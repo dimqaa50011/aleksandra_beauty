@@ -1,0 +1,113 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>{% block title %}Сертификаты — Glowora{% endblock %}</title>
+
+    <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,300;14..32,400;14..32,500;14..32,600;14..32,700&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
+    <link rel="stylesheet" href="{% static 'cert_app/css/admin.css' %}" />
+    <link rel="stylesheet" href="{% static 'cert_app/css/mobile.css' %}" />
+</head>
+<body>
+
+    <header class="admin-header">
+        <div class="header-container">
+            <div class="header-logo">
+                <a href="{% url 'cert_app:index' %}">
+                    Glow<span>ora</span>
+                    <span class="admin-badge">Сертификаты</span>
+                </a>
+            </div>
+            <button class="burger-btn" id="burgerBtn" aria-label="Меню">
+                <i class="fas fa-bars"></i>
+            </button>
+        </div>
+    </header>
+
+    <div class="admin-wrapper">
+        <aside class="admin-sidebar" id="sidebar">
+            <nav class="sidebar-nav">
+                <ul>
+                    <li>
+                        <a href="{% url 'cert_app:index' %}" class="{% if request.resolver_match.url_name == 'index' %}active{% endif %}">
+                            <i class="fas fa-home"></i>
+                            <span>Главная</span>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="{% url 'cert_app:list' %}" class="{% if request.resolver_match.url_name == 'list' %}active{% endif %}">
+                            <i class="fas fa-certificate"></i>
+                            <span>Сертификаты</span>
+                        </a>
+                    </li>
+                </ul>
+            </nav>
+            <div class="sidebar-footer">
+                <span style="color:#b0a39c;font-size:0.8rem;">
+                    <i class="fas fa-lock-open"></i> Без авторизации
+                </span>
+            </div>
+        </aside>
+
+        <main class="admin-content">
+            <div class="content-header">
+                <h1>{% block page_title %}Панель управления{% endblock %}</h1>
+                <div class="content-actions">
+                    {% block actions %}{% endblock %}
+                </div>
+            </div>
+
+            {% if messages %}
+                <div style="margin-bottom:20px;">
+                    {% for message in messages %}
+                        <div style="padding:12px 20px;border-radius:12px;margin-bottom:8px;
+                                    {% if message.tags == 'success' %}background:#e6f7e6;color:#2d8a4e;
+                                    {% elif message.tags == 'error' %}background:#fce8e5;color:#d4838e;
+                                    {% else %}background:#f0edeb;color:#6b5f5a;{% endif %}">
+                            {{ message }}
+                        </div>
+                    {% endfor %}
+                </div>
+            {% endif %}
+
+            <div class="content-body">
+                {% block content %}{% endblock %}
+            </div>
+        </main>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const burgerBtn = document.getElementById('burgerBtn');
+            const sidebar = document.getElementById('sidebar');
+            const body = document.body;
+
+            burgerBtn.addEventListener('click', function() {
+                sidebar.classList.toggle('open');
+                body.classList.toggle('sidebar-open');
+            });
+
+            document.addEventListener('click', function(event) {
+                const isClickInside = sidebar.contains(event.target) || burgerBtn.contains(event.target);
+                if (!isClickInside && window.innerWidth <= 768) {
+                    sidebar.classList.remove('open');
+                    body.classList.remove('sidebar-open');
+                }
+            });
+
+            window.addEventListener('resize', function() {
+                if (window.innerWidth > 768) {
+                    sidebar.classList.remove('open');
+                    body.classList.remove('sidebar-open');
+                }
+            });
+        });
+    </script>
+
+    {% block extra_js %}{% endblock %}
+
+</body>
+</html>

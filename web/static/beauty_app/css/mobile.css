@@ -1,0 +1,139 @@
+/* ============================================
+   МОБИЛЬНЫЕ СТИЛИ (до 768px)
+   ============================================ */
+@media (max-width: 768px) {
+    .burger-btn {
+        display: block;
+    }
+
+    .admin-sidebar {
+        position: fixed;
+        top: 70px;
+        left: -280px;
+        width: 280px;
+        height: calc(100vh - 70px);
+        background: var(--white);
+        border-right: 1px solid var(--border);
+        padding: 20px 16px;
+        overflow-y: auto;
+        z-index: 99;
+        transition: left 0.3s ease;
+        box-shadow: 4px 0 30px rgba(0, 0, 0, 0.05);
+    }
+
+    .admin-sidebar.open {
+        left: 0;
+    }
+
+    /* Затемнение фона при открытом меню */
+    body.sidebar-open::before {
+        content: '';
+        position: fixed;
+        top: 70px;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: rgba(0, 0, 0, 0.25);
+        z-index: 98;
+        backdrop-filter: blur(2px);
+    }
+
+    .admin-content {
+        padding: 16px 16px 32px;
+    }
+
+    .content-header h1 {
+        font-size: 1.4rem;
+    }
+
+    .content-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 12px;
+    }
+
+    .content-actions {
+        width: 100%;
+    }
+
+    .content-actions .btn {
+        width: 100%;
+        justify-content: center;
+    }
+
+    .certificates-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .admin-badge {
+        font-size: 0.55rem;
+        padding: 1px 10px;
+    }
+}
+
+/* ============================================
+   ОЧЕНЬ МАЛЕНЬКИЕ ЭКРАНЫ (до 480px)
+   ============================================ */
+@media (max-width: 480px) {
+    .admin-header {
+        padding: 10px 16px;
+    }
+
+    .header-logo a {
+        font-size: 1.2rem;
+    }
+
+    .admin-sidebar {
+        width: 100%;
+        left: -100%;
+    }
+
+    .admin-sidebar.open {
+        left: 0;
+    }
+
+    .admin-content {
+        padding: 12px 12px 24px;
+    }
+
+    .content-header h1 {
+        font-size: 1.2rem;
+    }
+
+    .certificate-card {
+        padding: 16px;
+    }
+
+    .certificate-card .icon {
+        font-size: 2.4rem;
+    }
+
+    .sidebar-nav a {
+        padding: 10px 14px;
+        font-size: 0.9rem;
+    }
+}
+
+/* ============================================
+   ПЛАНШЕТЫ (769px - 1024px)
+   ============================================ */
+@media (min-width: 769px) and (max-width: 1024px) {
+    .admin-sidebar {
+        width: 220px;
+        padding: 20px 12px;
+    }
+
+    .sidebar-nav a {
+        padding: 10px 12px;
+        font-size: 0.85rem;
+        gap: 10px;
+    }
+
+    .admin-content {
+        padding: 20px 24px 32px;
+    }
+
+    .certificates-grid {
+        grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+    }
+}

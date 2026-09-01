@@ -1,0 +1,324 @@
+{% extends 'dashboard_base.html' %}
+{% load static %}
+
+{% block title %}Выбрать сертификат для погашения — Glowora{% endblock %}
+
+{% block page_title %}Выберите сертификат для погашения{% endblock %}
+
+{% block actions %}
+    <a href="{% url 'cert_app:redeem' %}" class="btn btn-outline">
+        <i class="fas fa-arrow-left"></i> Назад
+    </a>
+{% endblock %}
+
+{% block content %}
+<div class="form-wrapper">
+    <div class="form-card">
+        <div class="form-header">
+            <div class="icon-circle">
+                <i class="fas fa-list"></i>
+            </div>
+            <h2>Выберите сертификат</h2>
+            <p class="form-description">
+                Найдено {{ certificates|length }} активных сертификатов для номера <strong>{{ phone }}</strong>
+            </p>
+        </div>
+
+        <form method="post" class="cert-form">
+            {% csrf_token %}
+
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="{{ form.certificate_id.id_for_label }}" class="form-label">
+                        Сертификат <span class="required">*</span>
+                    </label>
+                    {{ form.certificate_id }}
+                    {% if form.certificate_id.errors %}
+                        <div class="form-error">{{ form.certificate_id.errors }}</div>
+                    {% endif %}
+                </div>
+            </div>
+
+            {% if certificates %}
+                <div style="margin-bottom:20px;padding:12px 16px;background:#fcf9f7;border-radius:12px;border:1px solid #f0e8e5;">
+                    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;font-size:0.8rem;color:#6b5f5a;">
+                        <span><strong>Имя клиента</strong></span>
+                        <span><strong>Номинал</strong></span>
+                        <span><strong>Действует до</strong></span>
+                    </div>
+                    {% for cert in certificates %}
+                        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;font-size:0.85rem;color:#2d2a28;padding:4px 0;border-top:1px solid #f0e8e5;">
+                            <span>{{ cert.client_name }}</span>
+                            <span>{{ cert.price }} ₽</span>
+                            <span>{{ cert.expire_date|date:"d.m.Y" }}</span>
+                        </div>
+                    {% endfor %}
+                </div>
+            {% endif %}
+
+            <div class="form-actions">
+                <button type="submit" class="btn btn-primary" style="background:#d4838e;">
+                    <i class="fas fa-check-circle"></i> Погасить выбранный
+                </button>
+                <a href="{% url 'cert_app:redeem' %}" class="btn btn-outline">Отмена</a>
+            </div>
+        </form>
+
+        <div class="info-banner">
+            <i class="fas fa-info-circle"></i>
+            <span>
+                Будет погашен <strong>выбранный</strong> сертификат.
+                Действие нельзя отменить.
+            </span>
+        </div>
+    </div>
+</div>
+
+<style>
+    .form-wrapper {
+        display: flex;
+        justify-content: center;
+        align-items: flex-start;
+        padding: 20px 0;
+    }
+
+    .form-card {
+        background: #ffffff;
+        border-radius: 24px;
+        border: 1px solid #f0e8e5;
+        padding: 40px 48px;
+        max-width: 640px;
+        width: 100%;
+        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.04);
+        transition: box-shadow 0.3s ease;
+    }
+
+    .form-card:hover {
+        box-shadow: 0 12px 48px rgba(0, 0, 0, 0.06);
+    }
+
+    .form-header {
+        text-align: center;
+        margin-bottom: 32px;
+    }
+
+    .icon-circle {
+        width: 64px;
+        height: 64px;
+        background: #fce8e5;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin: 0 auto 16px;
+        font-size: 28px;
+        color: #d4838e;
+        transition: transform 0.3s ease;
+    }
+
+    .form-card:hover .icon-circle {
+        transform: scale(1.05);
+    }
+
+    .form-header h2 {
+        font-size: 1.5rem;
+        font-weight: 700;
+        color: #2d2a28;
+        margin-bottom: 6px;
+        letter-spacing: -0.3px;
+    }
+
+    .form-description {
+        font-size: 0.95rem;
+        color: #6b5f5a;
+        margin: 0;
+    }
+
+    .form-description strong {
+        color: #2d2a28;
+    }
+
+    .form-row {
+        margin-bottom: 24px;
+    }
+
+    .form-group {
+        display: flex;
+        flex-direction: column;
+    }
+
+    .form-label {
+        font-size: 0.85rem;
+        font-weight: 600;
+        color: #2d2a28;
+        margin-bottom: 6px;
+        letter-spacing: 0.2px;
+    }
+
+    .required {
+        color: #d4838e;
+        font-weight: 700;
+    }
+
+    .form-group select,
+    .form-group input {
+        width: 100%;
+        padding: 14px 18px;
+        border: 1.5px solid #f0e8e5;
+        border-radius: 12px;
+        font-size: 1rem;
+        font-family: 'Inter', sans-serif;
+        background: #fcf9f7;
+        transition: all 0.25s ease;
+        color: #2d2a28;
+    }
+
+    .form-group select:focus,
+    .form-group input:focus {
+        border-color: #f2a6b0;
+        outline: none;
+        box-shadow: 0 0 0 4px rgba(242, 166, 176, 0.12);
+        background: #ffffff;
+    }
+
+    .form-error {
+        color: #d4838e;
+        font-size: 0.8rem;
+        margin-top: 4px;
+    }
+
+    .form-actions {
+        display: flex;
+        gap: 14px;
+        margin-top: 8px;
+        margin-bottom: 24px;
+    }
+
+    .btn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 10px;
+        padding: 14px 28px;
+        border-radius: 60px;
+        font-weight: 600;
+        font-size: 0.95rem;
+        text-decoration: none;
+        transition: all 0.25s ease;
+        border: none;
+        cursor: pointer;
+        flex: 1;
+        min-height: 48px;
+    }
+
+    .btn-primary {
+        background: #d4838e;
+        color: #ffffff;
+        box-shadow: 0 4px 16px rgba(212, 131, 142, 0.25);
+    }
+
+    .btn-primary:hover {
+        background: #c06e7a;
+        transform: translateY(-2px);
+        box-shadow: 0 8px 28px rgba(212, 131, 142, 0.35);
+    }
+
+    .btn-outline {
+        background: transparent;
+        color: #6b5f5a;
+        border: 1.5px solid #f0e8e5;
+        flex: 0.6;
+    }
+
+    .btn-outline:hover {
+        background: #fcf9f7;
+        border-color: #d4c8c2;
+        transform: translateY(-2px);
+    }
+
+    .info-banner {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        padding: 14px 20px;
+        background: #fce8e5;
+        border-radius: 12px;
+        color: #6b5f5a;
+        font-size: 0.85rem;
+        margin-top: 8px;
+    }
+
+    .info-banner i {
+        color: #d4838e;
+        font-size: 1.1rem;
+        flex-shrink: 0;
+    }
+
+    .info-banner strong {
+        color: #2d2a28;
+        font-weight: 600;
+    }
+
+    @media (max-width: 768px) {
+        .form-card {
+            padding: 28px 24px;
+            border-radius: 20px;
+        }
+
+        .form-actions {
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .btn {
+            width: 100%;
+            justify-content: center;
+            flex: 1;
+        }
+
+        .btn-outline {
+            flex: 1;
+        }
+
+        .icon-circle {
+            width: 52px;
+            height: 52px;
+            font-size: 22px;
+        }
+
+        .form-header h2 {
+            font-size: 1.3rem;
+        }
+
+        .form-group select,
+        .form-group input {
+            padding: 12px 16px;
+            font-size: 0.95rem;
+        }
+
+        .info-banner {
+            flex-direction: column;
+            text-align: center;
+            padding: 16px;
+            gap: 6px;
+        }
+    }
+
+    @media (max-width: 480px) {
+        .form-card {
+            padding: 20px 16px;
+            border-radius: 16px;
+        }
+
+        .form-group select,
+        .form-group input {
+            padding: 10px 14px;
+            font-size: 0.9rem;
+        }
+
+        .form-label {
+            font-size: 0.8rem;
+        }
+    }
+</style>
+{% endblock %}

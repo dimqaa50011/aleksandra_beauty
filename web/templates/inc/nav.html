@@ -1,0 +1,23 @@
+<nav class="sidebar-nav">
+    <ul>
+        <li>
+            <a href="{% url 'beauty_app:dashboard' %}" class="{% if request.resolver_match.url_name == 'dashboard' %}active{% endif %}">
+                <i class="fas fa-home"></i>
+                <span>Главная</span>
+            </a>
+        </li>
+        <!-- Встраиваем сертификаты из cert_app -->
+        <li>
+            <a href="{% url 'cert_app:list' %}" class="{% if request.resolver_match.url_name == 'list' or request.resolver_match.url_name == 'detail' %}active{% endif %}">
+                <i class="fas fa-certificate"></i>
+                <span>Сертификаты</span>
+            </a>
+        </li>
+        <li>
+            <a href="{% url 'beauty_app:logout' %}" style="color:#d4838e;">
+                <i class="fas fa-sign-out-alt"></i>
+                <span>Выйти</span>
+            </a>
+        </li>
+    </ul>
+</nav>

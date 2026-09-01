@@ -1,0 +1,320 @@
+{% extends 'dashboard_base.html' %}
+{% load static %}
+
+{% block page_title %}Создать сертификат{% endblock %}
+
+{% block actions %}
+    <a href="{% url 'cert_app:list' %}" class="btn btn-outline">
+        <i class="fas fa-arrow-left"></i> Назад
+    </a>
+{% endblock %}
+
+{% block content %}
+<div class="form-wrapper">
+    <div class="form-card">
+        <form method="post" class="cert-form">
+            {% csrf_token %}
+            
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="{{ form.price.id_for_label }}" class="form-label">
+                        Номинал (₽) <span class="required">*</span>
+                    </label>
+                    <div class="select-wrapper">
+                        {{ form.price }}
+                    </div>
+                    {% if form.price.errors %}
+                        <div class="form-error">{{ form.price.errors }}</div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="{{ form.client_name.id_for_label }}" class="form-label">
+                        Имя клиента
+                    </label>
+                    {{ form.client_name }}
+                    {% if form.client_name.errors %}
+                        <div class="form-error">{{ form.client_name.errors }}</div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <div class="form-row two-cols">
+                <div class="form-group">
+                    <label for="{{ form.phone.id_for_label }}" class="form-label">
+                        Телефон <span class="required">*</span>
+                    </label>
+                    {{ form.phone }}
+                    {% if form.phone.errors %}
+                        <div class="form-error">{{ form.phone.errors }}</div>
+                    {% endif %}
+                </div>
+                <div class="form-group">
+                    <label for="{{ form.email.id_for_label }}" class="form-label">
+                        Email <span class="required">*</span>
+                    </label>
+                    {{ form.email }}
+                    {% if form.email.errors %}
+                        <div class="form-error">{{ form.email.errors }}</div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <div class="form-row">
+                <div class="form-group checkbox-group">
+                    {{ form.need_qr }}
+                    <label for="{{ form.need_qr.id_for_label }}" class="checkbox-label">
+                        {{ form.need_qr.label }}
+                    </label>
+                    {% if form.need_qr.errors %}
+                        <div class="form-error">{{ form.need_qr.errors }}</div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <div class="form-actions">
+                <button type="submit" class="btn btn-primary btn-lg">
+                    <i class="fas fa-plus"></i> Создать
+                </button>
+                <a href="{% url 'cert_app:list' %}" class="btn btn-outline btn-lg">
+                    Отмена
+                </a>
+            </div>
+        </form>
+    </div>
+</div>
+
+<style>
+    .form-wrapper {
+        display: flex;
+        justify-content: center;
+        align-items: flex-start;
+        padding: 20px 0;
+    }
+
+    .form-card {
+        background: #ffffff;
+        border-radius: 24px;
+        border: 1px solid #f0e8e5;
+        padding: 40px 48px;
+        max-width: 680px;
+        width: 100%;
+        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.04);
+        transition: box-shadow 0.3s ease;
+    }
+
+    .form-card:hover {
+        box-shadow: 0 12px 48px rgba(0, 0, 0, 0.06);
+    }
+
+    .form-row {
+        margin-bottom: 20px;
+    }
+
+    .form-row.two-cols {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 20px;
+    }
+
+    .form-group {
+        display: flex;
+        flex-direction: column;
+    }
+
+    .form-label {
+        font-size: 0.85rem;
+        font-weight: 600;
+        color: #2d2a28;
+        margin-bottom: 6px;
+        letter-spacing: 0.2px;
+    }
+
+    .required {
+        color: #d4838e;
+        font-weight: 700;
+    }
+
+    .form-group input,
+    .form-group select {
+        width: 100%;
+        padding: 12px 16px;
+        border: 1.5px solid #f0e8e5;
+        border-radius: 12px;
+        font-size: 0.95rem;
+        font-family: 'Inter', sans-serif;
+        background: #fcf9f7;
+        transition: border-color 0.25s ease, box-shadow 0.25s ease, background 0.25s ease;
+        color: #2d2a28;
+        appearance: none;
+        -webkit-appearance: none;
+    }
+
+    .form-group input:focus,
+    .form-group select:focus {
+        border-color: #f2a6b0;
+        outline: none;
+        box-shadow: 0 0 0 4px rgba(242, 166, 176, 0.12);
+        background: #ffffff;
+    }
+
+    .form-group input::placeholder {
+        color: #b0a39c;
+        font-weight: 400;
+    }
+
+    /* Кастомный селект */
+    .select-wrapper {
+        position: relative;
+    }
+
+    .select-wrapper select {
+        appearance: none;
+        -webkit-appearance: none;
+        background: #fcf9f7 url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%236b5f5a' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E") no-repeat right 16px center;
+        padding-right: 44px;
+        cursor: pointer;
+    }
+
+    .select-wrapper select:focus {
+        background-color: #ffffff;
+    }
+
+    /* Чекбокс */
+    .checkbox-group {
+        flex-direction: row;
+        align-items: center;
+        gap: 10px;
+        padding-top: 4px;
+    }
+
+    .checkbox-group input[type="checkbox"] {
+        width: 18px;
+        height: 18px;
+        accent-color: #f2a6b0;
+        cursor: pointer;
+        flex-shrink: 0;
+        margin: 0;
+        padding: 0;
+        border-radius: 4px;
+        border: 1.5px solid #f0e8e5;
+        background: #fcf9f7;
+        transition: all 0.2s ease;
+    }
+
+    .checkbox-group input[type="checkbox"]:checked {
+        border-color: #f2a6b0;
+        background-color: #f2a6b0;
+    }
+
+    .checkbox-group input[type="checkbox"]:focus {
+        box-shadow: 0 0 0 3px rgba(242, 166, 176, 0.2);
+        outline: none;
+    }
+
+    .checkbox-label {
+        font-size: 0.9rem;
+        font-weight: 500;
+        color: #4a3f3a;
+        cursor: pointer;
+        margin: 0;
+        user-select: none;
+    }
+
+    .form-error {
+        color: #d4838e;
+        font-size: 0.8rem;
+        margin-top: 4px;
+    }
+
+    .form-actions {
+        display: flex;
+        gap: 14px;
+        margin-top: 8px;
+        padding-top: 24px;
+        border-top: 1px solid #f0e8e5;
+    }
+
+    .btn-lg {
+        padding: 12px 36px;
+        font-size: 0.95rem;
+        font-weight: 600;
+        border-radius: 60px;
+        transition: all 0.25s ease;
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        justify-content: center;
+        cursor: pointer;
+        border: none;
+        text-decoration: none;
+    }
+
+    .btn-primary {
+        background: #f2a6b0;
+        color: #ffffff;
+        box-shadow: 0 4px 16px rgba(242, 166, 176, 0.25);
+    }
+
+    .btn-primary:hover {
+        background: #e8919c;
+        transform: translateY(-2px);
+        box-shadow: 0 8px 28px rgba(242, 166, 176, 0.35);
+    }
+
+    .btn-outline {
+        background: transparent;
+        color: #6b5f5a;
+        border: 1.5px solid #f0e8e5;
+    }
+
+    .btn-outline:hover {
+        background: #fcf9f7;
+        border-color: #d4c8c2;
+        transform: translateY(-2px);
+    }
+
+    /* Адаптив */
+    @media (max-width: 768px) {
+        .form-card {
+            padding: 28px 20px;
+            border-radius: 20px;
+        }
+
+        .form-row.two-cols {
+            grid-template-columns: 1fr;
+            gap: 16px;
+        }
+
+        .form-actions {
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .btn-lg {
+            width: 100%;
+            justify-content: center;
+            padding: 14px 20px;
+        }
+    }
+
+    @media (max-width: 480px) {
+        .form-card {
+            padding: 20px 16px;
+            border-radius: 16px;
+        }
+
+        .form-group input,
+        .form-group select {
+            padding: 10px 14px;
+            font-size: 0.9rem;
+        }
+
+        .form-label {
+            font-size: 0.8rem;
+        }
+    }
+</style>
+{% endblock %}

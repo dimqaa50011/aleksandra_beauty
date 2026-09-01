@@ -1,0 +1,238 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Glowora — Бьюти-студия</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,300;14..32,400;14..32,600;14..32,700&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="{% static "css/lending.css" %}">
+</head>
+<body>
+
+    <!-- ==========================================
+    НАВИГАЦИЯ
+    ========================================== -->
+    <nav class="navbar">
+        <div class="container">
+            <a href="#" class="logo">Glow<span>ora</span></a>
+            <div class="nav-links">
+                <a href="#">Главная</a>
+                <a href="#">Услуги</a>
+                <a href="#">О нас</a>
+                <a href="#">Блог</a>
+                <a href="#">Контакты</a>
+            </div>
+            <div class="nav-actions">
+                <a href="#" class="btn btn-sm">Записаться</a>
+                <button class="menu-toggle" aria-label="Меню">☰</button>
+            </div>
+        </div>
+    </nav>
+
+    <!-- ==========================================
+    ГЕРОЙ
+    ========================================== -->
+    <section class="hero">
+        <div class="container hero-grid">
+            <div class="hero-content">
+                <div class="badge">✨ Новая коллекция</div>
+                <h1>Раскрой своё<br /><span>природное сияние</span></h1>
+                <p class="sub">
+                    Уход за кожей, маникюр, педикюр и брови — всё в одном месте. 
+                    Нежно, эффективно и с любовью к вам.
+                </p>
+                <div class="offer">🌸 <span>20% OFF</span> — для новых клиентов</div>
+                <a href="#" class="btn">Записаться сейчас</a>
+                <div class="hero-stats">
+                    <div class="stat">
+                        <span class="number">10K+</span>
+                        <span class="label">Довольных клиентов</span>
+                    </div>
+                    <div class="stat">
+                        <span class="number">4.8</span>
+                        <span class="label">★ Средний рейтинг</span>
+                    </div>
+                </div>
+            </div>
+            <img src="https://images.unsplash.com/photo-1595476108010-b4d1f102b1b1?w=800&auto=format&fit=crop" alt="Бьюти-мастер" class="hero-image" />
+        </div>
+    </section>
+
+    <!-- ==========================================
+    КАТЕГОРИИ УСЛУГ
+    ========================================== -->
+    <section class="section">
+        <div class="container">
+            <span class="section-tag">✦ Услуги</span>
+            <h2 class="section-title">Категории</h2>
+            <div class="categories-grid">
+                <div class="category-card">
+                    <span class="icon">💅</span>
+                    <h4>Маникюр</h4>
+                    <p>Гель, дизайн, уход</p>
+                </div>
+                <div class="category-card">
+                    <span class="icon">🦶</span>
+                    <h4>Педикюр</h4>
+                    <p>SPA, медицинский</p>
+                </div>
+                <div class="category-card">
+                    <span class="icon">👁️</span>
+                    <h4>Брови & Ресницы</h4>
+                    <p>Ботокс, ламинирование</p>
+                </div>
+                <div class="category-card">
+                    <span class="icon">🧴</span>
+                    <h4>Уход за кожей</h4>
+                    <p>Чистки, пилинги</p>
+                </div>
+                <div class="category-card">
+                    <span class="icon">✨</span>
+                    <h4>Комплексы</h4>
+                    <p>Всё тело в уходе</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ==========================================
+    БАННЕР С АКЦИЕЙ
+    ========================================== -->
+    <section class="section" style="padding-top: 0;">
+        <div class="container">
+            <div class="banner">
+                <div>
+                    <h2>Уход, который <br /><span>любит тебя</span></h2>
+                    <p>Скидка 20% на наши бестселлеры. Предложение ограничено!</p>
+                </div>
+                <div class="offer-badge">20% <small>OFF</small></div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ==========================================
+    НАШИ УСЛУГИ
+    ========================================== -->
+    <section class="section" style="padding-top: 20px;">
+        <div class="container">
+            <div class="services-header">
+                <div>
+                    <span class="section-tag">✦ Процедуры</span>
+                    <h2 class="section-title" style="margin-bottom: 0;">Наши услуги</h2>
+                </div>
+                <a href="#" class="view-all">Все услуги →</a>
+            </div>
+
+            <div class="services-grid">
+                <!-- Услуга 1 -->
+                <div class="service-card">
+                    <img src="https://images.unsplash.com/photo-1604654894615-0548e5ad5b6e?w=600&auto=format&fit=crop" alt="Маникюр" class="image" />
+                    <div class="body">
+                        <h4>Премиум-маникюр</h4>
+                        <div class="meta">
+                            <span class="stars">★★★★★</span> (109)
+                        </div>
+                        <div class="price-row">
+                            <span class="price">2 500 ₽ <span class="old">3 000 ₽</span></span>
+                            <a href="#" class="btn btn-sm">Запись</a>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Услуга 2 -->
+                <div class="service-card">
+                    <img src="https://images.unsplash.com/photo-1604654894615-0548e5ad5b6e?w=600&auto=format&fit=crop" alt="Уход за кожей" class="image" />
+                    <div class="body">
+                        <h4>Увлажняющий уход</h4>
+                        <div class="meta">
+                            <span class="stars">★★★★★</span> (96)
+                        </div>
+                        <div class="price-row">
+                            <span class="price">1 900 ₽</span>
+                            <a href="#" class="btn btn-sm">Запись</a>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Услуга 3 -->
+                <div class="service-card">
+                    <img src="https://images.unsplash.com/photo-1604654894615-0548e5ad5b6e?w=600&auto=format&fit=crop" alt="Брови" class="image" />
+                    <div class="body">
+                        <h4>Ламинирование бровей</h4>
+                        <div class="meta">
+                            <span class="stars">★★★★★</span> (74)
+                        </div>
+                        <div class="price-row">
+                            <span class="price">1 500 ₽</span>
+                            <a href="#" class="btn btn-sm">Запись</a>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Услуга 4 -->
+                <div class="service-card">
+                    <img src="https://images.unsplash.com/photo-1604654894615-0548e5ad5b6e?w=600&auto=format&fit=crop" alt="Маска для лица" class="image" />
+                    <div class="body">
+                        <h4>Маска с розовой глиной</h4>
+                        <div class="meta">
+                            <span class="stars">★★★★★</span> (84)
+                        </div>
+                        <div class="price-row">
+                            <span class="price">1 200 ₽</span>
+                            <a href="#" class="btn btn-sm">Запись</a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ==========================================
+    БЛОК ДОВЕРИЯ
+    ========================================== -->
+    <section class="section" style="padding-top: 20px;">
+        <div class="container">
+            <div class="trust-section">
+                <div class="left">
+                    <h2>Красота, которая <br /><span>любит тебя</span></h2>
+                    <p>Скидка 20% на наши бестселлеры. Предложение ограничено!</p>
+                </div>
+                <div class="trust-stats">
+                    <div class="item">
+                        <div class="stars">★★★★★</div>
+                        <div class="number">4.8</div>
+                        <div class="label">Средний рейтинг</div>
+                    </div>
+                    <div class="item">
+                        <div class="number">10K+</div>
+                        <div class="label">Довольных клиентов</div>
+                    </div>
+                    <div class="item">
+                        <div class="number">98%</div>
+                        <div class="label">Возвращаются</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ==========================================
+    ФУТЕР
+    ========================================== -->
+    <footer class="container footer">
+        <div>
+            <a href="#" class="logo">Glow<span>ora</span></a>
+            <p style="margin-top: 4px; font-size: 0.85rem;">© 2026 — Бьюти-студия</p>
+        </div>
+        <div class="footer-links">
+            <a href="#">Главная</a>
+            <a href="#">Услуги</a>
+            <a href="#">О нас</a>
+            <a href="#">Блог</a>
+            <a href="#">Контакты</a>
+        </div>
+    </footer>
+
+</body>
+</html>

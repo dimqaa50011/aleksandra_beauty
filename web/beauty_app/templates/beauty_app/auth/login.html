@@ -1,0 +1,289 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Вход — Glowora</title>
+
+    <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,300;14..32,400;14..32,500;14..32,600;14..32,700&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
+
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background: #fef9f7;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .login-wrapper {
+            width: 100%;
+            max-width: 440px;
+        }
+
+        .login-card {
+            background: #ffffff;
+            border-radius: 24px;
+            border: 1px solid #f0e8e5;
+            padding: 40px 36px;
+            box-shadow: 0 8px 40px rgba(0, 0, 0, 0.05);
+            transition: box-shadow 0.3s ease;
+        }
+
+        .login-card:hover {
+            box-shadow: 0 12px 56px rgba(0, 0, 0, 0.07);
+        }
+
+        .login-header {
+            text-align: center;
+            margin-bottom: 32px;
+        }
+
+        .login-logo {
+            font-size: 1.8rem;
+            font-weight: 700;
+            color: #2d2a28;
+            letter-spacing: -0.5px;
+        }
+
+        .login-logo span {
+            color: #f2a6b0;
+        }
+
+        .login-header h1 {
+            font-size: 1.4rem;
+            font-weight: 700;
+            color: #2d2a28;
+            margin-top: 8px;
+        }
+
+        .login-header p {
+            font-size: 0.9rem;
+            color: #6b5f5a;
+            margin-top: 4px;
+        }
+
+        /* Сообщения об ошибках */
+        .messages {
+            margin-bottom: 20px;
+        }
+
+        .message {
+            padding: 12px 16px;
+            border-radius: 12px;
+            font-size: 0.9rem;
+            background: #fce8e5;
+            color: #d4838e;
+            border: 1px solid #fce0db;
+        }
+
+        .message-success {
+            background: #e6f7e6;
+            color: #2d8a4e;
+            border-color: #d0ecd0;
+        }
+
+        /* Форма */
+        .form-group {
+            margin-bottom: 18px;
+        }
+
+        .form-label {
+            display: block;
+            font-size: 0.85rem;
+            font-weight: 600;
+            color: #2d2a28;
+            margin-bottom: 6px;
+        }
+
+        .form-control {
+            width: 100%;
+            padding: 14px 16px;
+            border: 1.5px solid #f0e8e5;
+            border-radius: 12px;
+            font-size: 0.95rem;
+            font-family: 'Inter', sans-serif;
+            background: #fcf9f7;
+            transition: all 0.25s ease;
+            color: #2d2a28;
+        }
+
+        .form-control:focus {
+            border-color: #f2a6b0;
+            outline: none;
+            box-shadow: 0 0 0 4px rgba(242, 166, 176, 0.12);
+            background: #ffffff;
+        }
+
+        .form-control::placeholder {
+            color: #b0a39c;
+        }
+
+        .form-error {
+            color: #d4838e;
+            font-size: 0.8rem;
+            margin-top: 4px;
+        }
+
+        .form-actions {
+            margin-top: 24px;
+        }
+
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            width: 100%;
+            padding: 14px 24px;
+            border-radius: 60px;
+            font-weight: 600;
+            font-size: 1rem;
+            text-decoration: none;
+            transition: all 0.25s ease;
+            border: none;
+            cursor: pointer;
+            min-height: 52px;
+        }
+
+        .btn-primary {
+            background: #f2a6b0;
+            color: #ffffff;
+            box-shadow: 0 4px 20px rgba(242, 166, 176, 0.3);
+        }
+
+        .btn-primary:hover {
+            background: #e8919c;
+            transform: translateY(-2px);
+            box-shadow: 0 8px 32px rgba(242, 166, 176, 0.4);
+        }
+
+        .btn-primary:active {
+            transform: translateY(0);
+        }
+
+        /* Футер */
+        .login-footer {
+            text-align: center;
+            margin-top: 20px;
+            font-size: 0.8rem;
+            color: #b0a39c;
+        }
+
+        .login-footer a {
+            color: #f2a6b0;
+            text-decoration: none;
+            font-weight: 600;
+        }
+
+        .login-footer a:hover {
+            color: #e8919c;
+        }
+
+        /* Адаптив */
+        @media (max-width: 480px) {
+            .login-card {
+                padding: 28px 20px;
+                border-radius: 20px;
+            }
+
+            .login-logo {
+                font-size: 1.5rem;
+            }
+
+            .login-header h1 {
+                font-size: 1.2rem;
+            }
+
+            .form-control {
+                padding: 12px 14px;
+                font-size: 0.9rem;
+            }
+
+            .btn {
+                padding: 12px 20px;
+                font-size: 0.95rem;
+                min-height: 48px;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="login-wrapper">
+        <div class="login-card">
+
+            <!-- Шапка -->
+            <div class="login-header">
+                <div class="login-logo">Glow<span>ora</span></div>
+                <h1>Вход в систему</h1>
+                <p>Введите свои учётные данные</p>
+            </div>
+
+            <!-- Сообщения -->
+            {% if messages %}
+                <div class="messages">
+                    {% for message in messages %}
+                        <div class="message {% if message.tags == 'success' %}message-success{% endif %}">
+                            {{ message }}
+                        </div>
+                    {% endfor %}
+                </div>
+            {% endif %}
+
+            <!-- Форма -->
+            <form method="post">
+                {% csrf_token %}
+
+                <div class="form-group">
+                    <label for="{{ form.username.id_for_label }}" class="form-label">
+                        {{ form.username.label }}
+                    </label>
+                    {{ form.username }}
+                    {% if form.username.errors %}
+                        <div class="form-error">{{ form.username.errors.0 }}</div>
+                    {% endif %}
+                </div>
+
+                <div class="form-group">
+                    <label for="{{ form.password.id_for_label }}" class="form-label">
+                        {{ form.password.label }}
+                    </label>
+                    {{ form.password }}
+                    {% if form.password.errors %}
+                        <div class="form-error">{{ form.password.errors.0 }}</div>
+                    {% endif %}
+                </div>
+
+                {% if form.non_field_errors %}
+                    <div class="form-error" style="margin-bottom:16px;text-align:center;">
+                        {{ form.non_field_errors.0 }}
+                    </div>
+                {% endif %}
+
+                <div class="form-actions">
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-sign-in-alt"></i> Войти
+                    </button>
+                </div>
+            </form>
+
+            <div class="login-footer">
+                <p>Доступ только для авторизованных сотрудников</p>
+            </div>
+
+        </div>
+    </div>
+
+</body>
+</html>

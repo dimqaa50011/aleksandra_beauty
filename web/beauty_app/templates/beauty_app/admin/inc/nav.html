@@ -1,0 +1,35 @@
+<nav class="sidebar-nav">
+    <ul>
+        <li>
+            <a href="" class="">
+                <i class="fas fa-home"></i>
+                <span>Главная</span>
+            </a>
+        </li>
+        <li>
+            <a href="" class="{% if request.resolver_match.url_name == 'admin_certificates' %}active{% endif %}">
+                <i class="fas fa-certificate"></i>
+                <span>Сертификаты</span>
+            </a>
+        </li>
+        <!-- Можно добавить другие пункты -->
+        <li>
+            <a href="#">
+                <i class="fas fa-users"></i>
+                <span>Клиенты</span>
+            </a>
+        </li>
+        <li>
+            <a href="#">
+                <i class="fas fa-calendar-check"></i>
+                <span>Записи</span>
+            </a>
+        </li>
+        <li>
+            <a href="#">
+                <i class="fas fa-cog"></i>
+                <span>Настройки</span>
+            </a>
+        </li>
+    </ul>
+    </nav>

@@ -1,0 +1,635 @@
+{% extends 'dashboard_base.html' %}
+{% load static %}
+
+{% block page_title %}Управление сертификатами{% endblock %}
+
+{% block actions %}
+    <div class="action-buttons">
+        <a href="{% url 'cert_app:add' %}" class="btn btn-primary">
+            <i class="fas fa-plus"></i> Создать
+        </a>
+        <a href="{% url 'cert_app:redeem' %}" class="btn btn-redeem">
+            <i class="fas fa-check-circle"></i> Погасить
+        </a>
+    </div>
+{% endblock %}
+
+{% block content %}
+<div class="dashboard">
+
+    <!-- ========== СТАТИСТИКА ========== -->
+    <div class="stats-grid">
+        <div class="stat-card stat-total">
+            <div class="stat-icon">📊</div>
+            <div class="stat-body">
+                <div class="stat-number">{{ total }}</div>
+                <div class="stat-label">Всего</div>
+            </div>
+        </div>
+
+        <div class="stat-card stat-active">
+            <div class="stat-icon">🟢</div>
+            <div class="stat-body">
+                <div class="stat-number">{{ active }}</div>
+                <div class="stat-label">Активных</div>
+            </div>
+        </div>
+
+        <div class="stat-card stat-redeemed">
+            <div class="stat-icon">🔴</div>
+            <div class="stat-body">
+                <div class="stat-number">{{ redeemed }}</div>
+                <div class="stat-label">Погашено</div>
+            </div>
+        </div>
+
+        <div class="stat-card stat-expired">
+            <div class="stat-icon">⚪</div>
+            <div class="stat-body">
+                <div class="stat-number">{{ expired }}</div>
+                <div class="stat-label">Просрочено</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ========== ПОСЛЕДНИЕ СЕРТИФИКАТЫ ========== -->
+    <div class="recent-section">
+        <div class="section-header">
+            <h2 class="section-title">
+                <i class="fas fa-clock"></i> Последние сертификаты
+            </h2>
+            <a href="{% url 'cert_app:list' %}" class="view-all-link">
+                Все сертификаты <i class="fas fa-arrow-right"></i>
+            </a>
+        </div>
+
+        {% if recent_certificates %}
+            <div class="certificates-list">
+                {% for cert in recent_certificates %}
+                    <a href="{% url 'cert_app:detail' cert.pk %}" class="cert-row-link">
+                        <div class="cert-row">
+                            <div class="cert-cell cert-client">
+                                <div class="client-info">
+                                    <span class="client-name">{{ cert.client_name|default:"—" }}</span>
+                                    <span class="client-phone">{{ cert.phone }}</span>
+                                </div>
+                            </div>
+                            <div class="cert-cell cert-price">
+                                <span class="price-value">{{ cert.price }} ₽</span>
+                            </div>
+                            <div class="cert-cell cert-expire">
+                                <span class="expire-date">{{ cert.expire_date|date:"d.m.Y" }}</span>
+                                {% if cert.expire_date < now and not cert.is_used %}
+                                    <span class="expire-badge expired">Просрочен</span>
+                                {% endif %}
+                            </div>
+                            <div class="cert-cell cert-status">
+                                {% if cert.is_used %}
+                                    <span class="status-badge status-redeemed">
+                                        <span class="status-dot"></span> Погашен
+                                    </span>
+                                {% elif cert.expire_date < now %}
+                                    <span class="status-badge status-expired">
+                                        <span class="status-dot"></span> Просрочен
+                                    </span>
+                                {% else %}
+                                    <span class="status-badge status-active">
+                                        <span class="status-dot"></span> Активен
+                                    </span>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </a>
+                {% endfor %}
+            </div>
+        {% else %}
+            <div class="empty-state">
+                <div class="empty-icon">📭</div>
+                <h3 class="empty-title">Нет сертификатов</h3>
+                <p class="empty-text">
+                    Создайте свой первый подарочный сертификат
+                </p>
+                <a href="{% url 'cert_app:add' %}" class="btn btn-primary">
+                    <i class="fas fa-plus"></i> Создать сертификат
+                </a>
+            </div>
+        {% endif %}
+    </div>
+</div>
+
+<style>
+    .dashboard {
+        max-width: 1200px;
+    }
+
+    /* ===== КНОПКИ ДЕЙСТВИЙ ===== */
+    .action-buttons {
+        display: flex;
+        gap: 12px;
+        flex-wrap: wrap;
+    }
+
+    .btn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        padding: 10px 24px;
+        border-radius: 60px;
+        font-weight: 600;
+        font-size: 0.9rem;
+        text-decoration: none;
+        transition: all 0.25s ease;
+        border: none;
+        cursor: pointer;
+        white-space: nowrap;
+        min-height: 44px;
+    }
+
+    .btn i {
+        font-size: 0.9rem;
+    }
+
+    .btn-primary {
+        background: #f2a6b0;
+        color: #ffffff;
+        box-shadow: 0 4px 16px rgba(242, 166, 176, 0.25);
+    }
+
+    .btn-primary:hover {
+        background: #e8919c;
+        transform: translateY(-2px);
+        box-shadow: 0 8px 28px rgba(242, 166, 176, 0.35);
+        color: #fff;
+    }
+
+    .btn-redeem {
+        background: #d4838e;
+        color: #ffffff;
+        box-shadow: 0 4px 16px rgba(212, 131, 142, 0.25);
+    }
+
+    .btn-redeem:hover {
+        background: #c06e7a;
+        transform: translateY(-2px);
+        box-shadow: 0 8px 28px rgba(212, 131, 142, 0.35);
+        color: #fff;
+    }
+
+    /* ===== СТАТИСТИКА ===== */
+    .stats-grid {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 16px;
+        margin-bottom: 40px;
+    }
+
+    .stat-card {
+        background: #ffffff;
+        border-radius: 16px;
+        padding: 20px 24px;
+        border: 1px solid #f0e8e5;
+        display: flex;
+        align-items: center;
+        gap: 16px;
+        transition: all 0.25s ease;
+    }
+
+    .stat-card:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.06);
+    }
+
+    .stat-icon {
+        font-size: 1.8rem;
+        line-height: 1;
+        flex-shrink: 0;
+    }
+
+    .stat-body {
+        display: flex;
+        flex-direction: column;
+    }
+
+    .stat-number {
+        font-size: 1.8rem;
+        font-weight: 700;
+        color: #2d2a28;
+        line-height: 1.1;
+    }
+
+    .stat-label {
+        font-size: 0.8rem;
+        font-weight: 500;
+        color: #6b5f5a;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+
+    .stat-total .stat-number { color: #2d2a28; }
+    .stat-active .stat-number { color: #2d8a4e; }
+    .stat-redeemed .stat-number { color: #d4838e; }
+    .stat-expired .stat-number { color: #b0a39c; }
+
+    /* ===== ПОСЛЕДНИЕ СЕРТИФИКАТЫ ===== */
+    .recent-section {
+        background: #ffffff;
+        border-radius: 20px;
+        border: 1px solid #f0e8e5;
+        padding: 24px 28px;
+    }
+
+    .section-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 20px;
+        flex-wrap: wrap;
+        gap: 12px;
+    }
+
+    .section-title {
+        font-size: 1.1rem;
+        font-weight: 700;
+        color: #2d2a28;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        margin: 0;
+    }
+
+    .section-title i {
+        color: #f2a6b0;
+    }
+
+    .view-all-link {
+        font-size: 0.85rem;
+        font-weight: 600;
+        color: #f2a6b0;
+        text-decoration: none;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        transition: all 0.2s ease;
+        white-space: nowrap;
+    }
+
+    .view-all-link:hover {
+        color: #e8919c;
+        gap: 10px;
+    }
+
+    .view-all-link i {
+        font-size: 0.7rem;
+        transition: transform 0.2s ease;
+    }
+
+    .view-all-link:hover i {
+        transform: translateX(3px);
+    }
+
+    /* ===== СПИСОК СЕРТИФИКАТОВ ===== */
+    .certificates-list {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+    }
+
+    .cert-row-link {
+        text-decoration: none;
+        color: inherit;
+        display: block;
+        border-radius: 12px;
+        transition: all 0.2s ease;
+    }
+
+    .cert-row-link:hover .cert-row {
+        background: #f8f0ed;
+        transform: translateX(4px);
+    }
+
+    .cert-row {
+        display: grid;
+        grid-template-columns: 1fr 100px 130px 140px;
+        align-items: center;
+        padding: 14px 18px;
+        border-radius: 12px;
+        background: #fcf9f7;
+        transition: all 0.2s ease;
+        gap: 12px;
+    }
+
+    .cert-cell {
+        display: flex;
+        align-items: center;
+    }
+
+    .client-info {
+        display: flex;
+        flex-direction: column;
+        line-height: 1.3;
+    }
+
+    .client-name {
+        font-size: 0.9rem;
+        font-weight: 600;
+        color: #2d2a28;
+    }
+
+    .client-phone {
+        font-size: 0.75rem;
+        color: #6b5f5a;
+    }
+
+    .price-value {
+        font-size: 0.95rem;
+        font-weight: 700;
+        color: #2d2a28;
+    }
+
+    .expire-date {
+        font-size: 0.85rem;
+        color: #4a3f3a;
+    }
+
+    .expire-badge {
+        font-size: 0.6rem;
+        font-weight: 600;
+        color: #d4838e;
+        background: #fce8e5;
+        padding: 1px 8px;
+        border-radius: 40px;
+        margin-left: 6px;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+
+    .status-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        font-size: 0.75rem;
+        font-weight: 600;
+        padding: 4px 14px;
+        border-radius: 40px;
+        background: #f0edeb;
+        color: #6b5f5a;
+    }
+
+    .status-dot {
+        display: inline-block;
+        width: 6px;
+        height: 6px;
+        border-radius: 50%;
+        flex-shrink: 0;
+    }
+
+    .status-active {
+        background: #e6f7e6;
+        color: #1a7a3a;
+    }
+
+    .status-active .status-dot {
+        background: #2d8a4e;
+    }
+
+    .status-redeemed {
+        background: #fce8e5;
+        color: #b0606a;
+    }
+
+    .status-redeemed .status-dot {
+        background: #d4838e;
+    }
+
+    .status-expired {
+        background: #f0edeb;
+        color: #8a807a;
+    }
+
+    .status-expired .status-dot {
+        background: #b0a39c;
+    }
+
+    /* ===== ПУСТОЙ СОСТОЯНИЕ ===== */
+    .empty-state {
+        text-align: center;
+        padding: 48px 20px;
+    }
+
+    .empty-icon {
+        font-size: 3.5rem;
+        margin-bottom: 12px;
+        opacity: 0.6;
+    }
+
+    .empty-title {
+        font-size: 1.1rem;
+        font-weight: 600;
+        color: #2d2a28;
+        margin-bottom: 4px;
+    }
+
+    .empty-text {
+        font-size: 0.9rem;
+        color: #6b5f5a;
+        margin-bottom: 20px;
+    }
+
+    /* ============================================================
+       АДАПТИВ — МОБИЛКИ
+       ============================================================ */
+
+    @media (max-width: 1024px) {
+        .cert-row {
+            grid-template-columns: 1fr 90px 110px 120px;
+            gap: 8px;
+            padding: 12px 14px;
+        }
+    }
+
+    @media (max-width: 768px) {
+        .action-buttons {
+            flex-direction: column;
+            width: 100%;
+            gap: 10px;
+        }
+
+        .action-buttons .btn {
+            width: 100%;
+            justify-content: center;
+            padding: 14px 20px;
+            font-size: 1rem;
+            min-height: 48px;
+        }
+
+        .action-buttons .btn i {
+            font-size: 1.1rem;
+        }
+
+        .stats-grid {
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+        }
+
+        .stat-card {
+            padding: 14px 16px;
+            gap: 12px;
+        }
+
+        .stat-icon {
+            font-size: 1.4rem;
+        }
+
+        .stat-number {
+            font-size: 1.4rem;
+        }
+
+        .stat-label {
+            font-size: 0.7rem;
+        }
+
+        .recent-section {
+            padding: 16px 14px;
+            border-radius: 16px;
+        }
+
+        .section-title {
+            font-size: 0.95rem;
+        }
+
+        .view-all-link {
+            font-size: 0.75rem;
+        }
+
+        .cert-row {
+            grid-template-columns: 1fr;
+            gap: 4px;
+            padding: 14px 12px;
+            border-bottom: 1px solid #f0e8e5;
+            background: transparent;
+            border-radius: 0;
+        }
+
+        .cert-row:last-child {
+            border-bottom: none;
+        }
+
+        .cert-row-link:hover .cert-row {
+            background: #fcf9f7;
+            transform: none;
+        }
+
+        .cert-cell {
+            justify-content: space-between;
+            width: 100%;
+            padding: 2px 0;
+        }
+
+        .cert-cell::before {
+            content: attr(data-label);
+            font-size: 0.65rem;
+            font-weight: 600;
+            color: #6b5f5a;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .cert-client::before { content: "Клиент"; }
+        .cert-price::before { content: "Сумма"; }
+        .cert-expire::before { content: "Действует до"; }
+        .cert-status::before { content: "Статус"; }
+
+        .cert-client { order: 1; }
+        .cert-price { order: 2; }
+        .cert-expire { order: 3; }
+        .cert-status { order: 4; }
+
+        .client-info {
+            flex-direction: row;
+            gap: 8px;
+            align-items: center;
+        }
+
+        .client-name {
+            font-size: 0.85rem;
+        }
+
+        .client-phone {
+            font-size: 0.7rem;
+        }
+
+        .price-value {
+            font-size: 0.9rem;
+        }
+
+        .expire-date {
+            font-size: 0.8rem;
+        }
+
+        .status-badge {
+            font-size: 0.7rem;
+            padding: 2px 12px;
+        }
+
+        .empty-state {
+            padding: 32px 16px;
+        }
+
+        .empty-icon {
+            font-size: 2.8rem;
+        }
+
+        .empty-title {
+            font-size: 1rem;
+        }
+
+        .empty-text {
+            font-size: 0.85rem;
+        }
+    }
+
+    @media (max-width: 400px) {
+        .stats-grid {
+            gap: 6px;
+        }
+
+        .stat-card {
+            padding: 10px 12px;
+            gap: 8px;
+            border-radius: 12px;
+        }
+
+        .stat-icon {
+            font-size: 1.2rem;
+        }
+
+        .stat-number {
+            font-size: 1.2rem;
+        }
+
+        .stat-label {
+            font-size: 0.6rem;
+            letter-spacing: 0.3px;
+        }
+
+        .recent-section {
+            padding: 12px 10px;
+        }
+
+        .cert-row {
+            padding: 10px 8px;
+        }
+
+        .cert-cell {
+            font-size: 0.8rem;
+        }
+
+        .action-buttons .btn {
+            padding: 12px 16px;
+            font-size: 0.9rem;
+            min-height: 44px;
+        }
+    }
+</style>
+{% endblock %}

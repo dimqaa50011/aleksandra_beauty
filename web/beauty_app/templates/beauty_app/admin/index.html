@@ -1,0 +1,229 @@
+{% extends 'dashboard_base.html' %}
+{% load static %}
+
+{% block title %}Главная — Админка Glowora{% endblock %}
+
+{% block page_title %}Панель управления{% endblock %}
+
+{% block actions %}
+    {# Убираем кнопку "Добавить", она не нужна на главной #}
+{% endblock %}
+
+{% block content %}
+<div class="dashboard-grid">
+    <!-- ===== ПЛИТКА 1: Сертификаты ===== -->
+    <a href="{% url 'cert_app:list' %}" class="dash-card dash-card-certificates">
+        <div class="dash-card-icon">🎫</div>
+        <div class="dash-card-body">
+            <h3 class="dash-card-title">Сертификаты</h3>
+            <p class="dash-card-desc">Управление подарочными сертификатами</p>
+            <span class="dash-card-arrow">
+                <i class="fas fa-arrow-right"></i>
+            </span>
+        </div>
+    </a>
+
+    <!-- ===== ПЛИТКА 2: Клиенты ===== -->
+    <a href="#" class="dash-card dash-card-clients">
+        <div class="dash-card-icon">👤</div>
+        <div class="dash-card-body">
+            <h3 class="dash-card-title">Клиенты</h3>
+            <p class="dash-card-desc">Список клиентов и их записи</p>
+            <span class="dash-card-arrow">
+                <i class="fas fa-arrow-right"></i>
+            </span>
+        </div>
+    </a>
+
+    <!-- ===== ПЛИТКА 3: Записи ===== -->
+    <a href="#" class="dash-card dash-card-bookings">
+        <div class="dash-card-icon">📅</div>
+        <div class="dash-card-body">
+            <h3 class="dash-card-title">Записи</h3>
+            <p class="dash-card-desc">Расписание и бронирования</p>
+            <span class="dash-card-arrow">
+                <i class="fas fa-arrow-right"></i>
+            </span>
+        </div>
+    </a>
+
+    <!-- ===== ПЛИТКА 4: Услуги ===== -->
+    <a href="#" class="dash-card dash-card-services">
+        <div class="dash-card-icon">💅</div>
+        <div class="dash-card-body">
+            <h3 class="dash-card-title">Услуги</h3>
+            <p class="dash-card-desc">Категории и цены</p>
+            <span class="dash-card-arrow">
+                <i class="fas fa-arrow-right"></i>
+            </span>
+        </div>
+    </a>
+
+    <!-- ===== ПЛИТКА 5: Настройки ===== -->
+    <a href="#" class="dash-card dash-card-settings">
+        <div class="dash-card-icon">⚙️</div>
+        <div class="dash-card-body">
+            <h3 class="dash-card-title">Настройки</h3>
+            <p class="dash-card-desc">Основные настройки сайта</p>
+            <span class="dash-card-arrow">
+                <i class="fas fa-arrow-right"></i>
+            </span>
+        </div>
+    </a>
+
+    <!-- ===== ПЛИТКА 6: Выйти ===== -->
+    <a href="{% url 'beauty_app:logout' %}" class="dash-card dash-card-logout">
+        <div class="dash-card-icon">🚪</div>
+        <div class="dash-card-body">
+            <h3 class="dash-card-title">Выйти</h3>
+            <p class="dash-card-desc">Завершить сеанс</p>
+            <span class="dash-card-arrow">
+                <i class="fas fa-arrow-right"></i>
+            </span>
+        </div>
+    </a>
+</div>
+
+<style>
+    .dashboard-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+        gap: 20px;
+        max-width: 800px;
+        margin: 0 auto;
+        padding: 20px 0;
+    }
+
+    .dash-card {
+        background: #ffffff;
+        border-radius: 20px;
+        border: 1px solid #f0e8e5;
+        padding: 28px 22px;
+        text-decoration: none;
+        color: inherit;
+        display: flex;
+        align-items: flex-start;
+        gap: 16px;
+        transition: all 0.25s ease;
+        position: relative;
+        overflow: hidden;
+    }
+
+    .dash-card:hover {
+        transform: translateY(-4px);
+        box-shadow: 0 12px 40px rgba(0, 0, 0, 0.06);
+        border-color: #f2a6b0;
+    }
+
+    .dash-card:active {
+        transform: scale(0.98);
+    }
+
+    .dash-card-icon {
+        font-size: 2rem;
+        line-height: 1;
+        flex-shrink: 0;
+        margin-top: 2px;
+    }
+
+    .dash-card-body {
+        flex: 1;
+        min-width: 0;
+    }
+
+    .dash-card-title {
+        font-size: 1rem;
+        font-weight: 700;
+        color: #2d2a28;
+        margin: 0 0 2px 0;
+        letter-spacing: -0.2px;
+    }
+
+    .dash-card-desc {
+        font-size: 0.8rem;
+        color: #6b5f5a;
+        margin: 0 0 4px 0;
+        line-height: 1.3;
+    }
+
+    .dash-card-arrow {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        color: #f2a6b0;
+        font-size: 0.85rem;
+        transition: transform 0.25s ease;
+        opacity: 0.6;
+    }
+
+    .dash-card:hover .dash-card-arrow {
+        transform: translateX(4px);
+        opacity: 1;
+    }
+
+    /* Цветовые акценты для разных карточек */
+    .dash-card-certificates .dash-card-icon { color: #f2a6b0; }
+    .dash-card-certificates:hover { border-color: #f2a6b0; }
+
+    .dash-card-clients .dash-card-icon { color: #4a90d9; }
+    .dash-card-clients:hover { border-color: #4a90d9; }
+
+    .dash-card-bookings .dash-card-icon { color: #f5b342; }
+    .dash-card-bookings:hover { border-color: #f5b342; }
+
+    .dash-card-services .dash-card-icon { color: #9b59b6; }
+    .dash-card-services:hover { border-color: #9b59b6; }
+
+    .dash-card-settings .dash-card-icon { color: #6b5f5a; }
+    .dash-card-settings:hover { border-color: #6b5f5a; }
+
+    .dash-card-logout .dash-card-icon { color: #d4838e; }
+    .dash-card-logout:hover { border-color: #d4838e; }
+
+    /* ===== АДАПТИВ ===== */
+    @media (max-width: 768px) {
+        .dashboard-grid {
+            grid-template-columns: 1fr;
+            max-width: 100%;
+            padding: 10px 0;
+            gap: 12px;
+        }
+
+        .dash-card {
+            padding: 20px 18px;
+            border-radius: 16px;
+        }
+
+        .dash-card-icon {
+            font-size: 1.6rem;
+        }
+
+        .dash-card-title {
+            font-size: 0.95rem;
+        }
+
+        .dash-card-desc {
+            font-size: 0.75rem;
+        }
+    }
+
+    @media (max-width: 480px) {
+        .dash-card {
+            padding: 16px 14px;
+            gap: 12px;
+        }
+
+        .dash-card-icon {
+            font-size: 1.4rem;
+        }
+
+        .dash-card-title {
+            font-size: 0.9rem;
+        }
+
+        .dash-card-desc {
+            font-size: 0.7rem;
+        }
+    }
+</style>
+{% endblock %}
