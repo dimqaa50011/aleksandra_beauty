@@ -10,6 +10,7 @@ For the full list of settings and their values, see
 https://docs.djangoproject.com/en/6.0/ref/settings/
 """
 
+import os
 from pathlib import Path
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
@@ -19,13 +20,16 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/6.0/howto/deployment/checklist/
 
-# SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-=@mnmlkps9+@5os#a+ekteke$hu6^=53-#9x%3t6kp_dw!d%kr'
+BASE_DIR = Path(__file__).resolve().parent.parent
 
-# SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+# 1. Базовые настройки Django из .env
+SECRET_KEY = os.getenv('SECRET_KEY', 'fallback-key-if-env-is-missing')
 
-ALLOWED_HOSTS = []
+# DEBUG должен быть булевым. В .env мы храним его как '0' или '1'
+DEBUG = os.getenv('DEBUG', '0') == '1'
+
+
+ALLOWED_HOSTS = ["*"]
 
 
 # Application definition
@@ -118,10 +122,12 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/6.0/howto/static-files/
 
 STATIC_URL = 'static/'
-STATICFILES_DIRS = [
-    BASE_DIR / "static",
-]
-
+if DEBUG:
+    STATICFILES_DIRS = [
+        BASE_DIR / "static",
+    ]
+else:
+    STATIC_ROOT =  BASE_DIR /  'static'
 MEDIA_ROOT = BASE_DIR / "media"
 MEDIA_URL = "/media/"
 

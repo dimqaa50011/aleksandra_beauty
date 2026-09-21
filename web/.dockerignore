@@ -1,0 +1,24 @@
+# backend/.dockerignore
+
+__pycache__
+*.pyc
+*.pyo
+*.mo
+*.db
+*.sqlite3
+*.sqlite3-journal
+.venv
+venv
+env
+.env
+.dockerignore
+.git
+.gitignore
+.vscode
+.idea
+*.md
+README.md
+docker-compose.yml
+Dockerfile
+staticfiles/
+media/

@@ -22,13 +22,11 @@
             <a href="#" class="logo">Glow<span>ora</span></a>
             <div class="nav-links">
                 <a href="#">Главная</a>
-                <a href="#">Услуги</a>
                 <a href="#">О нас</a>
-                <a href="#">Блог</a>
                 <a href="#">Контакты</a>
             </div>
             <div class="nav-actions">
-                <a href="#" class="btn btn-sm">Записаться</a>
+                <a href="https://spb.moiprofi.ru/aleksandrasaharova/" class="btn btn-sm">Записаться</a>
                 <button class="menu-toggle" aria-label="Меню">☰</button>
             </div>
         </div>
@@ -43,14 +41,12 @@
                 <div class="badge">✨ Новая коллекция</div>
                 <h1>Раскрой своё<br /><span>природное сияние</span></h1>
                 <p class="sub">
-                    Уход за кожей, маникюр, педикюр и брови — всё в одном месте.
-                    Нежно, эффективно и с любовью к вам.
+                    Уход за кожей, аппаратная косметология, подбор домашнего ухода, депиляция, брови и ресницы - все в одном месте.
                 </p>
-                <div class="offer">🌸 <span>20% OFF</span> — для новых клиентов</div>
                 <a href="#" class="btn">Записаться сейчас</a>
                 <div class="hero-stats">
                     <div class="stat">
-                        <span class="number">10K+</span>
+                        <span class="number">5K+</span>
                         <span class="label">Довольных клиентов</span>
                     </div>
                     <div class="stat">
@@ -75,9 +71,9 @@
     <section class="section">
         <div class="container">
             <span class="section-tag">✦ Услуги</span>
-            <h2 class="section-title">Категории</h2>
+            <h2 class="section-title">Наши услуги</h2>
             <div class="categories-grid">
-                {% for category in categories %}
+                {% for category in categories %}    
                     <div class="category-card">
                         <span class="icon">{{ category.icon }}</span>
                         <h4>{{ category.name }}</h4>
@@ -109,68 +105,7 @@
         </div>
     </section>
 
-    <!-- ==========================================
-    НАШИ УСЛУГИ (ИЗ АДМИНКИ)
-    ========================================== -->
-    <section class="section" style="padding-top: 20px;">
-        <div class="container">
-            <div class="services-header">
-                <div>
-                    <span class="section-tag">✦ Процедуры</span>
-                    <h2 class="section-title" style="margin-bottom: 0;">Наши услуги</h2>
-                </div>
-                <a href="#" class="view-all">Все услуги →</a>
-            </div>
 
-            <div class="services-grid">
-                {% for service in services %}
-                    <div class="service-card">
-                        <!-- Картинка -->
-                        {% if service.image %}
-                            <img src="{{ service.image.url }}" alt="{{ service.name }}" class="image" />
-                        {% else %}
-                            <img src="https://images.unsplash.com/photo-1604654894615-0548e5ad5b6e?w=600&auto=format&fit=crop" alt="{{ service.name }}" class="image" />
-                        {% endif %}
-
-                        <div class="body">
-                            <h4>{{ service.name }}</h4>
-
-                            <!-- Рейтинг и отзывы -->
-                            <div class="meta">
-                                <span class="stars">
-                                    {% for i in "12345"|make_list %}
-                                        {% if forloop.counter <= service.rating|add:"0" %}
-                                            ★
-                                        {% else %}
-                                            ☆
-                                        {% endif %}
-                                    {% endfor %}
-                                </span>
-                                ({{ service.reviews_count }})
-                            </div>
-
-                            <!-- Цена -->
-                            <div class="price-row">
-                                <span class="price">
-                                    {{ service.price }} ₽
-                                    {% if service.old_price %}
-                                        <span class="old">{{ service.old_price }} ₽</span>
-                                    {% endif %}
-                                </span>
-                                <a href="{{ service.button_link|default:'#' }}" class="btn btn-sm">
-                                    {{ service.button_text|default:'Запись' }}
-                                </a>
-                            </div>
-                        </div>
-                    </div>
-                {% empty %}
-                    <p style="text-align:center;grid-column:1/-1;color:#6b5f5a;padding:40px 0;">
-                        Услуги пока не добавлены. Зайдите в админку и создайте их.
-                    </p>
-                {% endfor %}
-            </div>
-        </div>
-    </section>
 
     <!-- ==========================================
     БЛОК ДОВЕРИЯ (статичный)
@@ -211,9 +146,7 @@
         </div>
         <div class="footer-links">
             <a href="#">Главная</a>
-            <a href="#">Услуги</a>
             <a href="#">О нас</a>
-            <a href="#">Блог</a>
             <a href="#">Контакты</a>
         </div>
     </footer>

@@ -1,0 +1,46 @@
+version: '3.8'
+
+services:
+  # Сервис Django (назовем его 'web', так как мы использовали это имя в nginx.conf)
+  web:
+    build: .
+    # Команда запуска Gunicorn. Замени 'myproject.wsgi' на название твоего проекта
+    command: gunicorn config.wsgi:application --bind 0.0.0.0:8000 --workers 3
+    volumes:
+      # Монтируем локальные папки в контейнер (для разработки) 
+      # ИЛИ используем named volumes (для продакшена). Ниже вариант для продакшена:
+      - static_volume:/app/staticfiles
+      - media_volume:/app/mediafiles
+    expose:
+      - "8000"
+    env_file:
+      - .env
+    depends_on:
+      - db # Если есть база данных
+
+  # Сервис Nginx
+  nginx:
+    build: ./nginx
+    ports:
+      - "80:80"
+      - "443:443" # Открываем, если будешь настраивать HTTPS
+    volumes:
+      # ВАЖНО: Пути внутри контейнера nginx должны совпадать с alias в nginx.conf
+      - static_volume:/vol/static
+      - media_volume:/vol/media
+    depends_on:
+      - web
+
+  # Пример сервиса базы данных (PostgreSQL)
+  db:
+    image: postgres:15-alpine
+    volumes:
+      - postgres_data:/var/lib/postgresql/data/
+    env_file:
+      - .env
+
+# Объявляем именованные тома
+volumes:
+  postgres_data:
+  static_volume:
+  media_volume:
