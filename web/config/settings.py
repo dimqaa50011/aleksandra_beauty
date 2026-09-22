@@ -27,6 +27,7 @@ SECRET_KEY = os.getenv('SECRET_KEY', 'fallback-key-if-env-is-missing')
 
 # DEBUG должен быть булевым. В .env мы храним его как '0' или '1'
 DEBUG = os.getenv('DEBUG', '0') == '1'
+DEBUG = True
 
 
 ALLOWED_HOSTS = ["*"]

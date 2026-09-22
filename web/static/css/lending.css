@@ -570,3 +570,46 @@ a {
         gap: 24px;
     }
 }
+
+/* ===== ЛОГОТИП ===== */
+.logo {
+    display: inline-flex;
+    align-items: center;
+    text-decoration: none;
+    line-height: 1;
+    flex-shrink: 0;
+}
+
+.logo img {
+    display: block;
+    height: 85px;          /* базовая высота */
+    width: auto;           /* сохраняет пропорции */
+    max-width: 100%;
+    object-fit: contain;
+    transition: height 0.2s ease, opacity 0.2s ease;
+}
+
+.logo img:hover {
+    opacity: 0.85;
+}
+
+/* Планшеты */
+@media (max-width: 768px) {
+    .logo img {
+        height: 34px;
+    }
+}
+
+/* Мобильные */
+@media (max-width: 480px) {
+    .logo img {
+        height: 28px;
+    }
+}
+
+/* Очень узкие экраны */
+@media (max-width: 360px) {
+    .logo img {
+        height: 24px;
+    }
+}
