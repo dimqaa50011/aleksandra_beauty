@@ -803,33 +803,48 @@ a {
     font-size: 0.85rem;
     color: #999;
 }
-
-
 /* ==========================================
-   КАРТА - АДАПТИВНЫЙ КОНТЕЙНЕР
+   КАРТА - КОНТЕЙНЕР
    ========================================== */
 .map-wrapper {
-    width: 100%;
-    height: 400px;
     border-radius: 20px;
     overflow: hidden;
     box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+    display: inline-block; /* Чтобы контейнер был по размеру iframe */
 }
 
 .map-wrapper iframe {
-    width: 100%;
-    height: 100%;
-    border: none;
     display: block;
+    border-radius: 20px;
 }
 
-/* Мобильная версия */
+/* ==========================================
+   КНОПКА "ЗАПИСАТЬСЯ ОНЛАЙН"
+   ========================================== */
+.contact-info .btn {
+    display: inline-block;
+    width: auto;
+    min-width: 250px;
+    text-align: center;
+    margin-top: 24px;
+}
+
+/* ==========================================
+   МОБИЛЬНАЯ ВЕРСИЯ
+   ========================================== */
 @media (max-width: 768px) {
+    /* Карта на всю ширину, подвинута вниз */
     .map-wrapper {
-        height: 300px;
-        border-radius: 15px;
+        width: 100%;
+        margin-top: 30px;
     }
     
+    .map-wrapper iframe {
+        width: 100%;
+        height: 300px;
+    }
+    
+    /* Сетка в одну колонку */
     .contacts-grid {
         grid-template-columns: 1fr;
         gap: 30px;
@@ -842,12 +857,16 @@ a {
     .contact-info {
         order: 1;
     }
+    
+    /* Кнопка на всю ширину */
+    .contact-info .btn {
+        width: 100%;
+        min-width: unset;
+    }
 }
 
-/* Очень маленькие экраны */
 @media (max-width: 480px) {
-    .map-wrapper {
+    .map-wrapper iframe {
         height: 250px;
-        border-radius: 12px;
     }
 }
