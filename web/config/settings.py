@@ -22,7 +22,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 env = Env()
 env.read_env(BASE_DIR / ".env.prod")
 
-# Quick-start development settings - unsuitable for production
+# Quick-start development settings - unsuitable for production 
 # See https://docs.djangoproject.com/en/6.0/howto/deployment/checklist/
 
 
@@ -85,11 +85,14 @@ WSGI_APPLICATION = 'config.wsgi.application'
 
 DATABASES = {
     'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
+        'ENGINE': 'django.db.backends.postgresql',
+        'NAME': env.str('POSTGRES_DB'),
+        'USER': env.str('POSTGRES_USER'),
+        'PASSWORD': env.str('POSTGRES_PASSWORD'),
+        'HOST': env.str('POSTGRES_HOST', default='db'), # 'db' - это имя сервиса в docker-compose
+        'PORT': env.str('POSTGRES_PORT', default='5432'),
     }
 }
-
 
 # Password validation
 # https://docs.djangoproject.com/en/6.0/ref/settings/#auth-password-validators
@@ -133,19 +136,21 @@ LANGUAGES = [
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/6.0/howto/static-files/
 
-STATIC_URL = 'static/'
-if DEBUG:
-    STATICFILES_DIRS = [
-        BASE_DIR / "static",
-    ]
-else:
-    STATIC_ROOT =  BASE_DIR /  'static'
-MEDIA_ROOT = BASE_DIR / "media"
-MEDIA_URL = "/media/"
+STATIC_URL = '/static/'
+MEDIA_URL = '/media/'
 
-CERT_SECRET = "47edc3f4c854514d488b73f197dbea4009513921f84d7f5ddd486a6202f26c1e"
-WEB_PASSWORDS = ["rahL4yod", "vaequ3aT", "aeV8Aiph"]
-ADMIN_API_SECRET = "2fe210f6a456df3df7aa7ce80d290e85cdaccb32ae87e6f6855cc5aa4c22e349"
+if DEBUG:
+    STATICFILES_DIRS = [BASE_DIR / "static"]
+else:
+    # В продакшене collectstatic соберет всё сюда, а Nginx отдаст из тома
+    STATIC_ROOT = BASE_DIR / 'static' 
+
+MEDIA_ROOT = BASE_DIR / "media"
+
+EMAIL_HOST_PASSWORD = env.str('EMAIL_HOST_PASSWORD')
+CERT_SECRET = env.str('CERT_SECRET')
+ADMIN_API_SECRET = env.str('ADMIN_API_SECRET')
+WEB_PASSWORDS = env.list('WEB_PASSWORDS', subcast=str, default=[])
 
 
 EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
@@ -184,3 +189,13 @@ MESSAGE_TAGS = {
     messages.ERROR: 'error',
     messages.SUCCESS: 'success',
 }
+
+
+if not DEBUG:
+    SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+    USE_X_FORWARDED_HOST = True
+    SESSION_COOKIE_SECURE = True
+    CSRF_COOKIE_SECURE = True
+    SECURE_HSTS_SECONDS = 31536000  # 1 год
+    SECURE_HSTS_INCLUDE_SUBDOMAINS = True
+    SECURE_HSTS_PRELOAD = True
