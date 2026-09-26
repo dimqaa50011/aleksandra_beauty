@@ -146,7 +146,7 @@ STATICFILES_DIRS = [
 
 # Куда команда collectstatic будет собирать все файлы для продакшена
 # (Nginx будет раздавать файлы именно отсюда)
-STATIC_ROOT = BASE_DIR / 'static'
+STATIC_ROOT = BASE_DIR / 'staticfiles'
 
 
 MEDIA_ROOT = BASE_DIR / "media"
