@@ -1,45 +1,64 @@
 version: '3.8'
 
 services:
-  # Сервис Django (назовем его 'web', так как мы использовали это имя в nginx.conf)
+  # Django (Gunicorn)
   web:
     build: .
-    # Команда запуска Gunicorn. Замени 'myproject.wsgi' на название твоего проекта
     command: gunicorn config.wsgi:application --bind 0.0.0.0:8000 --workers 3
     volumes:
-      # Монтируем локальные папки в контейнер (для разработки) 
-      # ИЛИ используем named volumes (для продакшена). Ниже вариант для продакшена:
-      - static_volume:/app/staticfiles
-      - media_volume:/app/mediafiles
+      - static_volume:/app/static
+      - media_volume:/app/media
     expose:
       - "8000"
     env_file:
-      - .env
+      - .env.prod
     depends_on:
-      - db # Если есть база данных
+      db:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://localhost:8000/')\" || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    restart: unless-stopped
 
-  # Сервис Nginx
+  # Nginx (HTTPS + сертификаты)
   nginx:
     build: ./nginx
     ports:
       - "80:80"
-      - "443:443" # Открываем, если будешь настраивать HTTPS
+      - "443:443"
     volumes:
-      # ВАЖНО: Пути внутри контейнера nginx должны совпадать с alias в nginx.conf
       - static_volume:/vol/static
       - media_volume:/vol/media
+      - ./certs:/etc/nginx/certs:ro
     depends_on:
-      - web
+      web:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider https://localhost/ || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+    restart: unless-stopped
 
-  # Пример сервиса базы данных (PostgreSQL)
+  # PostgreSQL
   db:
     image: postgres:15-alpine
     volumes:
-      - postgres_data:/var/lib/postgresql/data/
+      - postgres_data:/var/lib/postgresql/data
     env_file:
-      - .env
+      - .env.prod
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    restart: unless-stopped
 
-# Объявляем именованные тома
 volumes:
   postgres_data:
   static_volume:

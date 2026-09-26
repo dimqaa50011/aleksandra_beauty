@@ -12,25 +12,28 @@ https://docs.djangoproject.com/en/6.0/ref/settings/
 
 import os
 from pathlib import Path
+from environs import Env
+
+
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
+env = Env()
+env.read_env(BASE_DIR / ".env.prod")
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/6.0/howto/deployment/checklist/
 
-BASE_DIR = Path(__file__).resolve().parent.parent
 
 # 1. Базовые настройки Django из .env
-SECRET_KEY = os.getenv('SECRET_KEY', 'fallback-key-if-env-is-missing')
+SECRET_KEY = env.str('SECRET_KEY')
 
 # DEBUG должен быть булевым. В .env мы храним его как '0' или '1'
-DEBUG = os.getenv('DEBUG', '0') == '1'
-DEBUG = True
+DEBUG = env.bool('DEBUG')
 
 
-ALLOWED_HOSTS = ["*"]
+ALLOWED_HOSTS = env.list('ALLOWED_HOSTS')
 
 
 # Application definition
@@ -110,13 +113,21 @@ AUTH_PASSWORD_VALIDATORS = [
 # Internationalization
 # https://docs.djangoproject.com/en/6.0/topics/i18n/
 
-LANGUAGE_CODE = 'en-us'
+LANGUAGE_CODE = 'ru'
 
-TIME_ZONE = 'UTC'
+# Часовой пояс (для Санкт-Петербурга)
+TIME_ZONE = 'Europe/Moscow'
 
-USE_I18N = True
+# Обязательно добавь эти настройки, если их нет:
+USE_I18N = True  # Включает поддержку интернационализации
+USE_L10N = True  # Включает локализацию форматов (даты, числа)
+USE_TZ = True    # Включает поддержку часовых поясов
 
-USE_TZ = True
+# Список поддерживаемых языков (опционально, но полезно)
+LANGUAGES = [
+    ('ru', 'Русский'),
+]
+
 
 
 # Static files (CSS, JavaScript, Images)

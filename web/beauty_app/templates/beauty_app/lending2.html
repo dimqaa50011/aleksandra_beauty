@@ -4,48 +4,89 @@
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Glowora — Бьюти-студия</title>
+    
+    <!-- SEO: Title и Description -->
+    <title>Sasha Sugar — Бьюти-студия в СПб | Косметология, брови, ресницы</title>
+    <meta name="description" content="Бьюти-студия Sasha Sugar в Санкт-Петербурге (Спасский пер., 7). Аппаратная косметология, уход за кожей, депиляция, брови и ресницы. Онлайн-запись к мастеру!">
+    <meta name="keywords" content="бьюти студия спб, косметология санкт-петербург, спасский переулок, депиляция, брови, ресницы, Sasha Sugar, Александра Сахарова">
 
-    <!-- Google Fonts -->
+    <!-- Open Graph (для красивых ссылок в соцсетях и мессенджерах) -->
+    <meta property="og:title" content="Sasha Sugar — Бьюти-студия в Санкт-Петербурге">
+    <meta property="og:description" content="Раскрой своё природное сияние. Косметология, депиляция, брови и ресницы на Спасском переулке, 7.">
+    <meta property="og:image" content="https://твой-домен.ru{% static 'images/og-cover.jpg' %}">
+    <meta property="og:url" content="https://твой-домен.ru">
+    <meta property="og:type" content="website">
+    <meta property="og:locale" content="ru_RU">
+
+    <!-- Google Fonts и стили -->
     <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,300;14..32,400;14..32,600;14..32,700&display=swap" rel="stylesheet" />
-
-    <!-- ===== СТИЛИ ИЗ СТАТИКИ ===== -->
     <link rel="stylesheet" href="{% static 'css/lending.css' %}">
+
+    <!-- Микроразметка Schema.org для локального бизнеса -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "BeautySalon",
+      "name": "Бьюти-студия Sasha Sugar",
+      "image": "https://твой-домен.ru{% static 'images/logo4.png' %}",
+      "description": "Аппаратная косметология, уход за кожей, депиляция, брови и ресницы в Санкт-Петербурге.",
+      "address": {
+        "@type": "PostalAddress",
+        "streetAddress": "Спасский переулок, д. 7",
+        "addressLocality": "Санкт-Петербург",
+        "addressCountry": "RU"
+      },
+      "geo": {
+        "@type": "GeoCoordinates",
+        "latitude": 59.9265, 
+        "longitude": 30.3245
+      },
+      "url": "https://твой-домен.ru",
+      "telephone": "+79052698654",
+      "openingHoursSpecification": [
+        {
+          "@type": "OpeningHoursSpecification",
+          "dayOfWeek": ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"],
+          "opens": "09:00",
+          "closes": "22:00"
+        }
+      ],
+      "priceRange": "₽₽"
+    }
+    </script>
 </head>
 <body>
 
-    <!-- ==========================================
-    НАВИГАЦИЯ (статичная)
-    ========================================== -->
+    <!-- НАВИГАЦИЯ -->
     <nav class="navbar">
         <div class="container">
             <div class="logo">
-                <img src="{% static 'images/logo4.png' %}" alt="">
+                <img src="{% static 'images/logo4.png' %}" alt="Логотип бьюти-студии Sasha Sugar">
             </div>
             <div class="nav-links">
-                <a href="#">Главная</a>
-                <a href="#">О нас</a>
-                <a href="#">Контакты</a>
+                <a href="#hero">Главная</a>
+                <a href="#about">О нас</a>
+                <a href="#contacts">Контакты</a>
             </div>
             <div class="nav-actions">
-                <a href="https://spb.moiprofi.ru/aleksandrasaharova/" class="btn btn-sm">Записаться</a>
+                <a href="https://spb.moiprofi.ru/aleksandrasaharova/" class="btn btn-sm" target="_blank" rel="noopener" title="Онлайн-запись к Александре Сахаровой">Записаться</a>
                 <button class="menu-toggle" aria-label="Меню">☰</button>
             </div>
         </div>
     </nav>
 
-    <!-- ==========================================
-    ГЕРОЙ (картинка из админки)
-    ========================================== -->
-    <section class="hero">
+    <!-- ГЕРОЙ -->
+    <section class="hero" id="hero">
         <div class="container hero-grid">
             <div class="hero-content">
                 <div class="badge">✨ Новая коллекция</div>
-                <h1>Раскрой своё<br /><span>природное сияние</span></h1>
+                
+                <h1>Бьюти-студия Sasha Sugar в СПб:<br /><span>раскрой своё природное сияние</span></h1>
+                
                 <p class="sub">
-                    Уход за кожей, аппаратная косметология, подбор домашнего ухода, депиляция, брови и ресницы - все в одном месте.
+                    Уход за кожей, аппаратная косметология, подбор домашнего ухода, депиляция, брови и ресницы — всё в одном месте.
                 </p>
-                <a href="#" class="btn">Записаться сейчас</a>
+                <a href="https://spb.moiprofi.ru/aleksandrasaharova/" class="btn" target="_blank" rel="noopener">Записаться сейчас</a>
                 <div class="hero-stats">
                     <div class="stat">
                         <span class="number">5K+</span>
@@ -58,21 +99,18 @@
                 </div>
             </div>
 
-            <!-- ===== КАРТИНКА ИЗ АДМИНКИ ===== -->
             {% if hero and hero.hero_image %}
-                <img src="{{ hero.hero_image.url }}" alt="{{ hero.title }}" class="hero-image" />
+                <img src="{{ hero.hero_image.url }}" alt="{{ hero.title|default:'Интерьер бьюти-студии Sasha Sugar' }}" class="hero-image" />
             {% else %}
-                <img src="https://images.unsplash.com/photo-1595476108010-b4d1f102b1b1?w=800&auto=format&fit=crop" alt="Бьюти-мастер" class="hero-image" />
+                <img src="https://images.unsplash.com/photo-1595476108010-b4d1f102b1b1?w=800&auto=format&fit=crop" alt="Бьюти-мастер в студии Sasha Sugar" class="hero-image" />
             {% endif %}
         </div>
     </section>
 
-    <!-- ==========================================
-    КАТЕГОРИИ (ИЗ АДМИНКИ)
-    ========================================== -->
+    <!-- КАТЕГОРИИ (УСЛУГИ) -->
     <section class="section">
         <div class="container">
-            <span class="section-tag">✦ Услуги</span>
+            <span class="section-tag"> Услуги</span>
             <h2 class="section-title">Наши услуги</h2>
             <div class="categories-grid">
                 {% for category in categories %}    
@@ -92,64 +130,95 @@
         </div>
     </section>
 
-    <!-- ==========================================
-    БАННЕР (статичный)
-    ========================================== -->
-    <section class="section" style="padding-top: 0;">
+    <!-- О НАС -->
+    <section class="section" id="about">
         <div class="container">
-            <div class="banner">
-                <div>
-                    <h2>Уход, который <br /><span>любит тебя</span></h2>
-                    <p>Скидка 20% на наши бестселлеры. Предложение ограничено!</p>
+            <div class="about-grid">
+                <div class="about-content">
+                    <span class="section-tag">✦ О студии</span>
+                    <h2 class="section-title">Мы создаем красоту <br /><span>с любовью к деталям</span></h2>
+                    <p class="about-text">
+                        Sasha Sugar — это пространство, где профессионализм встречается с уютом. 
+                        Мы используем только сертифицированные материалы и современное оборудование, 
+                        чтобы подчеркнуть вашу естественную красоту. Наша команда — это опытные мастера, 
+                        которые постоянно повышают свою квалификацию и следят за мировыми трендами в бьюти-индустрии.
+                    </p>
+                    <ul class="about-features">
+                        <li>✨ Сертифицированные мастера с опытом от 5 лет</li>
+                        <li> Гипоаллергенная и премиальная косметика</li>
+                        <li>☕ Уютная атмосфера и чайная церемония для каждого гостя</li>
+                    </ul>
                 </div>
-                <div class="offer-badge">20% <small>OFF</small></div>
-            </div>
-        </div>
-    </section>
-
-
-
-    <!-- ==========================================
-    БЛОК ДОВЕРИЯ (статичный)
-    ========================================== -->
-    <section class="section" style="padding-top: 20px;">
-        <div class="container">
-            <div class="trust-section">
-                <div class="left">
-                    <h2>Красота, которая <br /><span>любит тебя</span></h2>
-                    <p>Скидка 20% на наши бестселлеры. Предложение ограничено!</p>
-                </div>
-                <div class="trust-stats">
-                    <div class="item">
-                        <div class="stars">★★★★★</div>
-                        <div class="number">4.8</div>
-                        <div class="label">Средний рейтинг</div>
-                    </div>
-                    <div class="item">
-                        <div class="number">10K+</div>
-                        <div class="label">Довольных клиентов</div>
-                    </div>
-                    <div class="item">
-                        <div class="number">98%</div>
-                        <div class="label">Возвращаются</div>
-                    </div>
+                <div class="about-image">
+                    <img src="https://images.unsplash.com/photo-1560066984-138dadb4c035?w=800&auto=format&fit=crop" alt="Уютный интерьер студии Sasha Sugar на Спасском переулке" />
                 </div>
             </div>
         </div>
     </section>
 
-    <!-- ==========================================
-    ФУТЕР (статичный)
-    ========================================== -->
+    <!-- КОНТАКТЫ -->
+    <section class="section" id="contacts" style="background-color: #faf9f8;">
+        <div class="container">
+            <span class="section-tag">✦ Контакты</span>
+            <h2 class="section-title">Ждем вас в гости</h2>
+            
+            <div class="contacts-grid">
+                <div class="contact-info">
+                    <div class="contact-item">
+                        <span class="contact-icon">📍</span>
+                        <div>
+                            <h4>Адрес</h4>
+                            <p>г. Санкт-Петербург, Спасский переулок, д. 7</p>
+                        </div>
+                    </div>
+                    <div class="contact-item">
+                        <span class="contact-icon"></span>
+                        <div>
+                            <h4>Телефон</h4>
+                            <p><a href="tel:+79052698654">+7 (905) 269-86-54</a></p>
+                        </div>
+                    </div>
+                    <div class="contact-item">
+                        <span class="contact-icon"></span>
+                        <div>
+                            <h4>Режим работы</h4>
+                            <p>Ежедневно с 09:00 до 22:00</p>
+                        </div>
+                    </div>
+                    <div class="contact-item">
+                        <span class="contact-icon">✉️</span>
+                        <div>
+                            <h4>Email</h4>
+                            <p><a href="mailto:hello@sashasugar.ru">hello@sashasugar.ru</a></p>
+                        </div>
+                    </div>
+                    
+                    <a href="https://spb.moiprofi.ru/aleksandrasaharova/" class="btn" style="margin-top: 24px; display: inline-block;" target="_blank" rel="noopener">
+                        Записаться онлайн
+                    </a>
+                </div>
+
+                <div class="contact-map">
+                    <div class="map-placeholder">
+                        <iframe src="https://yandex.ru/map-widget/v1/?um=constructor%3A7061c1ee1fa2d23b9bf1312525474d32e6e427449bf3a521d2ab3c5311042c92&amp;source=constructor" width="100%" height="400" frameborder="0" loading="lazy" style="border-radius: 20px;"></iframe>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ФУТЕР -->
     <footer class="container footer">
         <div>
-            <a href="#" class="logo">Glow<span>ora</span></a>
-            <p style="margin-top: 4px; font-size: 0.85rem;">© 2026 — Бьюти-студия</p>
+            <div class="logo">
+                <img src="{% static 'images/logo4.png' %}" alt="Логотип Sasha Sugar">
+            </div>
+            <p style="margin-top: 8px; font-size: 0.85rem; color: #6b5f5a;">© 2026 — Бьюти-студия Sasha Sugar</p>
         </div>
         <div class="footer-links">
-            <a href="#">Главная</a>
-            <a href="#">О нас</a>
-            <a href="#">Контакты</a>
+            <a href="#hero">Главная</a>
+            <a href="#about">О нас</a>
+            <a href="#contacts">Контакты</a> 
         </div>
     </footer>
 
