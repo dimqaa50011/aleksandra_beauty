@@ -140,11 +140,11 @@ LANGUAGES = [
 STATIC_URL = '/static/'
 MEDIA_URL = '/media/'
 
-# if DEBUG:
-STATICFILES_DIRS = [BASE_DIR / "static"]
-# else:
+if DEBUG:
+    STATICFILES_DIRS = [BASE_DIR / "static"]
+else:
     # В продакшене collectstatic соберет всё сюда, а Nginx отдаст из тома
-    # STATIC_ROOT = BASE_DIR / 'static' 
+    STATIC_ROOT = BASE_DIR / 'static' 
 
 MEDIA_ROOT = BASE_DIR / "media"
 
