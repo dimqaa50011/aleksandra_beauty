@@ -739,6 +739,7 @@ a {
 @media (max-width: 968px) {
     .about-grid,
     .contacts-grid {
+        display: block;
         grid-template-columns: 1fr;
         gap: 40px;
     }
@@ -849,6 +850,7 @@ a {
     
     /* Сетка в одну колонку */
     .contacts-grid {
+        display: block;
         grid-template-columns: 1fr !important;
         gap: 30px !important;
     }
@@ -919,6 +921,7 @@ a {
     
     /* Контакты в одну колонку */
     .contacts-grid {
+        display: block;
         grid-template-columns: 1fr;
         gap: 30px;
     }
