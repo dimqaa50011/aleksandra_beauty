@@ -807,26 +807,29 @@ a {
    КАРТА - КОНТЕЙНЕР
    ========================================== */
 .map-wrapper {
-    border-radius: 20px;
-    overflow: hidden;
-    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
-    display: inline-block; /* Чтобы контейнер был по размеру iframe */
+    display: inline-block !important;
+    border-radius: 20px !important;
+    overflow: hidden !important;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08) !important;
 }
 
 .map-wrapper iframe {
-    display: block;
-    border-radius: 20px;
+    display: block !important;
+    border-radius: 20px !important;
 }
 
 /* ==========================================
-   КНОПКА "ЗАПИСАТЬСЯ ОНЛАЙН"
+   КНОПКА "ЗАПИСАТЬСЯ ОНЛАЙН" - ДЕСКТОП
    ========================================== */
 .contact-info .btn {
-    display: inline-block;
-    width: auto;
-    min-width: 250px;
-    text-align: center;
-    margin-top: 24px;
+    display: inline-block !important;
+    align-self: flex-start !important; /* Ключевая строка! */
+    width: auto !important;
+    min-width: 280px !important;
+    max-width: 400px !important;
+    text-align: center !important;
+    margin-top: 24px !important;
+    padding: 16px 40px !important;
 }
 
 /* ==========================================
@@ -835,38 +838,40 @@ a {
 @media (max-width: 768px) {
     /* Карта на всю ширину, подвинута вниз */
     .map-wrapper {
-        width: 100%;
-        margin-top: 30px;
+        width: 100% !important;
+        margin-top: 30px !important;
     }
     
     .map-wrapper iframe {
-        width: 100%;
-        height: 300px;
+        width: 100% !important;
+        height: 300px !important;
     }
     
     /* Сетка в одну колонку */
     .contacts-grid {
-        grid-template-columns: 1fr;
-        gap: 30px;
+        grid-template-columns: 1fr !important;
+        gap: 30px !important;
     }
     
     .contact-map {
-        order: 2;
+        order: 2 !important;
     }
     
     .contact-info {
-        order: 1;
+        order: 1 !important;
     }
     
-    /* Кнопка на всю ширину */
+    /* Кнопка на всю ширину на мобильных */
     .contact-info .btn {
-        width: 100%;
-        min-width: unset;
+        width: 100% !important;
+        min-width: unset !important;
+        max-width: 100% !important;
+        align-self: stretch !important;
     }
 }
 
 @media (max-width: 480px) {
     .map-wrapper iframe {
-        height: 250px;
+        height: 250px !important;
     }
 }
