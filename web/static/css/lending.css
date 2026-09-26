@@ -938,3 +938,61 @@ a {
         height: 220px;
     }
 }
+
+/* ==========================================
+   КОНТАКТЫ - МОБИЛЬНАЯ ВЕРСИЯ
+   ========================================== */
+@media (max-width: 768px) {
+    /* Уменьшаем отступы между блоками контактов */
+    .contact-info {
+        gap: 20px !important;
+    }
+    
+    /* Уменьшаем отступы внутри каждого элемента */
+    .contact-item {
+        gap: 12px !important;
+        margin-bottom: 0 !important;
+    }
+    
+    /* Уменьшаем размер иконки */
+    .contact-icon {
+        font-size: 1.4rem !important;
+        min-width: 30px !important;
+    }
+    
+    /* Уменьшаем заголовки */
+    .contact-item h4 {
+        font-size: 0.95rem !important;
+        margin-bottom: 4px !important;
+    }
+    
+    /* Уменьшаем текст */
+    .contact-item p {
+        font-size: 0.9rem !important;
+        line-height: 1.4 !important;
+    }
+}
+
+/* Для очень маленьких экранов */
+@media (max-width: 480px) {
+    .contact-info {
+        gap: 16px !important;
+    }
+    
+    .contact-item {
+        gap: 10px !important;
+    }
+    
+    .contact-icon {
+        font-size: 1.2rem !important;
+        min-width: 25px !important;
+    }
+    
+    .contact-item h4 {
+        font-size: 0.9rem !important;
+    }
+    
+    .contact-item p {
+        font-size: 0.85rem !important;
+    }
+}
