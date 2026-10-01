@@ -1,0 +1,198 @@
+{% extends 'dashboard_base.html' %}
+{% load static %}
+
+{% block title %}Заблокировать время{% endblock %}
+
+{% block page_title %}
+    <a href="{% url 'beauty_app:blocked_slots_list' %}" class="back-link">
+        <i class="fas fa-arrow-left"></i> Назад
+    </a>
+    <span class="page-title-text">Заблокировать время</span>
+{% endblock %}
+
+{% block content %}
+<div class="dashboard">
+    <div class="form-container">
+        <form method="post">
+            {% csrf_token %}
+            
+            {% if form.errors %}
+                <div class="form-errors">
+                    {% for field, errors in form.errors.items %}
+                        {% for error in errors %}
+                            <div class="alert alert-error">{{ error }}</div>
+                        {% endfor %}
+                    {% endfor %}
+                </div>
+            {% endif %}
+
+            <div class="form-group">
+                <label for="id_date">Дата *</label>
+                {{ form.date }}
+            </div>
+
+            <div class="form-row">
+                <div class="form-group" style="flex: 1;">
+                    <label for="id_start_time">Начало *</label>
+                    {{ form.start_time }}
+                </div>
+                <div class="form-group" style="flex: 1;">
+                    <label for="id_end_time">Конец *</label>
+                    {{ form.end_time }}
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label for="id_slot_type">Тип *</label>
+                {{ form.slot_type }}
+            </div>
+
+            <div class="form-group">
+                <label for="id_reason">Причина</label>
+                {{ form.reason }}
+            </div>
+
+            <div class="form-actions">
+                <button type="submit" class="btn btn-primary">
+                    <i class="fas fa-save"></i> Заблокировать
+                </button>
+                <a href="{% url 'beauty_app:blocked_slots_list' %}" class="btn btn-secondary">Отмена</a>
+            </div>
+        </form>
+    </div>
+</div>
+
+<style>
+            /* Принудительный 24-часовой формат для полей времени */
+        input[type="time"] {
+            /* Убираем нативные стрелки AM/PM в некоторых браузерах */
+            -webkit-appearance: none;
+            -moz-appearance: none;
+            appearance: none;
+            
+            /* Форсируем моноширинный шрифт для цифр */
+            font-family: 'Courier New', monospace;
+            font-size: 1rem;
+        }
+
+        /* Для Safari/iOS: скрываем нативный селектор AM/PM */
+        input[type="time"]::-webkit-calendar-picker-indicator {
+            display: none;
+            -webkit-appearance: none;
+        }
+    .back-link {
+        color: #f2a6b0;
+        text-decoration: none;
+        font-size: 0.9rem;
+        font-weight: 600;
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+    }
+
+    .back-link:hover {
+        color: #e8919c;
+    }
+
+    .page-title-text {
+        font-size: 1.3rem;
+        font-weight: 700;
+        color: #2d2a28;
+        margin-left: 16px;
+    }
+
+    .form-container {
+        background: #fff;
+        border-radius: 20px;
+        border: 1px solid #f0e8e5;
+        padding: 32px;
+        max-width: 600px;
+    }
+
+    .form-group {
+        margin-bottom: 24px;
+    }
+
+    .form-group label {
+        display: block;
+        font-size: 0.9rem;
+        font-weight: 600;
+        color: #2d2a28;
+        margin-bottom: 8px;
+    }
+
+    .form-control {
+        width: 100%;
+        padding: 12px 16px;
+        border: 1px solid #e8e0dd;
+        border-radius: 12px;
+        font-size: 1rem;
+        background: #fcf9f7;
+        transition: border-color 0.2s;
+    }
+
+    .form-control:focus {
+        outline: none;
+        border-color: #f2a6b0;
+        background: #fff;
+    }
+
+    .form-row {
+        display: flex;
+        gap: 16px;
+    }
+
+    .form-actions {
+        display: flex;
+        gap: 12px;
+        margin-top: 32px;
+    }
+
+    .btn {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        padding: 12px 24px;
+        border-radius: 60px;
+        font-weight: 600;
+        text-decoration: none;
+        border: none;
+        cursor: pointer;
+        transition: all 0.25s ease;
+    }
+
+    .btn-primary {
+        background: #f2a6b0;
+        color: #fff;
+    }
+
+    .btn-primary:hover {
+        background: #e8919c;
+        transform: translateY(-2px);
+    }
+
+    .btn-secondary {
+        background: #f0e8e5;
+        color: #6b5f5a;
+    }
+
+    .btn-secondary:hover {
+        background: #e8e0dd;
+    }
+
+    .alert-error {
+        background: #fce4ec;
+        color: #c62828;
+        padding: 12px 16px;
+        border-radius: 8px;
+        margin-bottom: 16px;
+    }
+
+    @media (max-width: 600px) {
+        .form-row {
+            flex-direction: column;
+            gap: 0;
+        }
+    }
+</style>
+{% endblock %}

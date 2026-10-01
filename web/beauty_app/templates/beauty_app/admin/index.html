@@ -93,6 +93,30 @@
             </span>
         </div>
     </a>
+
+    <!-- ===== ПЛИТКА: Заблокированные слоты ===== -->
+    <a href="{% url 'beauty_app:blocked_slots_list' %}" class="dash-card dash-card-blocked">
+        <div class="dash-card-icon"></div>
+        <div class="dash-card-body">
+            <h3 class="dash-card-title">Блокировки</h3>
+            <p class="dash-card-desc">Выходные и личные дела</p>
+            <span class="dash-card-arrow">
+                <i class="fas fa-arrow-right"></i>
+            </span>
+        </div>
+    </a>
+
+    <!-- ===== ПЛИТКА: Ручная запись ===== -->
+    <a href="{% url 'beauty_app:admin_booking_create' %}" class="dash-card dash-card-manual-booking">
+        <div class="dash-card-icon">📞</div>
+        <div class="dash-card-body">
+            <h3 class="dash-card-title">Новая запись</h3>
+            <p class="dash-card-desc">Ручное добавление записи</p>
+            <span class="dash-card-arrow">
+                <i class="fas fa-arrow-right"></i>
+            </span>
+        </div>
+    </a>
 </div>
 
 <style>

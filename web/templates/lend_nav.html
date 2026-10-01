@@ -1,0 +1,17 @@
+{% load static %}
+<nav class="navbar">
+        <div class="container">
+            <div class="logo">
+                <img src="{% static 'images/logo4.png' %}" alt="Логотип бьюти-студии Sasha Sugar">
+            </div>
+            <div class="nav-links">
+                <a href="#hero">Главная</a>
+                <a href="#about">О нас</a>
+                <a href="#contacts">Контакты</a>
+            </div>
+            <div class="nav-actions">
+                <a href="{% url 'beauty_app:booking_create' %}" class="btn btn-sm" target="_blank" rel="noopener" title="Онлайн-запись к Александре Сахаровой">Записаться</a>
+                <button class="menu-toggle" aria-label="Меню">☰</button>
+            </div>
+        </div>
+    </nav>

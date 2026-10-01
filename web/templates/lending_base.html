@@ -1,0 +1,78 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    
+    <!-- SEO: Title и Description -->
+    <title>{% block title %}{% endblock title %}</title>
+    <meta name="description" content="Бьюти-студия Sasha Sugar в Санкт-Петербурге (Спасский пер., 7). Аппаратная косметология, уход за кожей, депиляция, брови и ресницы. Онлайн-запись к мастеру!">
+    <meta name="keywords" content="бьюти студия спб, косметология санкт-петербург, спасский переулок, депиляция, брови, ресницы, Sasha Sugar, Александра Сахарова">
+
+    <!-- Open Graph (для красивых ссылок в соцсетях и мессенджерах) -->
+    <meta property="og:title" content="Sasha Sugar — Бьюти-студия в Санкт-Петербурге">
+    <meta property="og:description" content="Раскрой своё природное сияние. Косметология, депиляция, брови и ресницы на Спасском переулке, 7.">
+    <meta property="og:image" content="https://sasha-sugar.ru{% static 'images/og-cover.jpg' %}">
+    <meta property="og:url" content="https://sasha-sugar.ru">
+    <meta property="og:type" content="website">
+    <meta property="og:locale" content="ru_RU">
+    <link rel="icon" href='{% static "images/favico.png" %}' type="image/png">
+
+    <!-- Google Fonts и стили -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,300;14..32,400;14..32,600;14..32,700&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="{% static 'css/lending.css' %}">
+
+    <!-- Микроразметка Schema.org для локального бизнеса -->    
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "BeautySalon",
+      "name": "Бьюти-студия Sasha Sugar",
+      "image": "https://sasha-sugar.ru{% static 'images/logo4.png' %}",
+      "description": "Аппаратная косметология, уход за кожей, депиляция, брови и ресницы в Санкт-Петербурге.",
+      "address": {
+        "@type": "PostalAddress",
+        "streetAddress": "Спасский переулок, д. 7",
+        "addressLocality": "Санкт-Петербург",
+        "addressCountry": "RU"
+      },
+      "geo": {
+        "@type": "GeoCoordinates",
+        "latitude": 59.9265, 
+        "longitude": 30.3245
+      },
+      "url": "https://sasha-sugar.ru",
+      "telephone": "+79052698654",
+      "openingHoursSpecification": [
+        {
+          "@type": "OpeningHoursSpecification",
+          "dayOfWeek": ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"],
+          "opens": "09:00",
+          "closes": "22:00"
+        }
+      ],
+      "priceRange": "₽₽"
+    }
+    </script>
+</head>
+<body>
+    {% include "lend_nav.html" %}
+    {% block content %}{% endblock content %}
+
+    <footer class="container footer">
+        <div>
+            <div class="logo">
+                <img src="{% static 'images/logo4.png' %}" alt="Логотип Sasha Sugar">
+            </div>
+            <p style="margin-top: 8px; font-size: 0.85rem; color: #6b5f5a;">© 2026 — Бьюти-студия Sasha Sugar</p>
+        </div>
+        <div class="footer-links">
+            <a href="#hero">Главная</a>
+            <a href="#about">О нас</a>
+            <a href="#contacts">Контакты</a> 
+        </div>
+    </footer>
+
+</body>
+</html>

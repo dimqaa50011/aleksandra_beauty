@@ -1,5 +1,6 @@
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib import messages
+from django_q.tasks import async_task
 from .models import PostIdea, PostContent
 
 def gen_posts(request):
@@ -34,38 +35,15 @@ def gen_posts(request):
 
 
 def generate_post(request, idea_id):
-    """Отдельная вьюха для генерации поста (пока заглушка)"""
+    """Отдельная вьюха для запуска генерации в фоне"""
     
     idea = get_object_or_404(PostIdea, id=idea_id)
     
     if request.method == 'POST':
-        # TODO: Здесь будет вызов GigaChat API
-        # Пока создаём заглушку
-        PostContent.objects.create(
-            idea=idea,
-            variant_name='Вариант 1',
-            headline=f'Заголовок для: {idea.topic}',
-            body=f'Текст поста про {idea.topic}. Здесь будет сгенерированный текст от GigaChat.',
-            hashtags='#sashasugar #spb #beauty'
-        )
+        # Отправляем задачу в фоновую очередь!
+        # Первый аргумент - строка с путем к функции, второй - аргументы
+        async_task('gen_posts_app.tasks.generate_post_task', idea.id)
         
-        # Меняем статус идеи
-        idea.status = 'in_progress'
-        idea.save()
-        
-        messages.success(request, f'✨ Пост для идеи "{idea.topic}" сгенерирован!')
+        messages.success(request, f'⏳ Генерация для "{idea.topic}" запущена в фоне!')
     
-    return redirect('gen_posts_app:gen_posts')
-
-def idea_posts(request, idea_id):
-    """Страница со всеми сгенерированными постами для конкретной идеи"""
-    
-    idea = get_object_or_404(PostIdea, id=idea_id)
-    posts = idea.posts.all().order_by('-created_at')  # Сначала самые свежие
-    
-    context = {
-        'idea': idea,
-        'posts': posts,
-    }
-    
-    return render(request, 'gen_posts_app/idea_posts.html', context)
+    return redirect('gen_posts_app:idea_posts', idea_id=idea.id)

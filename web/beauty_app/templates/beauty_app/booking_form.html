@@ -1,0 +1,143 @@
+{% extends 'lending_base.html' %}
+{% load static %}
+
+{% block title %}Онлайн-запись — Sasha Sugar{% endblock %}
+
+{% block content %}
+<div class="container" style="padding-top: 120px; padding-bottom: 80px; max-width: 600px;">
+    <h1 class="section-title" style="text-align: center; margin-bottom: 32px;">Онлайн-запись</h1>
+    
+    <form method="post" id="bookingForm" class="booking-form">
+        {% csrf_token %}
+        
+        <div class="form-group">
+            <label>Категория</label>
+            {{ form.category }}
+        </div>
+        
+        <div class="form-group">
+            <label>Услуга *</label>
+            {{ form.service }}
+        </div>
+
+        <div class="form-row">
+            <div class="form-group" style="flex: 1;">
+                <label>Дата *</label>
+                {{ form.appointment_date }}
+            </div>
+            <div class="form-group" style="flex: 1;">
+                <label>Время *</label>
+                {{ form.appointment_time }}
+                <small id="timeHelp" style="color: #6b5f5a; display: none;">Выберите дату и услугу, чтобы увидеть доступное время</small>
+            </div>
+        </div>
+
+        <div class="form-group">
+            <label>Ваше имя *</label>
+            {{ form.client_name }}
+        </div>
+        
+        <div class="form-row">
+            <div class="form-group" style="flex: 1;">
+                <label>Телефон *</label>
+                {{ form.phone }}
+            </div>
+            <div class="form-group" style="flex: 1;">
+                <label>Email</label>
+                {{ form.email }}
+            </div>
+        </div>
+
+        {% if form.errors %}
+            <div class="form-errors" style="color: #c62828; background: #fce4ec; padding: 12px; border-radius: 8px; margin-bottom: 16px;">
+                {% for field, errors in form.errors.items %}
+                    {% for error in errors %}
+                        <p style="margin: 0;">{{ error }}</p>
+                    {% endfor %}
+                {% endfor %}
+            </div>
+        {% endif %}
+
+        <button type="submit" class="btn btn-primary" style="width: 100%; margin-top: 16px;">
+            Записаться
+        </button>
+    </form>
+</div>
+
+<style>
+    .form-group { margin-bottom: 20px; }
+    .form-group label { display: block; font-weight: 600; margin-bottom: 8px; color: #2d2a28; }
+    .form-row { display: flex; gap: 16px; }
+    .form-control {
+        width: 100%; padding: 12px; border: 1px solid #e8e0dd; border-radius: 12px;
+        font-size: 1rem; background: #fcf9f7; transition: border-color 0.2s;
+    }
+    .form-control:focus { outline: none; border-color: #f2a6b0; background: #fff; }
+    
+    @media (max-width: 600px) {
+        .form-row { flex-direction: column; gap: 0; }
+    }
+</style>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const dateInput = document.querySelector('input[name="appointment_date"]');
+        const serviceSelect = document.querySelector('select[name="service"]');
+        const timeSelect = document.querySelector('select[name="appointment_time"]');
+        const timeHelp = document.getElementById('timeHelp');
+
+        function fetchAvailableTimes() {
+            const date = dateInput.value;
+            const serviceId = serviceSelect.value;
+
+            if (!date || !serviceId) {
+                timeSelect.innerHTML = '<option value="">Сначала выберите дату и услугу</option>';
+                timeHelp.style.display = 'block';
+                return;
+            }
+
+            timeHelp.style.display = 'none';
+            timeSelect.innerHTML = '<option value="">Загрузка...</option>';
+
+            fetch(`/api/available-times/?date=${date}&service_id=${serviceId}`)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.is_blocked) {
+                        timeSelect.innerHTML = '<option value="" disabled> Этот день полностью заблокирован</option>';
+                        timeHelp.textContent = 'Студия не работает в эту дату. Пожалуйста, выберите другой день.';
+                        timeHelp.style.display = 'block';
+                        timeHelp.style.color = '#d4838e';
+                    } else if (data.times.length === 0) {
+                        if (data.blocked_count > 0) {
+                            timeSelect.innerHTML = '<option value="" disabled>⚠️ Часть дня заблокирована</option>';
+                            timeHelp.textContent = 'Есть заблокированные слоты. Попробуйте другое время или дату.';
+                        } else {
+                            timeSelect.innerHTML = '<option value="" disabled>На этот день нет свободных окон</option>';
+                            timeHelp.textContent = 'Все мастера заняты. Попробуйте другую дату.';
+                        }
+                        timeHelp.style.display = 'block';
+                    } else {
+                        timeSelect.innerHTML = '<option value="">Выберите время</option>';
+                        data.times.forEach(time => {
+                            const option = document.createElement('option');
+                            option.value = time;
+                            option.textContent = time;
+                            timeSelect.appendChild(option);
+                        });
+                    }
+                })
+                .catch(error => {
+                    console.error('Ошибка:', error);
+                    timeSelect.innerHTML = '<option value="">Ошибка загрузки</option>';
+                });
+        }
+
+        dateInput.addEventListener('change', fetchAvailableTimes);
+        serviceSelect.addEventListener('change', fetchAvailableTimes);
+
+        if (serviceSelect.value && dateInput.value) {
+            fetchAvailableTimes();
+        }
+    });
+</script>
+{% endblock %}

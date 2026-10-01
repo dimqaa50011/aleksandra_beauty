@@ -1,80 +1,8 @@
+{% extends 'lending_base.html' %}
 {% load static %}
-<!DOCTYPE html>
-<html lang="ru">
-<head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    
-    <!-- SEO: Title и Description -->
-    <title>Sasha Sugar — Бьюти-студия в СПб | Косметология, брови, ресницы</title>
-    <meta name="description" content="Бьюти-студия Sasha Sugar в Санкт-Петербурге (Спасский пер., 7). Аппаратная косметология, уход за кожей, депиляция, брови и ресницы. Онлайн-запись к мастеру!">
-    <meta name="keywords" content="бьюти студия спб, косметология санкт-петербург, спасский переулок, депиляция, брови, ресницы, Sasha Sugar, Александра Сахарова">
 
-    <!-- Open Graph (для красивых ссылок в соцсетях и мессенджерах) -->
-    <meta property="og:title" content="Sasha Sugar — Бьюти-студия в Санкт-Петербурге">
-    <meta property="og:description" content="Раскрой своё природное сияние. Косметология, депиляция, брови и ресницы на Спасском переулке, 7.">
-    <meta property="og:image" content="https://sasha-sugar.ru{% static 'images/og-cover.jpg' %}">
-    <meta property="og:url" content="https://sasha-sugar.ru">
-    <meta property="og:type" content="website">
-    <meta property="og:locale" content="ru_RU">
-    <link rel="icon" href='{% static "images/favico.png" %}' type="image/png">
-
-    <!-- Google Fonts и стили -->
-    <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,300;14..32,400;14..32,600;14..32,700&display=swap" rel="stylesheet" />
-    <link rel="stylesheet" href="{% static 'css/lending.css' %}">
-
-    <!-- Микроразметка Schema.org для локального бизнеса -->    
-    <script type="application/ld+json">
-    {
-      "@context": "https://schema.org",
-      "@type": "BeautySalon",
-      "name": "Бьюти-студия Sasha Sugar",
-      "image": "https://sasha-sugar.ru{% static 'images/logo4.png' %}",
-      "description": "Аппаратная косметология, уход за кожей, депиляция, брови и ресницы в Санкт-Петербурге.",
-      "address": {
-        "@type": "PostalAddress",
-        "streetAddress": "Спасский переулок, д. 7",
-        "addressLocality": "Санкт-Петербург",
-        "addressCountry": "RU"
-      },
-      "geo": {
-        "@type": "GeoCoordinates",
-        "latitude": 59.9265, 
-        "longitude": 30.3245
-      },
-      "url": "https://sasha-sugar.ru",
-      "telephone": "+79052698654",
-      "openingHoursSpecification": [
-        {
-          "@type": "OpeningHoursSpecification",
-          "dayOfWeek": ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"],
-          "opens": "09:00",
-          "closes": "22:00"
-        }
-      ],
-      "priceRange": "₽₽"
-    }
-    </script>
-</head>
-<body>
-
-    <!-- НАВИГАЦИЯ -->
-    <nav class="navbar">
-        <div class="container">
-            <div class="logo">
-                <img src="{% static 'images/logo4.png' %}" alt="Логотип бьюти-студии Sasha Sugar">
-            </div>
-            <div class="nav-links">
-                <a href="#hero">Главная</a>
-                <a href="#about">О нас</a>
-                <a href="#contacts">Контакты</a>
-            </div>
-            <div class="nav-actions">
-                <a href="https://spb.moiprofi.ru/aleksandrasaharova/" class="btn btn-sm" target="_blank" rel="noopener" title="Онлайн-запись к Александре Сахаровой">Записаться</a>
-                <button class="menu-toggle" aria-label="Меню">☰</button>
-            </div>
-        </div>
-    </nav>
+{% block title %}Категории услуг — Sasha Sugar{% endblock %}
+{% block content %}
 <div class="container" style="padding-top: 120px; padding-bottom: 80px;">
     
     <!-- Хлебные крошки -->
@@ -132,8 +60,8 @@
                             <span class="current-price">{{ service.price }} ₽</span>
                         </div>
                         
-                        <a href="{{ service.button_link }}" class="btn btn-sm" target="_blank" rel="noopener">
-                            {{ service.button_text|default:"Записаться" }}
+                        <a href="{% url 'beauty_app:booking_create' %}" class="btn btn-primary-large">
+                            Записаться онлайн
                         </a>
                     </div>
                 </div>
@@ -374,5 +302,4 @@
         transform: translateX(4px);
     }
 </style>
-</body>
-</html>
+{% endblock content %}

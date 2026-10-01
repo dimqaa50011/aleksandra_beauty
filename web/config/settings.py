@@ -45,11 +45,14 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    
+    'django_q',
 
     'beauty_app',
     'cert_app',
     'gen_posts_app',
 ]
+
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
@@ -100,6 +103,18 @@ DATABASES = {
         "ENGINE": "django.db.backends.sqlite3",
         "NAME": "db.sqlite3",
     }
+}
+
+
+Q_CLUSTER = {
+    'name': 'SashaSugar',
+    'workers': 2,             # Количество параллельных задач
+    'timeout': 90,            # Максимальное время выполнения (сек)
+    'retry': 120,             # Повторная попытка при ошибке
+    'queue_limit': 50,
+    'bulk': 10,
+    'orm': 'default',         # ВАЖНО: используем PostgreSQL как брокер!
+    'catch_up': False,
 }
 
 # Password validation
@@ -210,3 +225,17 @@ if not DEBUG:
     SECURE_HSTS_SECONDS = 31536000  # 1 год
     SECURE_HSTS_INCLUDE_SUBDOMAINS = True
     SECURE_HSTS_PRELOAD = True
+    
+    
+GIGACHAT_CLIENT_ID = env.str("GIGACHAT_CLIENT_ID")
+GIGACHAT_CLIENT_SECRET = env.str("GIGACHAT_CLIENT_SECRET")
+GIGACHAT_AUTH_KEY = env.str("GIGACHAT_AUTH_KEY")
+
+
+# Кэш для хранения токена GigaChat (живет в памяти процесса, для воркера этого достаточно)
+CACHES = {
+    'default': {
+        'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',
+        'LOCATION': 'gigachat-cache',
+    }
+}

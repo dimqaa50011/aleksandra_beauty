@@ -1,0 +1,205 @@
+{% extends 'dashboard_base.html' %}
+{% load static %}
+
+{% block title %}Заблокированные слоты{% endblock %}
+
+{% block page_title %}Управление блокировками{% endblock %}
+
+{% block actions %}
+    <a href="{% url 'beauty_app:blocked_slot_add' %}" class="btn btn-primary">
+        <i class="fas fa-plus"></i> Заблокировать время
+    </a>
+{% endblock %}
+
+{% block content %}
+<div class="dashboard">
+    {% if messages %}
+        <div class="messages">
+            {% for message in messages %}
+                <div class="alert alert-{{ message.tags }}">{{ message }}</div>
+            {% endfor %}
+        </div>
+    {% endif %}
+
+    <div class="blocked-slots-section">
+        {% if blocked_slots %}
+            <div class="blocked-slots-list">
+                {% for slot in blocked_slots %}
+                    <div class="blocked-slot-card">
+                        <div class="slot-info">
+                            <div class="slot-date">{{ slot.date|date:"d.m.Y" }}</div>
+                            <div class="slot-time">{{ slot.start_time|time:"H:i" }} - {{ slot.end_time|time:"H:i" }}</div>
+                            <div class="slot-type">
+                                <span class="type-badge type-{{ slot.slot_type }}">
+                                    {{ slot.get_slot_type_display }}
+                                </span>
+                            </div>
+                            {% if slot.reason %}
+                                <div class="slot-reason">{{ slot.reason }}</div>
+                            {% endif %}
+                        </div>
+                        <form method="post" action="{% url 'beauty_app:blocked_slot_delete' slot.pk %}" style="display: inline;">
+                            {% csrf_token %}
+                            <button type="submit" class="btn btn-danger" onclick="return confirm('Удалить эту блокировку?')">
+                                <i class="fas fa-trash"></i> Удалить
+                            </button>
+                        </form>
+                    </div>
+                {% endfor %}
+            </div>
+        {% else %}
+            <div class="empty-state">
+                <div class="empty-icon"></div>
+                <h3 class="empty-title">Нет заблокированных слотов</h3>
+                <p class="empty-text">Добавьте выходные или личные дела</p>
+                <a href="{% url 'beauty_app:blocked_slot_add' %}" class="btn btn-primary">
+                    <i class="fas fa-plus"></i> Заблокировать время
+                </a>
+            </div>
+        {% endif %}
+    </div>
+</div>
+
+<style>
+    .blocked-slots-list {
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+    }
+
+    .blocked-slot-card {
+        background: #fcf9f7;
+        border: 1px solid #f0e8e5;
+        border-radius: 12px;
+        padding: 20px 24px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        transition: all 0.2s ease;
+    }
+
+    .blocked-slot-card:hover {
+        background: #f8f0ed;
+        border-color: #d4838e;
+    }
+
+    .slot-info {
+        flex: 1;
+    }
+
+    .slot-date {
+        font-size: 1.1rem;
+        font-weight: 700;
+        color: #2d2a28;
+        margin-bottom: 4px;
+    }
+
+    .slot-time {
+        font-size: 0.95rem;
+        color: #6b5f5a;
+        margin-bottom: 8px;
+    }
+
+    .type-badge {
+        font-size: 0.7rem;
+        font-weight: 600;
+        padding: 3px 12px;
+        border-radius: 40px;
+        text-transform: uppercase;
+        letter-spacing: 0.3px;
+    }
+
+    .type-day_off { background: #fce4ec; color: #c62828; }
+    .type-personal { background: #fff3e0; color: #f57c00; }
+    .type-maintenance { background: #e3f2fd; color: #1976d2; }
+    .type-other { background: #f5f5f5; color: #757575; }
+
+    .slot-reason {
+        font-size: 0.85rem;
+        color: #6b5f5a;
+        margin-top: 8px;
+    }
+
+    .btn-danger {
+        background: #d4838e;
+        color: #fff;
+        padding: 8px 16px;
+        border-radius: 60px;
+        border: none;
+        cursor: pointer;
+        font-weight: 600;
+        transition: all 0.2s ease;
+    }
+
+    .btn-danger:hover {
+        background: #c06e7a;
+        transform: translateY(-2px);
+    }
+
+    .empty-state {
+        text-align: center;
+        padding: 48px 20px;
+    }
+
+    .empty-icon {
+        font-size: 3rem;
+        margin-bottom: 12px;
+        opacity: 0.6;
+    }
+
+    .empty-title {
+        font-size: 1.1rem;
+        font-weight: 600;
+        color: #2d2a28;
+        margin-bottom: 4px;
+    }
+
+    .empty-text {
+        font-size: 0.9rem;
+        color: #6b5f5a;
+        margin-bottom: 20px;
+    }
+
+    .btn {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        padding: 10px 24px;
+        border-radius: 60px;
+        font-weight: 600;
+        text-decoration: none;
+        transition: all 0.25s ease;
+    }
+
+    .btn-primary {
+        background: #f2a6b0;
+        color: #fff;
+    }
+
+    .btn-primary:hover {
+        background: #e8919c;
+        transform: translateY(-2px);
+    }
+
+    .messages {
+        margin-bottom: 24px;
+    }
+
+    .alert {
+        padding: 14px 20px;
+        border-radius: 12px;
+        margin-bottom: 12px;
+        font-size: 0.9rem;
+    }
+
+    .alert-success {
+        background: #e8f5e9;
+        color: #2e7d32;
+    }
+
+    .alert-error {
+        background: #fce4ec;
+        color: #c62828;
+    }
+</style>
+{% endblock %}

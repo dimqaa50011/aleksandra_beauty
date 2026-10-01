@@ -70,7 +70,7 @@
                 <a href="#contacts">Контакты</a>
             </div>
             <div class="nav-actions">
-                <a href="https://spb.moiprofi.ru/aleksandrasaharova/" class="btn btn-sm" target="_blank" rel="noopener" title="Онлайн-запись к Александре Сахаровой">Записаться</a>
+                <a href="{% url 'beauty_app:booking_create' %}" class="btn btn-sm" target="_blank" rel="noopener" title="Онлайн-запись к Александре Сахаровой">Записаться</a>
                 <button class="menu-toggle" aria-label="Меню">☰</button>
             </div>
         </div>
@@ -121,7 +121,7 @@
             </div>
 
             <div class="service-detail-actions">
-                <a href="{{ service.button_link }}" class="btn btn-primary-large" target="_blank" rel="noopener">
+                <a href="{% url 'beauty_app:booking_create' %}?service={{ service.id }}" class="btn btn-primary-large" target="_blank" rel="noopener">
                     {{ service.button_text|default:"Записаться онлайн" }}
                 </a>
                 <a href="{% url 'beauty_app:category_services' service.category.id %}" class="btn btn-secondary-outline">

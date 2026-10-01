@@ -118,6 +118,8 @@ class Service(models.Model):
 
     name = models.CharField(max_length=200, help_text="Премиум-маникюр")
     description = models.TextField(blank=True, help_text="Краткое описание")
+    duration = models.PositiveSmallIntegerField("Длительность", default=15)
+    
 
     # Фото
     image = models.ImageField(upload_to='services/', blank=True, null=True)
@@ -260,3 +262,80 @@ class FooterLink(models.Model):
 
     def __str__(self):
         return self.title
+
+
+
+class Booking(models.Model):
+    STATUS_CHOICES = [
+        ('pending', '⏳ Ожидает подтверждения'),
+        ('confirmed', '✅ Подтверждено'),
+        ('cancelled', '❌ Отменено'),
+    ]
+
+    client_name = models.CharField('Имя клиента', max_length=100)
+    phone = models.CharField('Телефон', max_length=20)
+    email = models.EmailField('Электронная почта', blank=True, null=True)
+    
+    # Связь с услугой (чтобы знать длительность и название)
+    service = models.ForeignKey(
+        'Service', 
+        on_delete=models.PROTECT, 
+        verbose_name='Услуга',
+        related_name='bookings'
+    )
+    
+    appointment_datetime = models.DateTimeField('Дата и время записи')
+    status = models.CharField('Статус', max_length=20, choices=STATUS_CHOICES, default='pending')
+    
+    created_at = models.DateTimeField('Создано', auto_now_add=True)
+    updated_at = models.DateTimeField('Обновлено', auto_now=True)
+
+    class Meta:
+        verbose_name = 'Запись клиента'
+        verbose_name_plural = 'Записи клиентов'
+        ordering = ['-appointment_datetime']
+
+    def __str__(self):
+        return f"{self.client_name} — {self.service.name} ({self.appointment_datetime.strftime('%d.%m.%Y %H:%M')})"
+    
+    
+class DayOff(models.Model):
+    """Даты, когда студия не работает (выходные, праздники, отпуска)"""
+    date = models.DateField('Дата выходного', unique=True, help_text="Например: 2026-10-15")
+    reason = models.CharField('Причина (необязательно)', max_length=100, blank=True, help_text="Например: Праздник, Отпуск мастера")
+    created_at = models.DateTimeField('Добавлено', auto_now_add=True)
+
+    class Meta:
+        verbose_name = 'Выходной день'
+        verbose_name_plural = 'Выходные дни'
+        ordering = ['-date'] # Сначала ближайшие
+
+    def __str__(self):
+        reason_str = f" ({self.reason})" if self.reason else ""
+        return f"{self.date.strftime('%d.%m.%Y')}{reason_str}"
+
+
+class BlockedSlot(models.Model):
+    """Заблокированные временные слоты (выходные, личные дела, перерывы)"""
+    
+    TYPE_CHOICES = [
+        ('day_off', 'Выходной день'),
+        ('personal', 'Личные дела'),
+        ('maintenance', 'Технический перерыв'),
+        ('other', 'Другое'),
+    ]
+    
+    date = models.DateField('Дата')
+    start_time = models.TimeField('Начало')
+    end_time = models.TimeField('Конец')
+    reason = models.CharField('Причина', max_length=100, blank=True)
+    slot_type = models.CharField('Тип', max_length=20, choices=TYPE_CHOICES, default='day_off')
+    created_at = models.DateTimeField('Создано', auto_now_add=True)
+
+    class Meta:
+        verbose_name = 'Заблокированный слот'
+        verbose_name_plural = 'Заблокированные слоты'
+        ordering = ['date', 'start_time']
+
+    def __str__(self):
+        return f"{self.date.strftime('%d.%m.%Y')} {self.start_time.strftime('%H:%M')}-{self.end_time.strftime('%H:%M')} ({self.get_slot_type_display()})"
