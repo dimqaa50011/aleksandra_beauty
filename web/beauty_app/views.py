@@ -21,7 +21,45 @@ from .models import (
 )
 from .forms import LoginForm
 
+from django.shortcuts import render, get_object_or_404
+from .models import ServiceCategory, Service
 
+def category_services(request, category_id):
+    """Страница со списком услуг конкретной категории"""
+    
+    # Получаем категорию по ID (или 404, если не найдена или неактивна)
+    category = get_object_or_404(ServiceCategory, id=category_id, is_active=True)
+    
+    # Получаем все активные услуги этой категории
+    # Сортируем сначала по полю order, потом по цене
+    services = Service.objects.filter(
+        category=category, 
+        is_active=True
+    ).order_by('order', 'price')
+    
+    context = {
+        'category': category,
+        'services': services,
+    }
+    
+    return render(request, 'beauty_app/category_services.html', context)
+
+def service_detail(request, service_id):
+    """Детальная страница конкретной услуги"""
+    service = get_object_or_404(Service, id=service_id, is_active=True)
+    
+    # Получаем другие услуги из этой же категории для блока "Похожие" (опционально, но полезно)
+    related_services = Service.objects.filter(
+        category=service.category, 
+        is_active=True
+    ).exclude(id=service.id)[:3]
+    
+    context = {
+        'service': service,
+        'related_services': related_services,
+    }
+    
+    return render(request, 'beauty_app/service_detail.html', context)
 # =============================================
 # ЛЕНДИНГИ (доступны всем)
 # =============================================

@@ -1,0 +1,378 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    
+    <!-- SEO: Title и Description -->
+    <title>Sasha Sugar — Бьюти-студия в СПб | Косметология, брови, ресницы</title>
+    <meta name="description" content="Бьюти-студия Sasha Sugar в Санкт-Петербурге (Спасский пер., 7). Аппаратная косметология, уход за кожей, депиляция, брови и ресницы. Онлайн-запись к мастеру!">
+    <meta name="keywords" content="бьюти студия спб, косметология санкт-петербург, спасский переулок, депиляция, брови, ресницы, Sasha Sugar, Александра Сахарова">
+
+    <!-- Open Graph (для красивых ссылок в соцсетях и мессенджерах) -->
+    <meta property="og:title" content="Sasha Sugar — Бьюти-студия в Санкт-Петербурге">
+    <meta property="og:description" content="Раскрой своё природное сияние. Косметология, депиляция, брови и ресницы на Спасском переулке, 7.">
+    <meta property="og:image" content="https://sasha-sugar.ru{% static 'images/og-cover.jpg' %}">
+    <meta property="og:url" content="https://sasha-sugar.ru">
+    <meta property="og:type" content="website">
+    <meta property="og:locale" content="ru_RU">
+    <link rel="icon" href='{% static "images/favico.png" %}' type="image/png">
+
+    <!-- Google Fonts и стили -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,300;14..32,400;14..32,600;14..32,700&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="{% static 'css/lending.css' %}">
+
+    <!-- Микроразметка Schema.org для локального бизнеса -->    
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "BeautySalon",
+      "name": "Бьюти-студия Sasha Sugar",
+      "image": "https://sasha-sugar.ru{% static 'images/logo4.png' %}",
+      "description": "Аппаратная косметология, уход за кожей, депиляция, брови и ресницы в Санкт-Петербурге.",
+      "address": {
+        "@type": "PostalAddress",
+        "streetAddress": "Спасский переулок, д. 7",
+        "addressLocality": "Санкт-Петербург",
+        "addressCountry": "RU"
+      },
+      "geo": {
+        "@type": "GeoCoordinates",
+        "latitude": 59.9265, 
+        "longitude": 30.3245
+      },
+      "url": "https://sasha-sugar.ru",
+      "telephone": "+79052698654",
+      "openingHoursSpecification": [
+        {
+          "@type": "OpeningHoursSpecification",
+          "dayOfWeek": ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"],
+          "opens": "09:00",
+          "closes": "22:00"
+        }
+      ],
+      "priceRange": "₽₽"
+    }
+    </script>
+</head>
+<body>
+
+    <!-- НАВИГАЦИЯ -->
+    <nav class="navbar">
+        <div class="container">
+            <div class="logo">
+                <img src="{% static 'images/logo4.png' %}" alt="Логотип бьюти-студии Sasha Sugar">
+            </div>
+            <div class="nav-links">
+                <a href="#hero">Главная</a>
+                <a href="#about">О нас</a>
+                <a href="#contacts">Контакты</a>
+            </div>
+            <div class="nav-actions">
+                <a href="https://spb.moiprofi.ru/aleksandrasaharova/" class="btn btn-sm" target="_blank" rel="noopener" title="Онлайн-запись к Александре Сахаровой">Записаться</a>
+                <button class="menu-toggle" aria-label="Меню">☰</button>
+            </div>
+        </div>
+    </nav>
+<div class="container" style="padding-top: 120px; padding-bottom: 80px;">
+    
+    <!-- Хлебные крошки -->
+    <nav class="breadcrumbs">
+        <a href="/">Главная</a>
+        <span>/</span>
+        <span>{{ category.name }}</span>
+    </nav>
+
+    <!-- Заголовок категории -->
+    <div class="category-header">
+        <span class="category-icon">{{ category.icon }}</span>
+        <h1 class="section-title" style="margin-bottom: 12px;">{{ category.name }}</h1>
+        {% if category.description %}
+            <p class="category-desc">{{ category.description }}</p>
+        {% endif %}
+    </div>
+
+    <!-- Список услуг -->
+    <div class="services-list">
+        {% if services %}
+            {% for service in services %}
+                <div class="service-card">
+                    <div class="service-info">
+                        <h3 class="service-name">
+                            {% if service.is_bestseller %}
+                                <span class="bestseller-badge">🔥 Хит</span>
+                            {% endif %}
+                            {{ service.name }}
+                        </h3>
+                        
+                        {% if service.description %}
+                            <!-- Обрезаем до 20 слов и добавляем многоточие -->
+                            <p class="service-desc">{{ service.description|truncatewords:5 }}</p>
+                        {% endif %}
+                        
+                        <div class="service-meta">
+                            {% if service.rating %}
+                                <span class="service-rating">
+                                    ★ {{ service.rating }} <span class="reviews-count">({{ service.reviews_count }})</span>
+                                </span>
+                            {% endif %}
+                            <!-- Ссылка на полную страницу -->
+                            <a href="{% url 'beauty_app:service_detail' service.id %}" class="read-more-link">
+                                Подробнее <span class="arrow">→</span>
+                            </a>
+                        </div>
+                    </div>
+                    
+                    <div class="service-action">
+                        <div class="service-price-block">
+                            {% if service.old_price %}
+                                <span class="old-price">{{ service.old_price }} ₽</span>
+                            {% endif %}
+                            <span class="current-price">{{ service.price }} ₽</span>
+                        </div>
+                        
+                        <a href="{{ service.button_link }}" class="btn btn-sm" target="_blank" rel="noopener">
+                            {{ service.button_text|default:"Записаться" }}
+                        </a>
+                    </div>
+                </div>
+            {% endfor %}
+        {% else %}
+            <div class="empty-state">
+                <p>В этой категории пока нет доступных услуг. Загляните позже!</p>
+            </div>
+        {% endif %}
+    </div>
+
+    <!-- Кнопка возврата -->
+    <div style="text-align: center; margin-top: 48px;">
+        <a href="/#services" class="btn btn-secondary">
+            ← Вернуться ко всем услугам
+        </a>
+    </div>
+
+</div>
+
+    <footer class="container footer">
+        <div>
+            <div class="logo">
+                <img src="{% static 'images/logo4.png' %}" alt="Логотип Sasha Sugar">
+            </div>
+            <p style="margin-top: 8px; font-size: 0.85rem; color: #6b5f5a;">© 2026 — Бьюти-студия Sasha Sugar</p>
+        </div>
+        <div class="footer-links">
+            <a href="#hero">Главная</a>
+            <a href="#about">О нас</a>
+            <a href="#contacts">Контакты</a> 
+        </div>
+    </footer>
+
+
+
+<style>
+    /* Хлебные крошки */
+    .breadcrumbs {
+        font-size: 0.85rem;
+        color: #6b5f5a;
+        margin-bottom: 32px;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+    .breadcrumbs a {
+        color: #f2a6b0;
+        text-decoration: none;
+        transition: color 0.2s;
+    }
+    .breadcrumbs a:hover { color: #e8919c; }
+
+    /* Заголовок категории */
+    .category-header {
+        text-align: center;
+        margin-bottom: 48px;
+    }
+    .category-icon {
+        font-size: 3.5rem;
+        display: block;
+        margin-bottom: 16px;
+    }
+    .category-desc {
+        font-size: 1.1rem;
+        color: #6b5f5a;
+        max-width: 600px;
+        margin: 0 auto;
+        line-height: 1.6;
+    }
+
+    /* Список услуг */
+    .services-list {
+        display: flex;
+        flex-direction: column;
+        gap: 16px;
+        max-width: 800px;
+        margin: 0 auto;
+    }
+
+    .service-card {
+        background: #ffffff;
+        border: 1px solid #f0e8e5;
+        border-radius: 16px;
+        padding: 24px;
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        gap: 24px;
+        transition: all 0.25s ease;
+    }
+
+    .service-card:hover {
+        border-color: #f2a6b0;
+        box-shadow: 0 8px 24px rgba(242, 166, 176, 0.1);
+        transform: translateY(-2px);
+    }
+
+    .service-info { flex: 1; }
+
+    .service-name {
+        font-size: 1.15rem;
+        font-weight: 700;
+        color: #2d2a28;
+        margin: 0 0 8px 0;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+
+    .bestseller-badge {
+        font-size: 0.7rem;
+        background: #fff3e0;
+        color: #f57c00;
+        padding: 2px 8px;
+        border-radius: 20px;
+        font-weight: 600;
+    }
+
+    .service-desc {
+        font-size: 0.9rem;
+        color: #6b5f5a;
+        margin: 0 0 12px 0;
+        line-height: 1.5;
+    }
+
+    .service-rating {
+        font-size: 0.85rem;
+        color: #f5b342;
+        font-weight: 600;
+    }
+    .reviews-count {
+        color: #9b8f8a;
+        font-weight: 400;
+    }
+
+    .service-action {
+        text-align: right;
+        flex-shrink: 0;
+        display: flex;
+        flex-direction: column;
+        align-items: flex-end;
+        gap: 12px;
+    }
+
+    .service-price-block {
+        display: flex;
+        flex-direction: column;
+        align-items: flex-end;
+        gap: 4px;
+    }
+
+    .old-price {
+        font-size: 0.9rem;
+        color: #9b8f8a;
+        text-decoration: line-through;
+    }
+
+    .current-price {
+        font-size: 1.4rem;
+        font-weight: 700;
+        color: #2d2a28;
+    }
+
+    .btn-sm {
+        padding: 8px 24px;
+        font-size: 0.85rem;
+        min-height: 40px;
+    }
+
+    .btn-secondary {
+        background: #f0e8e5;
+        color: #6b5f5a;
+        text-decoration: none;
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        padding: 12px 24px;
+        border-radius: 60px;
+        font-weight: 600;
+        transition: all 0.2s;
+    }
+    .btn-secondary:hover {
+        background: #e8e0dd;
+        color: #2d2a28;
+    }
+
+    .empty-state {
+        text-align: center;
+        padding: 40px;
+        color: #6b5f5a;
+        font-size: 1rem;
+        background: #fcf9f7;
+        border-radius: 16px;
+    }
+
+    /* Адаптив для мобильных */
+    @media (max-width: 600px) {
+        .service-card {
+            flex-direction: column;
+            gap: 16px;
+            padding: 20px;
+        }
+        .service-action {
+            flex-direction: row;
+            justify-content: space-between;
+            align-items: center;
+            width: 100%;
+            border-top: 1px solid #f0e8e5;
+            padding-top: 16px;
+        }
+        .service-price-block {
+            align-items: flex-start;
+        }
+    }
+
+        .read-more-link {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        font-size: 0.85rem;
+        font-weight: 600;
+        color: #f2a6b0;
+        text-decoration: none;
+        margin-top: 8px;
+        transition: all 0.2s ease;
+    }
+
+    .read-more-link:hover {
+        color: #e8919c;
+    }
+
+    .read-more-link .arrow {
+        transition: transform 0.2s ease;
+    }
+
+    .read-more-link:hover .arrow {
+        transform: translateX(4px);
+    }
+</style>
+</body>
+</html>

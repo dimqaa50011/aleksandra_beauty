@@ -82,9 +82,22 @@
             </span>
         </div>
     </a>
+
+    <a href="{% url 'gen_posts_app:gen_posts' %}" class="dash-card dash-card-posts">
+        <div class="dash-card-icon">📝</div>
+        <div class="dash-card-body">
+            <h3 class="dash-card-title">Посты</h3>
+            <p class="dash-card-desc">Генерация и управление контентом</p>
+            <span class="dash-card-arrow">
+                <i class="fas fa-arrow-right"></i>
+            </span>
+        </div>
+    </a>
 </div>
 
 <style>
+        .dash-card-posts .dash-card-icon { color: #2d8a4e; }
+    .dash-card-posts:hover { border-color: #2d8a4e; }
     .dashboard-grid {
         display: grid;
         grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));

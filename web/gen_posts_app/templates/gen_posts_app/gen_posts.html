@@ -1,0 +1,435 @@
+{% extends 'dashboard_base.html' %}
+{% load static %}
+
+{% block title %}Управление постами{% endblock %}
+
+{% block page_title %}Генерация постов{% endblock %}
+
+{% block actions %}
+    <button type="button" class="btn btn-primary" onclick="toggleForm()">
+        <i class="fas fa-plus"></i> Добавить идею
+    </button>
+{% endblock %}
+
+{% block content %}
+<div class="dashboard">
+    
+    <!-- ========== ФОРМА ДОБАВЛЕНИЯ ИДЕИ ========== -->
+    <div id="addIdeaForm" class="add-idea-form" style="display: none;">
+        <h3 class="form-title">Новая идея для поста</h3>
+        <form method="post">
+            {% csrf_token %}
+            <input type="hidden" name="add_idea" value="1">
+            
+            <div class="form-group">
+                <label for="topic">Тема поста *</label>
+                <input type="text" id="topic" name="topic" required maxlength="200" placeholder="Например: Зимний уход за кожей">
+            </div>
+            
+            <div class="form-group">
+                <label for="description">Описание / контекст</label>
+                <textarea id="description" name="description" rows="3" placeholder="Что важно упомянуть? Какие детали?"></textarea>
+            </div>
+            
+            <div class="form-group">
+                <label for="platform">Платформа</label>
+                <select id="platform" name="platform">
+                    <option value="telegram">Telegram</option>
+                    <option value="vk">ВКонтакте</option>
+                    <option value="both" selected>Обе платформы</option>
+                </select>
+            </div>
+            
+            <div class="form-actions">
+                <button type="submit" class="btn btn-primary">
+                    <i class="fas fa-save"></i> Сохранить идею
+                </button>
+                <button type="button" class="btn btn-secondary" onclick="toggleForm()">
+                    Отмена
+                </button>
+            </div>
+        </form>
+    </div>
+
+    <!-- ========== СООБЩЕНИЯ (УСПЕХ/ОШИБКА) ========== -->
+    {% if messages %}
+        <div class="messages">
+            {% for message in messages %}
+                <div class="alert alert-{{ message.tags }}">
+                    {{ message }}
+                </div>
+            {% endfor %}
+        </div>
+    {% endif %}
+    
+    <!-- ========== СПИСОК ИДЕЙ ========== -->
+    <div class="ideas-section">
+        {% if ideas %}
+            <div class="ideas-list">
+                {% for idea in ideas %}
+                    <div class="idea-card">
+                        <div class="idea-header">
+                            <div class="idea-info">
+                                <h4 class="idea-topic">
+                                    <a href="{% url 'gen_posts_app:idea_posts' idea.id %}" class="idea-link">
+                                        {{ idea.topic }}
+                                    </a>
+                                </h4>
+                                {% if idea.description %}
+                                    <p class="idea-desc">{{ idea.description|truncatechars:120 }}</p>
+                                {% endif %}
+                                <div class="idea-meta">
+                                    <span class="platform-badge platform-{{ idea.platform }}">
+                                        {{ idea.get_platform_display }}
+                                    </span>
+                                    <span class="status-badge status-{{ idea.status }}">
+                                        {{ idea.get_status_display }}
+                                    </span>
+                                    <a href="{% url 'gen_posts_app:idea_posts' idea.id %}" class="posts-count-link">
+                                        <i class="fas fa-file-alt"></i> {{ idea.get_posts_count }} постов
+                                    </a>
+                                </div>
+                            </div>
+                            
+                            <div class="idea-actions">
+                                <form method="post" action="{% url 'gen_posts_app:generate_post' idea.id %}">
+                                    {% csrf_token %}
+                                    <button type="submit" class="btn btn-generate">
+                                        <i class="fas fa-magic"></i> Сгенерировать
+                                    </button>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                {% endfor %}
+            </div>
+        {% else %}
+            <div class="empty-state">
+                <div class="empty-icon">📝</div>
+                <h3 class="empty-title">Пока нет идей</h3>
+                <p class="empty-text">Добавьте первую идею для поста, и мы сгенерируем для неё контент</p>
+                <button type="button" class="btn btn-primary" onclick="toggleForm()">
+                    <i class="fas fa-plus"></i> Добавить идею
+                </button>
+            </div>
+        {% endif %}
+    </div>
+</div>
+
+<style>
+    .dashboard {
+        max-width: 1200px;
+    }
+
+    /* ===== КНОПКИ ===== */
+    .btn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        padding: 10px 24px;
+        border-radius: 60px;
+        font-weight: 600;
+        font-size: 0.9rem;
+        text-decoration: none;
+        transition: all 0.25s ease;
+        border: none;
+        cursor: pointer;
+        white-space: nowrap;
+        min-height: 44px;
+    }
+
+    .btn i {
+        font-size: 0.9rem;
+    }
+
+    .btn-primary {
+        background: #f2a6b0;
+        color: #ffffff;
+        box-shadow: 0 4px 16px rgba(242, 166, 176, 0.25);
+    }
+
+    .btn-primary:hover {
+        background: #e8919c;
+        transform: translateY(-2px);
+        box-shadow: 0 8px 28px rgba(242, 166, 176, 0.35);
+        color: #fff;
+    }
+
+    .btn-secondary {
+        background: #f0e8e5;
+        color: #6b5f5a;
+    }
+
+    .btn-secondary:hover {
+        background: #e8e0dd;
+        color: #2d2a28;
+    }
+
+    .btn-generate {
+        background: #2d8a4e;
+        color: #ffffff;
+        box-shadow: 0 4px 16px rgba(45, 138, 78, 0.25);
+        font-size: 0.85rem;
+        padding: 8px 20px;
+    }
+
+    .btn-generate:hover {
+        background: #247a42;
+        transform: translateY(-2px);
+        box-shadow: 0 8px 28px rgba(45, 138, 78, 0.35);
+        color: #fff;
+    }
+
+    /* ===== СООБЩЕНИЯ ===== */
+    .messages {
+        margin-bottom: 24px;
+    }
+
+    .alert {
+        padding: 14px 20px;
+        border-radius: 12px;
+        margin-bottom: 12px;
+        font-size: 0.9rem;
+        font-weight: 500;
+    }
+
+    .alert-success {
+        background: #e8f5e9;
+        color: #2e7d32;
+        border: 1px solid #c8e6c9;
+    }
+
+    .alert-error {
+        background: #fce4ec;
+        color: #c62828;
+        border: 1px solid #f8bbd0;
+    }
+
+    /* ===== ФОРМА ДОБАВЛЕНИЯ ===== */
+    .add-idea-form {
+        background: #ffffff;
+        border-radius: 20px;
+        border: 1px solid #f0e8e5;
+        padding: 28px;
+        margin-bottom: 32px;
+        animation: slideDown 0.3s ease;
+    }
+
+    @keyframes slideDown {
+        from { opacity: 0; transform: translateY(-20px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+
+    .form-title {
+        font-size: 1.2rem;
+        font-weight: 700;
+        color: #2d2a28;
+        margin: 0 0 20px 0;
+    }
+
+    .form-group {
+        margin-bottom: 20px;
+    }
+
+    .form-group label {
+        display: block;
+        font-size: 0.85rem;
+        font-weight: 600;
+        color: #2d2a28;
+        margin-bottom: 8px;
+    }
+
+    .form-group input,
+    .form-group textarea,
+    .form-group select {
+        width: 100%;
+        padding: 12px 16px;
+        border: 1px solid #e8e0dd;
+        border-radius: 12px;
+        font-size: 0.95rem;
+        font-family: inherit;
+        transition: border-color 0.2s ease;
+        background: #fcf9f7;
+        box-sizing: border-box;
+    }
+
+    .form-group input:focus,
+    .form-group textarea:focus,
+    .form-group select:focus {
+        outline: none;
+        border-color: #f2a6b0;
+        background: #fff;
+    }
+
+    .form-group textarea {
+        resize: vertical;
+        min-height: 80px;
+    }
+
+    .form-actions {
+        display: flex;
+        gap: 12px;
+        margin-top: 24px;
+    }
+
+    /* ===== СПИСОК ИДЕЙ ===== */
+    .ideas-section {
+        background: #ffffff;
+        border-radius: 20px;
+        border: 1px solid #f0e8e5;
+        padding: 24px 28px;
+    }
+
+    .ideas-list {
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+    }
+
+    .idea-card {
+        background: #fcf9f7;
+        border-radius: 16px;
+        padding: 20px 24px;
+        transition: all 0.2s ease;
+    }
+
+    .idea-card:hover {
+        background: #f8f0ed;
+        transform: translateX(4px);
+    }
+
+    .idea-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 20px;
+    }
+
+    .idea-info {
+        flex: 1;
+        min-width: 0;
+    }
+
+    .idea-topic {
+        font-size: 1.05rem;
+        font-weight: 700;
+        color: #2d2a28;
+        margin: 0 0 6px 0;
+    }
+
+    .idea-desc {
+        font-size: 0.85rem;
+        color: #6b5f5a;
+        margin: 0 0 10px 0;
+        line-height: 1.4;
+    }
+
+    .idea-meta {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        flex-wrap: wrap;
+    }
+
+    .platform-badge,
+    .status-badge {
+        font-size: 0.7rem;
+        font-weight: 600;
+        padding: 3px 12px;
+        border-radius: 40px;
+        text-transform: uppercase;
+        letter-spacing: 0.3px;
+    }
+
+    .platform-telegram { background: #e3f2fd; color: #1976d2; }
+    .platform-vk { background: #e8eaf6; color: #3f51b5; }
+    .platform-both { background: #f3e5f5; color: #9c27b0; }
+
+    .status-new { background: #fff3e0; color: #f57c00; }
+    .status-in_progress { background: #e3f2fd; color: #1976d2; }
+    .status-ready { background: #e8f5e9; color: #388e3c; }
+    .status-published { background: #f3e5f5; color: #7b1fa2; }
+    .status-archived { background: #f5f5f5; color: #757575; }
+
+    .posts-count {
+        font-size: 0.75rem;
+        color: #6b5f5a;
+        display: flex;
+        align-items: center;
+        gap: 4px;
+    }
+
+    .idea-actions {
+        flex-shrink: 0;
+    }
+
+    /* ===== ПУСТОЕ СОСТОЯНИЕ ===== */
+    .empty-state {
+        text-align: center;
+        padding: 48px 20px;
+    }
+
+    .empty-icon {
+        font-size: 3.5rem;
+        margin-bottom: 12px;
+        opacity: 0.6;
+    }
+
+    .empty-title {
+        font-size: 1.1rem;
+        font-weight: 600;
+        color: #2d2a28;
+        margin-bottom: 4px;
+    }
+
+    .empty-text {
+        font-size: 0.9rem;
+        color: #6b5f5a;
+        margin-bottom: 20px;
+    }
+
+    /* ===== АДАПТИВ ===== */
+    @media (max-width: 768px) {
+        .idea-header {
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 16px;
+        }
+        
+        .idea-actions {
+            width: 100%;
+        }
+        
+        .idea-actions .btn {
+            width: 100%;
+        }
+        
+        .form-actions {
+            flex-direction: column;
+        }
+        
+        .form-actions .btn {
+            width: 100%;
+        }
+        
+        .idea-meta {
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 6px;
+        }
+    }
+</style>
+
+<script>
+    function toggleForm() {
+        const form = document.getElementById('addIdeaForm');
+        if (form.style.display === 'none' || form.style.display === '') {
+            form.style.display = 'block';
+            form.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        } else {
+            form.style.display = 'none';
+        }
+    }
+</script>
+{% endblock %}

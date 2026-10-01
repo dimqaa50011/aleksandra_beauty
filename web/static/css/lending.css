@@ -999,3 +999,15 @@ a {
         font-size: 0.85rem !important;
     }
 }
+
+.category-card-link {
+    text-decoration: none;
+    color: inherit;
+    display: block;
+}
+
+.category-card-link:hover .category-card {
+    border-color: #f2a6b0;
+    box-shadow: 0 8px 24px rgba(242, 166, 176, 0.15);
+    transform: translateY(-4px);
+}

@@ -17,6 +17,7 @@
     <meta property="og:url" content="https://sasha-sugar.ru">
     <meta property="og:type" content="website">
     <meta property="og:locale" content="ru_RU">
+    <link rel="icon" href='{% static "images/favico.png" %}' type="image/png">
 
     <!-- Google Fonts и стили -->
     <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,300;14..32,400;14..32,600;14..32,700&display=swap" rel="stylesheet" />
@@ -28,7 +29,7 @@
       "@context": "https://schema.org",
       "@type": "BeautySalon",
       "name": "Бьюти-студия Sasha Sugar",
-      "image": "https://твой-домен.ru{% static 'images/logo4.png' %}",
+      "image": "https://sasha-sugar.ru{% static 'images/logo4.png' %}",
       "description": "Аппаратная косметология, уход за кожей, депиляция, брови и ресницы в Санкт-Петербурге.",
       "address": {
         "@type": "PostalAddress",
@@ -41,7 +42,7 @@
         "latitude": 59.9265, 
         "longitude": 30.3245
       },
-      "url": "https://твой-домен.ru",
+      "url": "https://sasha-sugar.ru",
       "telephone": "+79052698654",
       "openingHoursSpecification": [
         {
@@ -114,16 +115,19 @@
             <h2 class="section-title">Наши услуги</h2>
             <div class="categories-grid">
                 {% for category in categories %}    
-                    <div class="category-card">
-                        <span class="icon">{{ category.icon }}</span>
-                        <h4>{{ category.name }}</h4>
-                        {% if category.description %}
-                            <p>{{ category.description }}</p>
-                        {% endif %}
-                    </div>
+                    <!-- Оборачиваем в ссылку с ID категории -->
+                    <a href="{% url 'beauty_app:category_services' category.id %}" class="category-card-link">
+                        <div class="category-card">
+                            <span class="icon">{{ category.icon }}</span>
+                            <h4>{{ category.name }}</h4>
+                            {% if category.description %}
+                                <p>{{ category.description }}</p>
+                            {% endif %}
+                        </div>
+                    </a>
                 {% empty %}
-                    <p style="text-align:center;grid-column:1/-1;color:#6b5f5a;padding:40px 0;">
-                        Категории пока не добавлены. Зайдите в админку и создайте их.
+                    <p style="text-align:center; grid-column:1/-1; color:#6b5f5a; padding:40px 0;">
+                        Категории пока не добавлены.
                     </p>
                 {% endfor %}
             </div>

@@ -84,14 +84,21 @@ WSGI_APPLICATION = 'config.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/6.0/ref/settings/#databases
 
+# DATABASES = {
+#     'default': {
+#         'ENGINE': 'django.db.backends.postgresql',
+#         'NAME': env.str('POSTGRES_DB'),
+#         'USER': env.str('POSTGRES_USER'),
+#         'PASSWORD': env.str('POSTGRES_PASSWORD'),
+#         'HOST': env.str('POSTGRES_HOST', default='db'), # 'db' - это имя сервиса в docker-compose
+#         'PORT': env.str('POSTGRES_PORT', default='5432'),
+#     }
+# }
+
 DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.postgresql',
-        'NAME': env.str('POSTGRES_DB'),
-        'USER': env.str('POSTGRES_USER'),
-        'PASSWORD': env.str('POSTGRES_PASSWORD'),
-        'HOST': env.str('POSTGRES_HOST', default='db'), # 'db' - это имя сервиса в docker-compose
-        'PORT': env.str('POSTGRES_PORT', default='5432'),
+    "default": {
+        "ENGINE": "django.db.backends.sqlite3",
+        "NAME": "db.sqlite3",
     }
 }
 
