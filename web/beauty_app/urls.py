@@ -12,6 +12,7 @@ urlpatterns = [
     
     # Бронирование (публичное)
     path('booking/', views.booking_create, name='booking_create'),
+    path('booking/success/', views.booking_success, name='booking_success'),
     path('api/available-times/', views.get_available_times, name='available_times'),
     
     # Авторизация
@@ -26,6 +27,9 @@ urlpatterns = [
     path('admin-dashboard/blocked-slots/', views.BlockedSlotListView.as_view(), name='blocked_slots_list'),
     path('admin-dashboard/blocked-slots/add/', views.BlockedSlotAddView.as_view(), name='blocked_slot_add'),
     path('admin-dashboard/blocked-slots/<int:pk>/delete/', views.BlockedSlotDeleteView.as_view(), name='blocked_slot_delete'),
+    path('admin-dashboard/bookings/', views.BookingsListView.as_view(), name='bookings_list'),
+    path('admin-dashboard/bookings/<int:pk>/confirm/', views.BookingConfirmView.as_view(), name='booking_confirm'),
+    path('admin-dashboard/bookings/<int:pk>/cancel/', views.BookingCancelView.as_view(), name='booking_cancel'),
     
     # Ручное создание записи
     path('admin-dashboard/bookings/add/', views.AdminBookingCreateView.as_view(), name='admin_booking_create'),

@@ -1,4 +1,4 @@
-from django.views.generic import TemplateView, FormView, View
+from django.views.generic import ListView, TemplateView, FormView, View
 from django.contrib.auth.views import LoginView as AuthLoginView, LogoutView as AuthLogoutView
 from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin
 from django.views.decorators.cache import cache_page
@@ -78,6 +78,9 @@ def is_time_slot_available(new_start_time, service, duration=None):
     return True
 
 
+def booking_success(request):
+    """Страница подтверждения успешной записи"""
+    return render(request, 'beauty_app/booking_success.html')
 # =============================================
 # БРОНИРОВАНИЕ (доступно всем)
 # =============================================
@@ -370,3 +373,41 @@ class DashboardView(AdminRequiredMixin, TemplateView):
             context['expired'] = 0
             context['recent_certificates'] = []
         return context
+
+class BookingsListView(AdminRequiredMixin, ListView):
+    """Страница списка всех записей клиентов"""
+    model = Booking
+    template_name = 'beauty_app/admin/bookings_list.html'
+    context_object_name = 'bookings'
+    
+    def get_queryset(self):
+        # Сортировка: ближайшие даты и время сверху (возрастание)
+        return Booking.objects.all().order_by('appointment_datetime')
+    
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        # Передаем сегодняшнюю дату в шаблон, чтобы подсвечивать записи на сегодня
+        context['today'] = timezone.now().date()
+        return context
+
+
+class BookingConfirmView(AdminRequiredMixin, View):
+    """Подтверждение записи"""
+    
+    def post(self, request, pk):
+        booking = get_object_or_404(Booking, pk=pk)
+        booking.status = 'confirmed'
+        booking.save()
+        messages.success(request, f'Запись для {booking.client_name} подтверждена')
+        return redirect('beauty_app:bookings_list')
+
+
+class BookingCancelView(AdminRequiredMixin, View):
+    """Отмена/удаление записи"""
+    
+    def post(self, request, pk):
+        booking = get_object_or_404(Booking, pk=pk)
+        booking.status = 'cancelled'
+        booking.save()
+        messages.success(request, f'Запись для {booking.client_name} отменена')
+        return redirect('beauty_app:bookings_list')

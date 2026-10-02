@@ -8,7 +8,6 @@
     <section class="hero" id="hero">
         <div class="container hero-grid">
             <div class="hero-content">
-                <div class="badge">✨ Новая коллекция</div>
                 
                 <h1>Бьюти-студия Sasha Sugar в СПб:<br /><span>раскрой своё природное сияние</span></h1>
                 
@@ -39,7 +38,6 @@
     <!-- КАТЕГОРИИ (УСЛУГИ) -->
     <section class="section">
         <div class="container">
-            <span class="section-tag"> Услуги</span>
             <h2 class="section-title">Наши услуги</h2>
             <div class="categories-grid">
                 {% for category in categories %}    
@@ -67,7 +65,6 @@
         <div class="container">
             <div class="about-grid">
                 <div class="about-content">
-                    <span class="section-tag">✦ О студии</span>
                     <h2 class="section-title">Мы создаем красоту <br /><span>с любовью к деталям</span></h2>
                     <p class="about-text">
                         Sasha Sugar — это пространство, где профессионализм встречается с уютом. 
@@ -90,7 +87,6 @@
     <!-- КОНТАКТЫ -->
     <section class="section" id="contacts" style="background-color: #faf9f8;">
         <div class="container">
-            <span class="section-tag">✦ Контакты</span>
             <h2 class="section-title">Ждем вас в гости</h2>
             
             <div class="contacts-grid">
@@ -138,19 +134,6 @@
         </div>
     </section>
 
-    <!-- ФУТЕР -->
-    <footer class="container footer">
-        <div>
-            <div class="logo">
-                <img src="{% static 'images/logo4.png' %}" alt="Логотип Sasha Sugar">
-            </div>
-            <p style="margin-top: 8px; font-size: 0.85rem; color: #6b5f5a;">© 2026 — Бьюти-студия Sasha Sugar</p>
-        </div>
-        <div class="footer-links">
-            <a href="#hero">Главная</a>
-            <a href="#about">О нас</a>
-            <a href="#contacts">Контакты</a> 
-        </div>
-    </footer>
+
 
 {% endblock content %}

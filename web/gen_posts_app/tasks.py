@@ -27,6 +27,7 @@ def get_gigachat_token() -> str:
     # 2. Токена нет, запрашиваем новый
     client_id = getattr(settings, 'GIGACHAT_CLIENT_ID', '')
     client_secret = getattr(settings, 'GIGACHAT_CLIENT_SECRET', '')
+    token = getattr(settings, 'GIGACHAT_AUTH_KEY', '')
     
     if not client_id or not client_secret:
         logger.error("GIGACHAT_CLIENT_ID или GIGACHAT_CLIENT_SECRET не настроены в settings.py")
@@ -34,7 +35,7 @@ def get_gigachat_token() -> str:
 
     # Формируем Basic Auth заголовок (base64 от client_id:client_secret)
     auth_string = f"{client_id}:{client_secret}"
-    encoded_auth = base64.b64encode(auth_string.encode('utf-8')).decode('utf-8')
+    encoded_auth = token
     
     headers = {
         'Content-Type': 'application/x-www-form-urlencoded',
@@ -50,7 +51,7 @@ def get_gigachat_token() -> str:
     try:
         # verify=False иногда нужен для сертификатов Сбера, но попробуем стандартный запрос
         # Если будет ошибка SSL, раскомментируй verify=False
-        response = requests.post(GIGACHAT_AUTH_URL, headers=headers, data=payload, timeout=10)
+        response = requests.post(GIGACHAT_AUTH_URL, headers=headers, data=payload, timeout=10, verify=False)
         response.raise_for_status()
         
         data = response.json()
@@ -100,17 +101,16 @@ def call_gigachat_api(topic: str, description: str) -> dict:
     }
     
     payload = {
-        "model": "GigaChat:latest", # Или конкретная модель, если указана в тарифе
+        "model": "GigaChat", 
         "messages": [
             {"role": "system", "content": system_prompt},
             {"role": "user", "content": user_prompt}
         ],
-        "temperature": 0.7, # Креативность (0.0 - 1.0)
+        "temperature": 0.7,
         "max_tokens": 1500
     }
-
     try:
-        response = requests.post(GIGACHAT_CHAT_URL, headers=headers, json=payload, timeout=30)
+        response = requests.post(GIGACHAT_CHAT_URL, headers=headers, json=payload, timeout=30, verify=False)
         response.raise_for_status()
         
         data = response.json()

@@ -1,0 +1,316 @@
+{% extends 'dashboard_base.html' %}
+{% load static %}
+
+{% block title %}Записи клиентов{% endblock %}
+
+{% block page_title %}Расписание и записи{% endblock %}
+
+{% block actions %}
+    <a href="{% url 'beauty_app:admin_booking_create' %}" class="btn btn-primary">
+        <i class="fas fa-plus"></i> Новая запись
+    </a>
+{% endblock %}
+
+{% block content %}
+<div class="dashboard">
+    
+    {% if messages %}
+        <div class="messages">
+            {% for message in messages %}
+                <div class="alert alert-{{ message.tags }}">{{ message }}</div>
+            {% endfor %}
+        </div>
+    {% endif %}
+
+    <div class="bookings-section">
+        {% if bookings %}
+            <div class="bookings-list">
+                {% for booking in bookings %}
+                    <div class="booking-card {% if booking.appointment_datetime.date == today %}booking-today{% endif %} {% if booking.status == 'cancelled' %}booking-cancelled{% endif %}">
+                        
+                        <!-- Левая колонка: Дата и время -->
+                        <div class="booking-datetime">
+                            <div class="booking-date">
+                                {% if booking.appointment_datetime.date == today %}
+                                    <span class="today-badge">Сегодня</span>
+                                {% endif %}
+                                {{ booking.appointment_datetime|date:"d.m.Y" }}
+                            </div>
+                            <div class="booking-time">{{ booking.appointment_datetime|date:"H:i" }}</div>
+                        </div>
+
+                        <!-- Центральная колонка: Информация -->
+                        <div class="booking-info">
+                            <div class="client-name">{{ booking.client_name }}</div>
+                            <div class="client-phone">
+                                <a href="tel:{{ booking.phone }}">{{ booking.phone }}</a>
+                            </div>
+                            <div class="service-name">
+                                <i class="fas fa-cut"></i> {{ booking.service.name }}
+                            </div>
+                        </div>
+
+                        <!-- Правая колонка: Статус и кнопки -->
+                        <div class="booking-actions">
+                            <span class="status-badge status-{{ booking.status }}">
+                                {{ booking.get_status_display }}
+                            </span>
+                            
+                            {% if booking.status == 'pending' %}
+                                <div class="action-buttons">
+                                    <form method="post" action="{% url 'beauty_app:booking_confirm' booking.pk %}">
+                                        {% csrf_token %}
+                                        <button type="submit" class="btn-icon btn-confirm" title="Подтвердить">
+                                            <i class="fas fa-check"></i>
+                                        </button>
+                                    </form>
+                                    <form method="post" action="{% url 'beauty_app:booking_cancel' booking.pk %}">
+                                        {% csrf_token %}
+                                        <button type="submit" class="btn-icon btn-delete" title="Отменить" onclick="return confirm('Отменить эту запись?')">
+                                            <i class="fas fa-trash"></i>
+                                        </button>
+                                    </form>
+                                </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                {% endfor %}
+            </div>
+        {% else %}
+            <div class="empty-state">
+                <div class="empty-icon"></div>
+                <h3 class="empty-title">Записей пока нет</h3>
+                <p class="empty-text">Расписание пусто. Создайте первую запись!</p>
+                <a href="{% url 'beauty_app:admin_booking_create' %}" class="btn btn-primary">
+                    <i class="fas fa-plus"></i> Создать запись
+                </a>
+            </div>
+        {% endif %}
+    </div>
+</div>
+
+<style>
+    .bookings-list {
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+    }
+
+    .booking-card {
+        background: #ffffff;
+        border: 1px solid #f0e8e5;
+        border-radius: 16px;
+        padding: 20px 24px;
+        display: flex;
+        align-items: center;
+        gap: 24px;
+        transition: all 0.2s ease;
+    }
+
+    .booking-card:hover {
+        border-color: #f2a6b0;
+        box-shadow: 0 4px 16px rgba(242, 166, 176, 0.1);
+    }
+
+    /* Подсветка записей на сегодня */
+    .booking-today {
+        background: #fff9f5;
+        border-color: #f5b342;
+        border-left: 4px solid #f5b342;
+    }
+
+    /* Отмененные записи */
+    .booking-cancelled {
+        opacity: 0.5;
+    }
+
+    /* Левая колонка: Дата и время */
+    .booking-datetime {
+        flex-shrink: 0;
+        text-align: center;
+        min-width: 100px;
+        padding-right: 24px;
+        border-right: 1px solid #f0e8e5;
+    }
+
+    .booking-date {
+        font-size: 0.85rem;
+        font-weight: 600;
+        color: #2d2a28;
+        margin-bottom: 4px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 4px;
+    }
+
+    .today-badge {
+        background: #f5b342;
+        color: #fff;
+        font-size: 0.65rem;
+        padding: 2px 8px;
+        border-radius: 20px;
+        font-weight: 700;
+        text-transform: uppercase;
+    }
+
+    .booking-time {
+        font-size: 1.2rem;
+        font-weight: 700;
+        color: #f2a6b0;
+    }
+
+    /* Центральная колонка: Информация */
+    .booking-info {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+    }
+
+    .client-name {
+        font-size: 1.05rem;
+        font-weight: 700;
+        color: #2d2a28;
+    }
+
+    .client-phone a {
+        font-size: 0.9rem;
+        color: #6b5f5a;
+        text-decoration: none;
+        transition: color 0.2s;
+    }
+
+    .client-phone a:hover {
+        color: #f2a6b0;
+    }
+
+    .service-name {
+        font-size: 0.85rem;
+        color: #9b8f8a;
+        margin-top: 4px;
+    }
+
+    /* Правая колонка: Статус и кнопки */
+    .booking-actions {
+        flex-shrink: 0;
+        display: flex;
+        flex-direction: column;
+        align-items: flex-end;
+        gap: 12px;
+    }
+
+    .status-badge {
+        font-size: 0.7rem;
+        font-weight: 600;
+        padding: 4px 12px;
+        border-radius: 40px;
+        text-transform: uppercase;
+        letter-spacing: 0.3px;
+    }
+
+    .status-pending { background: #fff3e0; color: #f57c00; }
+    .status-confirmed { background: #e8f5e9; color: #388e3c; }
+    .status-cancelled { background: #fce4ec; color: #c62828; }
+
+    .action-buttons {
+        display: flex;
+        gap: 8px;
+    }
+
+    .btn-icon {
+        width: 36px;
+        height: 36px;
+        border-radius: 50%;
+        border: none;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: all 0.2s ease;
+        font-size: 0.9rem;
+    }
+
+    .btn-confirm {
+        background: #e8f5e9;
+        color: #388e3c;
+    }
+
+    .btn-confirm:hover {
+        background: #388e3c;
+        color: #fff;
+    }
+
+    .btn-delete {
+        background: #fce4ec;
+        color: #c62828;
+    }
+
+    .btn-delete:hover {
+        background: #c62828;
+        color: #fff;
+    }
+
+    .empty-state {
+        text-align: center;
+        padding: 48px 20px;
+    }
+
+    .empty-icon { font-size: 3rem; margin-bottom: 12px; opacity: 0.6; }
+    .empty-title { font-size: 1.1rem; font-weight: 600; color: #2d2a28; margin-bottom: 4px; }
+    .empty-text { font-size: 0.9rem; color: #6b5f5a; margin-bottom: 20px; }
+
+    .btn {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        padding: 10px 24px;
+        border-radius: 60px;
+        font-weight: 600;
+        text-decoration: none;
+        transition: all 0.25s ease;
+        border: none;
+        cursor: pointer;
+    }
+
+    .btn-primary { background: #f2a6b0; color: #fff; }
+    .btn-primary:hover { background: #e8919c; transform: translateY(-2px); }
+
+    .messages { margin-bottom: 24px; }
+    .alert { padding: 14px 20px; border-radius: 12px; margin-bottom: 12px; font-size: 0.9rem; }
+    .alert-success { background: #e8f5e9; color: #2e7d32; }
+    .alert-error { background: #fce4ec; color: #c62828; }
+
+    /* Адаптив для мобильных */
+    @media (max-width: 768px) {
+        .booking-card {
+            flex-direction: column;
+            align-items: stretch;
+            gap: 16px;
+        }
+
+        .booking-datetime {
+            border-right: none;
+            border-bottom: 1px solid #f0e8e5;
+            padding-right: 0;
+            padding-bottom: 12px;
+            display: flex;
+            justify-content: center;
+            gap: 12px;
+            align-items: center;
+        }
+
+        .booking-date {
+            flex-direction: row;
+            align-items: center;
+            margin-bottom: 0;
+        }
+
+        .booking-actions {
+            align-items: center;
+            flex-direction: row;
+            justify-content: center;
+        }
+    }
+</style>
+{% endblock %}

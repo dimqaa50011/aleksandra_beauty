@@ -1,0 +1,158 @@
+{% extends 'lending_base.html' %}
+{% load static %}
+
+{% block title %}Запись подтверждена — Sasha Sugar{% endblock %}
+
+{% block content %}
+<div class="container" style="padding-top: 120px; padding-bottom: 80px; max-width: 600px;">
+    <div class="success-card">
+        <div class="success-icon">✅</div>
+        <h1 class="success-title">Вы успешно записаны!</h1>
+        <p class="success-text">
+            Ваша заявка принята. Мы свяжемся с вами для подтверждения записи.
+        </p>
+        
+        <div class="success-info">
+            <p>Если у вас есть вопросы, позвоните нам:</p>
+            <a href="tel:+79052698654" class="phone-link">+7 (905) 269-86-54</a>
+        </div>
+
+        <div class="success-actions">
+            <a href="/" class="btn btn-primary">
+                <i class="fas fa-home"></i> На главную
+            </a>
+            <a href="{% url 'beauty_app:booking_create' %}" class="btn btn-secondary">
+                <i class="fas fa-plus"></i> Новая запись
+            </a>
+        </div>
+    </div>
+</div>
+
+<style>
+    .success-card {
+        background: #ffffff;
+        border-radius: 24px;
+        border: 1px solid #f0e8e5;
+        padding: 48px 32px;
+        text-align: center;
+        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.04);
+    }
+
+    .success-icon {
+        font-size: 4rem;
+        margin-bottom: 24px;
+        animation: scaleIn 0.5s ease;
+    }
+
+    @keyframes scaleIn {
+        from {
+            transform: scale(0);
+            opacity: 0;
+        }
+        to {
+            transform: scale(1);
+            opacity: 1;
+        }
+    }
+
+    .success-title {
+        font-size: 1.8rem;
+        font-weight: 700;
+        color: #2d2a28;
+        margin: 0 0 16px 0;
+    }
+
+    .success-text {
+        font-size: 1.05rem;
+        color: #6b5f5a;
+        line-height: 1.6;
+        margin: 0 0 32px 0;
+    }
+
+    .success-info {
+        background: #fcf9f7;
+        border-radius: 16px;
+        padding: 20px;
+        margin-bottom: 32px;
+    }
+
+    .success-info p {
+        font-size: 0.9rem;
+        color: #6b5f5a;
+        margin: 0 0 8px 0;
+    }
+
+    .phone-link {
+        font-size: 1.2rem;
+        font-weight: 700;
+        color: #f2a6b0;
+        text-decoration: none;
+        transition: color 0.2s;
+    }
+
+    .phone-link:hover {
+        color: #e8919c;
+    }
+
+    .success-actions {
+        display: flex;
+        gap: 12px;
+        justify-content: center;
+        flex-wrap: wrap;
+    }
+
+    .btn {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        padding: 12px 28px;
+        border-radius: 60px;
+        font-weight: 600;
+        font-size: 0.95rem;
+        text-decoration: none;
+        transition: all 0.25s ease;
+    }
+
+    .btn-primary {
+        background: #f2a6b0;
+        color: #fff;
+        box-shadow: 0 4px 16px rgba(242, 166, 176, 0.3);
+    }
+
+    .btn-primary:hover {
+        background: #e8919c;
+        transform: translateY(-2px);
+        box-shadow: 0 8px 28px rgba(242, 166, 176, 0.4);
+        color: #fff;
+    }
+
+    .btn-secondary {
+        background: #f0e8e5;
+        color: #6b5f5a;
+    }
+
+    .btn-secondary:hover {
+        background: #e8e0dd;
+        color: #2d2a28;
+    }
+
+    @media (max-width: 600px) {
+        .success-card {
+            padding: 32px 20px;
+        }
+
+        .success-title {
+            font-size: 1.4rem;
+        }
+
+        .success-actions {
+            flex-direction: column;
+        }
+
+        .btn {
+            width: 100%;
+            justify-content: center;
+        }
+    }
+</style>
+{% endblock %}
