@@ -301,5 +301,122 @@
     .read-more-link:hover .arrow {
         transform: translateX(4px);
     }
+    /* ==========================================
+   МОБИЛЬНЫЙ АДАПТИВ СТРАНИЦЫ КАТЕГОРИИ
+   ========================================== */
+@media (max-width: 768px) {
+    /* Уменьшаем верхний отступ (было 120px — слишком много) */
+    .container[style*="padding-top: 120px"] {
+        padding-top: 80px !important;
+        padding-bottom: 40px !important;
+    }
+
+    /* Хлебные крошки — компактнее */
+    .breadcrumbs {
+        font-size: 0.8rem;
+        margin-bottom: 20px;
+        flex-wrap: wrap;
+    }
+
+    /* Иконка категории — меньше */
+    .category-icon {
+        font-size: 2.5rem !important;
+        margin-bottom: 12px !important;
+    }
+
+    /* Заголовок категории — компактнее */
+    .category-header {
+        margin-bottom: 28px !important;
+    }
+
+    .category-header .section-title {
+        font-size: 1.8rem !important;
+        margin-bottom: 8px !important;
+    }
+
+    .category-desc {
+        font-size: 0.95rem !important;
+        padding: 0 10px;
+    }
+
+    /* Карточки услуг */
+    .service-card {
+        padding: 16px !important;
+        gap: 12px !important;
+    }
+
+    .service-name {
+        font-size: 1.05rem !important;
+        flex-wrap: wrap;
+    }
+
+    .service-desc {
+        font-size: 0.85rem !important;
+    }
+
+    /* Блок с ценой и кнопкой */
+    .service-action {
+        flex-direction: row !important;
+        justify-content: space-between !important;
+        align-items: center !important;
+        width: 100% !important;
+        border-top: 1px solid #f0e8e5;
+        padding-top: 12px;
+    }
+
+    .service-price-block {
+        align-items: flex-start !important;
+    }
+
+    .current-price {
+        font-size: 1.2rem !important;
+    }
+
+    /* Кнопка "Записаться онлайн" — на всю ширину */
+    .btn-primary-large {
+        width: 100% !important;
+        text-align: center !important;
+        padding: 12px 20px !important;
+        font-size: 0.9rem !important;
+    }
+
+    /* Кнопка "Вернуться" */
+    .btn-secondary {
+        width: 100% !important;
+        justify-content: center !important;
+    }
+
+    /* Футер */
+    .footer {
+        flex-direction: column !important;
+        text-align: center;
+        gap: 16px;
+        padding: 24px 0 !important;
+    }
+
+    .footer-links {
+        justify-content: center;
+        flex-wrap: wrap;
+    }
+}
+
+/* Для очень маленьких экранов */
+@media (max-width: 480px) {
+    .container[style*="padding-top: 120px"] {
+        padding-top: 20px !important;
+    }
+
+    .category-icon {
+        font-size: 2rem !important;
+    }
+
+    .category-header .section-title {
+        font-size: 1.5rem !important;
+    }
+
+    .service-card {
+        padding: 14px !important;
+    }
+}
 </style>
 {% endblock content %}

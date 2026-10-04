@@ -77,6 +77,75 @@
     @media (max-width: 600px) {
         .form-row { flex-direction: column; gap: 0; }
     }
+    /* ==========================================
+   МОБИЛЬНЫЙ АДАПТИВ ФОРМЫ ЗАПИСИ
+   ========================================== */
+@media (max-width: 768px) {
+    /* Уменьшаем верхний отступ */
+    .container[style*="padding-top: 120px"] {
+        padding-top: 80px !important;
+        padding-bottom: 40px !important;
+    }
+
+    /* Заголовок компактнее */
+    .section-title {
+        font-size: 1.8rem !important;
+        margin-bottom: 24px !important;
+    }
+
+    /* Поля формы */
+    .form-group {
+        margin-bottom: 16px !important;
+    }
+
+    .form-group label {
+        font-size: 0.9rem !important;
+        margin-bottom: 6px !important;
+    }
+
+    .form-control {
+        padding: 10px 12px !important;
+        font-size: 0.95rem !important;
+    }
+
+    /* Двухколоночные поля в одну колонку */
+    .form-row {
+        flex-direction: column !important;
+        gap: 0 !important;
+    }
+
+    .form-row .form-group {
+        width: 100% !important;
+    }
+
+    /* Кнопка отправки */
+    .btn-primary {
+        padding: 14px !important;
+        font-size: 1rem !important;
+    }
+
+    /* Блок ошибок */
+    .form-errors {
+        font-size: 0.85rem !important;
+        padding: 10px !important;
+    }
+}
+
+/* Для очень маленьких экранов */
+@media (max-width: 480px) {
+    .container[style*="padding-top: 120px"] {
+        padding-top: 35px !important;
+    }
+
+    .section-title {
+        font-size: 1.5rem !important;
+    }
+
+    .form-control {
+        padding: 10px !important;
+        font-size: 0.9rem !important;
+    }
+}
 </style>
 
 <script>

@@ -91,8 +91,45 @@
                             {% endif %}
                         </div>
                         
-                        <div class="post-actions">
-                            <button class="btn btn-secondary btn-sm" onclick="copyPost({{ post.id }})">
+                                                <div class="post-actions">
+                            {% if not post.is_approved %}
+                                <!-- Статус: Черновик -->
+                                <form method="post" action="{% url 'gen_posts_app:update_post_status' idea.id post.id %}" style="display: inline;">
+                                    {% csrf_token %}
+                                    <input type="hidden" name="action" value="approve">
+                                    <button type="submit" class="btn btn-approve btn-sm">
+                                        <i class="fas fa-check"></i> Одобрить
+                                    </button>
+                                </form>
+                            {% elif not post.is_published %}
+                                <!-- Статус: Одобрен -->
+                                <form method="post" action="{% url 'gen_posts_app:update_post_status' idea.id post.id %}" style="display: inline;">
+                                    {% csrf_token %}
+                                    <input type="hidden" name="action" value="publish">
+                                    <button type="submit" class="btn btn-publish btn-sm">
+                                        <i class="fas fa-rocket"></i> Опубликовать
+                                    </button>
+                                </form>
+                                <form method="post" action="{% url 'gen_posts_app:update_post_status' idea.id post.id %}" style="display: inline;">
+                                    {% csrf_token %}
+                                    <input type="hidden" name="action" value="draft">
+                                    <button type="submit" class="btn btn-secondary btn-sm" onclick="return confirm('Вернуть пост в черновики?')">
+                                        <i class="fas fa-undo"></i> В черновики
+                                    </button>
+                                </form>
+                            {% else %}
+                                <!-- Статус: Опубликован -->
+                                <form method="post" action="{% url 'gen_posts_app:update_post_status' idea.id post.id %}" style="display: inline;">
+                                    {% csrf_token %}
+                                    <input type="hidden" name="action" value="unpublish">
+                                    <button type="submit" class="btn btn-secondary btn-sm" onclick="return confirm('Скрыть пост из блога?')">
+                                        <i class="fas fa-eye-slash"></i> Скрыть
+                                    </button>
+                                </form>
+                            {% endif %}
+                            
+                            <!-- Кнопка копирования (доступна всегда) -->
+                            <button class="btn btn-secondary btn-sm" onclick="copyPost('{{ post.headline|escapejs }}', '{{ post.body|escapejs }}', '{{ post.hashtags|escapejs }}')">
                                 <i class="fas fa-copy"></i> Копировать
                             </button>
                         </div>
@@ -110,6 +147,28 @@
 </div>
 
 <style>
+        .btn-approve {
+        background: #e8f5e9;
+        color: #388e3c;
+        box-shadow: 0 2px 8px rgba(56, 142, 60, 0.15);
+    }
+
+    .btn-approve:hover {
+        background: #388e3c;
+        color: #fff;
+        transform: translateY(-2px);
+    }
+
+    .btn-publish {
+        background: #f2a6b0;
+        color: #fff;
+        box-shadow: 0 2px 8px rgba(242, 166, 176, 0.25);
+    }
+
+    .btn-publish:hover {
+        background: #e8919c;
+        transform: translateY(-2px);
+    }
     .dashboard {
         max-width: 1200px;
     }
@@ -431,9 +490,18 @@
 </style>
 
 <script>
-    function copyPost(postId) {
-        // Здесь будет логика копирования поста в буфер обмена
-        alert('Функция копирования будет добавлена позже');
+    function copyPost(headline, body, hashtags) {
+        // Формируем итоговый текст
+        const textToCopy = `${headline}\n\n${body}\n\n${hashtags}`;
+        
+        // Копируем в буфер обмена
+        navigator.clipboard.writeText(textToCopy).then(() => {
+            // Визуальное подтверждение (можно заменить на красивый toast, но alert пока сойдет)
+            alert('✅ Текст поста успешно скопирован!');
+        }).catch(err => {
+            console.error('Ошибка копирования: ', err);
+            alert('❌ Не удалось скопировать текст');
+        });
     }
 </script>
 {% endblock %}

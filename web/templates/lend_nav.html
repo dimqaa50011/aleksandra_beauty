@@ -1,17 +1,40 @@
 {% load static %}
 <nav class="navbar">
-        <div class="container">
-            <div class="logo">
-                <img src="{% static 'images/logo4.png' %}" alt="Логотип бьюти-студии Sasha Sugar">
-            </div>
-            <div class="nav-links">
-                <a href="#hero">Главная</a>
-                <a href="#about">О нас</a>
-                <a href="#contacts">Контакты</a>
-            </div>
-            <div class="nav-actions">
-                <a href="{% url 'beauty_app:booking_create' %}" class="btn btn-sm" target="_blank" rel="noopener" title="Онлайн-запись к Александре Сахаровой">Записаться</a>
-                <button class="menu-toggle" aria-label="Меню">☰</button>
-            </div>
+    <div class="container navbar-inner">
+        <!-- Логотип -->
+        <a href="{% url 'beauty_app:landing' %}" class="logo">
+            <img src="{% static 'images/logo4.png' %}" alt="Логотип бьюти-студии Sasha Sugar">
+        </a>
+        
+        <!-- Десктопные ссылки (ИСПРАВЛЕНО) -->
+        <div class="nav-links">
+            <a href="{% url 'beauty_app:landing' %}">Главная</a>
+            <a href="{% url 'beauty_app:landing' %}#about">О нас</a>
+            <a href="{% url 'beauty_app:landing' %}#contacts">Контакты</a>
+            <a href="{% url 'gen_posts_app:blog_list' %}">Блог</a>
         </div>
-    </nav>
+        
+        <!-- Десктопная кнопка -->
+        <a href="{% url 'beauty_app:booking_create' %}" class="btn btn-sm nav-btn" target="_blank" rel="noopener">Записаться</a>
+        
+        <!-- Кнопка бургер -->
+        <button class="menu-toggle" id="menuToggle" aria-label="Меню">
+            <span></span>
+            <span></span>
+            <span></span>
+        </button>
+    </div>
+    
+    <!-- Мобильное меню (ИСПРАВЛЕНО) -->
+    <div class="mobile-menu" id="mobileMenu">
+        <button class="mobile-close" id="mobileClose" aria-label="Закрыть меню">
+            <span></span>
+            <span></span>
+        </button>
+        <a href="{% url 'beauty_app:landing' %}" class="mobile-link">Главная</a>
+        <a href="{% url 'beauty_app:landing' %}#about" class="mobile-link">О нас</a>
+        <a href="{% url 'beauty_app:landing' %}#contacts" class="mobile-link">Контакты</a>
+        <a href="{% url 'gen_posts_app:blog_list' %}" class="mobile-link">Блог</a>
+        <a href="{% url 'beauty_app:booking_create' %}" class="mobile-link btn-mobile">Записаться онлайн</a>
+    </div>
+</nav>

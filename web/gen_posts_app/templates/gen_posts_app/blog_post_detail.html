@@ -1,0 +1,207 @@
+{% extends 'lending_base.html' %}
+{% load static %}
+
+{% block title %}{{ post.headline|default:post.idea.topic }} — Sasha Sugar{% endblock %}
+
+{% block content %}
+<div class="container" style="padding-top: 120px; padding-bottom: 80px; max-width: 800px;">
+    
+    <!-- Навигация назад -->
+    <a href="{% url 'gen_posts_app:blog_list' %}" class="back-to-blog">
+        <i class="fas fa-arrow-left"></i> Вернуться к блогу
+    </a>
+
+    <article class="blog-post-full">
+        <header class="post-header">
+            <div class="post-meta">
+                <span class="post-date">{{ post.created_at|date:"d.m.Y" }}</span>
+            </div>
+            <h1 class="post-title">{{ post.headline|default:post.idea.topic }}</h1>
+        </header>
+
+        <div class="post-body-full">
+            <!-- linebreaks сохраняет абзацы и переносы строк из базы -->
+            {{ post.body|linebreaks }}
+        </div>
+
+        {% if post.hashtags %}
+            <div class="post-hashtags-full">
+                {{ post.hashtags }}
+            </div>
+        {% endif %}
+
+        <div class="post-cta">
+            <p>Понравилась статья? Приходите к нам за красотой и отличным настроением!</p>
+            <a href="https://spb.moiprofi.ru/aleksandrasaharova/" class="btn-cta" target="_blank" rel="noopener">
+                Записаться в студию
+            </a>
+        </div>
+    </article>
+
+</div>
+
+<style>
+    .back-to-blog {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        color: #f2a6b0;
+        text-decoration: none;
+        font-weight: 600;
+        margin-bottom: 32px;
+        transition: all 0.2s ease;
+    }
+    .back-to-blog:hover { color: #e8919c; gap: 12px; }
+
+    .blog-post-full {
+        background: #ffffff;
+        border-radius: 24px;
+        border: 1px solid #f0e8e5;
+        padding: 40px;
+    }
+
+    .post-meta { margin-bottom: 16px; }
+    .post-date { font-size: 0.9rem; color: #9b8f8a; }
+
+    .post-title {
+        font-size: 2rem;
+        font-weight: 700;
+        color: #2d2a28;
+        margin: 0 0 32px 0;
+        line-height: 1.2;
+    }
+
+    .post-body-full {
+        font-size: 1.1rem;
+        color: #4a3f3a;
+        line-height: 1.8;
+        margin-bottom: 32px;
+    }
+    .post-body-full p { margin-bottom: 20px; }
+
+    .post-hashtags-full {
+        font-size: 1rem;
+        color: #f2a6b0;
+        font-weight: 500;
+        margin-bottom: 40px;
+        padding-top: 24px;
+        border-top: 1px solid #f0e8e5;
+    }
+
+    .post-cta {
+        background: #fcf9f7;
+        border-radius: 16px;
+        padding: 32px;
+        text-align: center;
+    }
+    .post-cta p {
+        font-size: 1.1rem;
+        font-weight: 600;
+        color: #2d2a28;
+        margin: 0 0 20px 0;
+    }
+
+    .btn-cta {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        background: #f2a6b0;
+        color: #fff;
+        padding: 14px 32px;
+        border-radius: 60px;
+        font-weight: 700;
+        font-size: 1rem;
+        text-decoration: none;
+        transition: all 0.25s ease;
+        box-shadow: 0 4px 16px rgba(242, 166, 176, 0.3);
+    }
+    .btn-cta:hover {
+        background: #e8919c;
+        transform: translateY(-2px);
+        box-shadow: 0 8px 28px rgba(242, 166, 176, 0.4);
+        color: #fff;
+    }
+
+    @media (max-width: 768px) {
+        .blog-post-full { padding: 24px; }
+        .post-title { font-size: 1.5rem; }
+        .post-body-full { font-size: 1rem; }
+    }
+    /* ==========================================
+   МОБИЛЬНЫЙ АДАПТИВ СТРАНИЦЫ ПОСТА
+   ========================================== */
+@media (max-width: 768px) {
+    /* Уменьшаем верхний и нижний отступы контейнера */
+    .container[style*="padding-top: 120px"] {
+        padding-top: 80px !important;
+        padding-bottom: 40px !important;
+    }
+
+    /* Ссылка "Назад" компактнее */
+    .back-to-blog {
+        margin-bottom: 24px !important;
+        font-size: 0.9rem !important;
+    }
+
+    /* Карточка поста */
+    .blog-post-full {
+        padding: 24px 20px !important;
+        border-radius: 20px !important;
+    }
+
+    /* Заголовок поста */
+    .post-title {
+        font-size: 1.5rem !important;
+        line-height: 1.3 !important;
+        margin-bottom: 20px !important; /* Было 32px */
+    }
+
+    /* Текст статьи */
+    .post-body-full {
+        font-size: 1rem !important;
+        line-height: 1.6 !important; /* Чуть плотнее для мобильного чтения */
+    }
+    .post-body-full p {
+        margin-bottom: 16px !important; /* Было 20px */
+    }
+
+    /* Хештеги */
+    .post-hashtags-full {
+        font-size: 0.9rem !important;
+        margin-bottom: 24px !important; /* Было 40px */
+        padding-top: 16px !important;
+    }
+
+    /* Блок призыва к действию (CTA) */
+    .post-cta {
+        padding: 24px 16px !important; /* Было 32px */
+    }
+    .post-cta p {
+        font-size: 1rem !important;
+        margin-bottom: 16px !important;
+    }
+    
+    /* Кнопка записи на всю ширину для удобного нажатия пальцем */
+    .btn-cta {
+        width: 100% !important;
+        padding: 14px 20px !important;
+        font-size: 1rem !important;
+    }
+}
+
+/* Для очень маленьких экранов */
+@media (max-width: 480px) {
+    .container[style*="padding-top: 120px"] {
+        padding-top: 35px !important;
+    }
+
+    .post-title {
+        font-size: 1.35rem !important;
+    }
+
+    .blog-post-full {
+        padding: 20px 16px !important;
+    }
+}
+</style>
+{% endblock %}

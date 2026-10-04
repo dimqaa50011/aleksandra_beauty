@@ -264,7 +264,6 @@ class FooterLink(models.Model):
         return self.title
 
 
-
 class Booking(models.Model):
     STATUS_CHOICES = [
         ('pending', '⏳ Ожидает подтверждения'),
@@ -276,7 +275,6 @@ class Booking(models.Model):
     phone = models.CharField('Телефон', max_length=20)
     email = models.EmailField('Электронная почта', blank=True, null=True)
     
-    # Связь с услугой (чтобы знать длительность и название)
     service = models.ForeignKey(
         'Service', 
         on_delete=models.PROTECT, 
@@ -285,7 +283,11 @@ class Booking(models.Model):
     )
     
     appointment_datetime = models.DateTimeField('Дата и время записи')
-    status = models.CharField('Статус', max_length=20, choices=STATUS_CHOICES, default='pending')
+    # ИЗМЕНЕНИЕ: статус по умолчанию теперь 'confirmed'
+    status = models.CharField('Статус', max_length=20, choices=STATUS_CHOICES, default='confirmed')
+    
+    # НОВОЕ ПОЛЕ: для хранения ID события в Google Календаре
+    google_event_id = models.CharField('ID события в Google', max_length=255, blank=True, null=True, editable=False)
     
     created_at = models.DateTimeField('Создано', auto_now_add=True)
     updated_at = models.DateTimeField('Обновлено', auto_now=True)
