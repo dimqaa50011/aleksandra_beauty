@@ -72,22 +72,24 @@ def get_gigachat_token() -> str:
 
 
 def call_gigachat_api(topic: str, description: str) -> dict:
-    """Делает реальный запрос к GigaChat API и возвращает структурированный ответ."""
+    """Делает запрос к GigaChat и возвращает структурированный ответ."""
     
     token = get_gigachat_token()
     
-    # Системный промпт, заставляющий модель отвечать СТРОГО в формате JSON
+    # УЛУЧШЕННЫЙ ПРОМПТ с жестким запретом на реальные переносы строк в JSON
     system_prompt = (
         "Ты — профессиональный SMM-менеджер уютной бьюти-студии 'Sasha Sugar' в Санкт-Петербурге. "
-        "Твоя задача — написать вовлекающий пост для соцсетей на основе темы и описания. "
-        "Тон: дружелюбный, заботливый, профессиональный, с обращением 'Девочки' или 'Красотки'. "
-        "Обязательно упомяни, что студия находится по адресу: Спасский переулок, 7. "
-        "В конце добавь призыв к действию (записаться). "
-        "ОТВЕТЬ СТРОГО В ФОРМАТЕ JSON БЕЗ КАКИХ-ЛИБО ДОПОЛНИТЕЛЬНЫХ ТЕКСТОВ, ПОЯСНЕНИЙ ИЛИ MARKDOWN-ОБЕРТОК (```). "
+        "Твоя задача — написать вовлекающий пост на основе темы и описания. "
+        "Тон: дружелюбный, заботливый, профессиональный. "
+        "Обязательно упомяни адрес: Спасский переулок, 7. "
+        "В конце добавь призыв к действию. "
+        "ОТВЕТЬ СТРОГО В ФОРМАТЕ JSON. "
+        "ВАЖНО: Внутри строковых значений JSON НЕ ИСПОЛЬЗУЙ реальные переносы строк (Enter). "
+        "Вместо них используй символы \\n. Иначе твой ответ будет невалидным JSON и сломает систему."
         "Формат JSON:\n"
         "{\n"
         '  "headline": "Короткий цепляющий заголовок с 1-2 эмодзи",\n'
-        '  "body": "Основной текст поста, разбитый на абзацы (используй \\n\\n)",\n'
+        '  "body": "Основной текст поста. Для разделения абзацев используй символы \\n\\n",\n'
         '  "hashtags": "5-7 релевантных хештегов через пробел, начиная с #sashasugar"\n'
         "}"
     )
@@ -109,37 +111,47 @@ def call_gigachat_api(topic: str, description: str) -> dict:
         "temperature": 0.7,
         "max_tokens": 1500
     }
+
+    chat_url = "https://gigachat.devices.sberbank.ru/api/v1/chat/completions"
+
     try:
-        response = requests.post(GIGACHAT_CHAT_URL, headers=headers, json=payload, timeout=30, verify=False)
+        response = requests.post(chat_url, headers=headers, json=payload, timeout=30, verify=False)
+        
+        if not response.ok:
+            logger.error(f"❌ GigaChat вернул ошибку {response.status_code}. Ответ: {response.text}")
         response.raise_for_status()
         
         data = response.json()
         raw_content = data['choices'][0]['message']['content']
         
-        # Очистка ответа от возможных markdown-оберток (```json ... ```)
-        cleaned_content = re.sub(r'^```json\s*', '', raw_content, flags=re.MULTILINE)
-        cleaned_content = re.sub(r'\s*```$', '', cleaned_content, flags=re.MULTILINE)
-        cleaned_content = cleaned_content.strip()
+        # 1. Убираем markdown-обертки ```json ... ```
+        cleaned_content = re.sub(r'^```(?:json)?\s*', '', raw_content, flags=re.IGNORECASE | re.MULTILINE)
+        cleaned_content = re.sub(r'\s*```$', '', cleaned_content, flags=re.MULTILINE).strip()
         
-        # Парсим JSON
+        # 2. МАГИЧЕСКОЕ ИСПРАВЛЕНИЕ: заменяем реальные переносы строк внутри кавычек на \n
+        # Это спасает от ошибки "Invalid control character", если модель все равно вставила Enter
+        def escape_newlines_in_json(match):
+            return match.group(0).replace('\n', '\\n').replace('\r', '')
+        
+        cleaned_content = re.sub(r'"[^"\\]*(?:\\.[^"\\]*)*"', escape_newlines_in_json, cleaned_content)
+        
+        # 3. Парсим JSON
         result = json.loads(cleaned_content)
         
-        # Валидация полей
         if not all(k in result for k in ['headline', 'body', 'hashtags']):
             raise ValueError("API вернул JSON без обязательных полей")
             
         return result
 
     except requests.exceptions.RequestException as e:
-        logger.error(f"Ошибка запроса к GigaChat API: {e}")
+        logger.error(f"Ошибка сети при запросе к GigaChat API: {e}")
         raise
     except json.JSONDecodeError as e:
-        logger.error(f"Не удалось распарсить JSON от GigaChat. Ответ: {raw_content}")
+        logger.error(f"Не удалось распарсить JSON от GigaChat. Сырой ответ:\n{raw_content}")
         raise
     except Exception as e:
         logger.error(f"Непредвиденная ошибка при генерации: {e}")
         raise
-
 
 def generate_post_task(idea_id: int):
     """Фоновая задача для генерации поста."""
