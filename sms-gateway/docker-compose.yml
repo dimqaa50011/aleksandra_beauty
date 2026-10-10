@@ -1,0 +1,72 @@
+version: "3.8"
+
+services:
+  # --- База данных ---
+  db:
+    image: mariadb:lts
+    container_name: sms-gate-db
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD}
+      MYSQL_DATABASE: sms
+      MYSQL_USER: sms
+      MYSQL_PASSWORD: ${DB_PASSWORD}
+    volumes:
+      - mariadb-data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # --- Бэкенд SMSGate ---
+  backend:
+    image: ghcr.io/android-sms-gateway/server:latest
+    container_name: sms-gate-backend
+    restart: unless-stopped
+    environment:
+      - CONFIG_PATH=/app/config.yml
+      - DATABASE__PASSWORD=${DB_PASSWORD}
+      - GATEWAY__MODE=private
+      - GATEWAY__PRIVATE_TOKEN=${PRIVATE_TOKEN}
+      - HTTP__LISTEN=0.0.0.0:3000
+    volumes:
+      - ./configs/config.yml:/app/config.yml:ro
+    depends_on:
+      db:
+        condition: service_healthy
+
+  # --- Фоновый worker (обслуживание БД) ---
+  worker:
+    image: ghcr.io/android-sms-gateway/server:latest
+    container_name: sms-gate-worker
+    restart: unless-stopped
+    command: ["/app/app", "worker"]
+    environment:
+      - CONFIG_PATH=/app/config.yml
+      - DATABASE__PASSWORD=${DB_PASSWORD}
+    volumes:
+      - ./configs/config.yml:/app/config.yml:ro
+    depends_on:
+      db:
+        condition: service_healthy
+
+  # --- Nginx Proxy Manager (SSL + Reverse Proxy) ---
+  npm:
+    image: 'jc21/nginx-proxy-manager:latest'
+    container_name: npm
+    restart: unless-stopped
+    ports:
+      - '80:80'      # HTTP (нужен для ACME challenge)
+      - '81:81'      # Веб-интерфейс управления NPM
+      - '443:443'    # HTTPS
+    environment:
+      DB_SQLITE_FILE: "/data/database.sqlite"
+    volumes:
+      - ./npm-data:/data
+      - ./letsencrypt:/etc/letsencrypt
+    depends_on:
+      - backend
+
+volumes:
+  mariadb-data:

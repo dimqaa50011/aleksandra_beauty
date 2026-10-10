@@ -1,0 +1,11 @@
+database:
+  host: db
+  port: 3306
+  user: sms
+  database: sms
+
+http:
+  listen: 0.0.0.0:3000
+
+http.openapi:
+  enabled: false
