@@ -57,9 +57,9 @@ services:
     container_name: npm
     restart: unless-stopped
     ports:
-      - '80:80'      # HTTP (нужен для ACME challenge)
+      - '8080:80'      # HTTP (нужен для ACME challenge)
       - '81:81'      # Веб-интерфейс управления NPM
-      - '443:443'    # HTTPS
+      - '8443:443'    # HTTPS
     environment:
       DB_SQLITE_FILE: "/data/database.sqlite"
     volumes:
