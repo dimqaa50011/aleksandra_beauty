@@ -49,7 +49,7 @@
         </div>
     {% endif %}
 
-    <button type="submit" class="btn btn-primary" style="width: 100%; margin-top: 24px; padding: 14px 32px; background: #f2a6b0; color: #fff; border: none; border-radius: 60px; font-size: 1rem; font-weight: 600; cursor: pointer; transition: all 0.3s; box-shadow: 0 4px 20px rgba(242, 166, 176, 0.35);">
+    <button type="submit" class="btn btn-primary" id="submitBtn" style="width: 100%; margin-top: 24px; padding: 14px 32px; background: #f2a6b0; color: #fff; border: none; border-radius: 60px; font-size: 1rem; font-weight: 600; cursor: pointer; transition: all 0.3s; box-shadow: 0 4px 20px rgba(242, 166, 176, 0.35);">
         Записаться
     </button>
 </form>
@@ -64,7 +64,6 @@
     }
     .form-control:focus { outline: none; border-color: #f2a6b0; background: #fff; }
     
-    /* Стили для кнопки */
     .btn-primary {
         width: 100%;
         padding: 14px 32px;
@@ -90,6 +89,14 @@
         transform: translateY(0);
     }
     
+    .btn-primary:disabled {
+        background: #ccc;
+        cursor: not-allowed;
+        transform: none;
+        box-shadow: none;
+        opacity: 0.6;
+    }
+    
     @media (max-width: 600px) {
         .form-row { flex-direction: column; gap: 0; }
     }
@@ -105,9 +112,57 @@
         .form-control { padding: 10px !important; font-size: 0.9rem !important; }
     }
 </style>
+
 <script>
     document.addEventListener('DOMContentLoaded', function() {
-        // 1. АВТОЗАПОЛНЕНИЕ ДЛЯ VK
+        // ==========================================
+        // 1. МАСКА ДЛЯ ТЕЛЕФОНА (+7)
+        // ==========================================
+        const phoneInput = document.querySelector('input[name="phone"]');
+        
+        if (phoneInput) {
+            phoneInput.setAttribute('placeholder', '+7 (999) 123-45-67');
+
+            phoneInput.addEventListener('input', function(e) {
+                let value = e.target.value.replace(/\D/g, '');
+                
+                if (value.startsWith('8')) {
+                    value = '7' + value.substring(1);
+                }
+                else if (value.length > 0 && !value.startsWith('7')) {
+                    value = '7' + value;
+                }
+
+                let formattedValue = '';
+                if (value.length > 0) {
+                    formattedValue = '+7';
+                }
+                if (value.length > 1) {
+                    formattedValue += ' (' + value.substring(1, 4);
+                }
+                if (value.length >= 5) {
+                    formattedValue += ') ' + value.substring(4, 7);
+                }
+                if (value.length >= 8) {
+                    formattedValue += '-' + value.substring(7, 9);
+                }
+                if (value.length >= 10) {
+                    formattedValue += '-' + value.substring(9, 11);
+                }
+
+                e.target.value = formattedValue;
+            });
+
+            phoneInput.addEventListener('keydown', function(e) {
+                if (e.key === 'Backspace' && this.value.length <= 4) {
+                    this.value = '';
+                }
+            });
+        }
+
+        // ==========================================
+        // 2. АВТОЗАПОЛНЕНИЕ ИМЕНИ ДЛЯ VK
+        // ==========================================
         if (window.vkBridge) {
             window.vkBridge.send('VKWebAppInit');
             window.vkBridge.send('VKWebAppGetUserInfo').then(data => {
@@ -118,20 +173,20 @@
             }).catch(() => {});
         }
 
-        // 2. ЭЛЕМЕНТЫ ФОРМЫ
+        // ==========================================
+        // 3. ЗАВИСИМОСТЬ: КАТЕГОРИЯ -> УСЛУГИ
+        // ==========================================
         const categorySelect = document.querySelector('select[name="category"]');
         const serviceSelect = document.querySelector('select[name="service"]');
         const dateInput = document.querySelector('input[name="appointment_date"]');
         const timeSelect = document.querySelector('select[name="appointment_time"]');
         const timeHelp = document.getElementById('timeHelp');
 
-        // 3. ЛОГИКА ЗАВИСИМОСТИ: КАТЕГОРИЯ -> УСЛУГИ
         function updateServices() {
             const categoryId = categorySelect.value;
             
-            // Сбрасываем услугу и время при смене категории
             serviceSelect.innerHTML = '<option value="">Загрузка...</option>';
-            timeSelect.innerHTML = '<option value="">Сначала выберите услугу</option>';
+            if (timeSelect) timeSelect.innerHTML = '<option value="">Сначала выберите услугу</option>';
             if (timeHelp) timeHelp.style.display = 'block';
 
             if (!categoryId) {
@@ -139,7 +194,6 @@
                 return;
             }
 
-            // Запрашиваем услуги для выбранной категории
             fetch(`/api/services-by-category/?category_id=${categoryId}`)
                 .then(response => response.json())
                 .then(data => {
@@ -162,17 +216,16 @@
                 });
         }
 
-        // Слушаем изменение категории
         if (categorySelect) {
             categorySelect.addEventListener('change', updateServices);
-            
-            // Если при загрузке страницы категория уже выбрана (например, из ссылки), запускаем обновление
             if (categorySelect.value) {
                 updateServices();
             }
         }
 
-        // 4. ЛОГИКА ЗАВИСИМОСТИ: УСЛУГА + ДАТА -> ВРЕМЯ
+        // ==========================================
+        // 4. ЗАВИСИМОСТЬ: УСЛУГА + ДАТА -> ВРЕМЯ
+        // ==========================================
         function fetchAvailableTimes() {
             const date = dateInput ? dateInput.value : '';
             const serviceId = serviceSelect.value;
@@ -224,9 +277,26 @@
         if (dateInput) dateInput.addEventListener('change', fetchAvailableTimes);
         if (serviceSelect) serviceSelect.addEventListener('change', fetchAvailableTimes);
 
-        // Если при загрузке дата и услуга уже выбраны, загружаем время
         if (dateInput && serviceSelect && dateInput.value && serviceSelect.value) {
             fetchAvailableTimes();
+        }
+
+        // ==========================================
+        // 5. БЛОКИРОВКА КНОПКИ ПРИ ОТПРАВКЕ ФОРМЫ
+        // ==========================================
+        const bookingForm = document.getElementById('bookingForm');
+
+        if (bookingForm) {
+            bookingForm.addEventListener('submit', function(e) {
+                const submitBtn = document.getElementById('submitBtn');
+                
+                if (submitBtn) {
+                    submitBtn.disabled = true;
+                    submitBtn.textContent = 'Отправка...';
+                    submitBtn.style.opacity = '0.6';
+                    submitBtn.style.cursor = 'not-allowed';
+                }
+            });
         }
     });
 </script>
