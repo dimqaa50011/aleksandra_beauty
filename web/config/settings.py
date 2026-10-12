@@ -106,6 +106,17 @@ DATABASES = {
 #     }
 # }
 
+X_FRAME_OPTIONS = 'ALLOWALL'
+# Разрешаем отправку Cookies из iframe (VK)
+SESSION_COOKIE_SAMESITE = 'None'
+CSRF_COOKIE_SAMESITE = 'None'
+
+# Обязательно требуем HTTPS для этих cookies (у тебя же HTTPS через Nginx?)
+SESSION_COOKIE_SECURE = True
+CSRF_COOKIE_SECURE = True
+
+SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+
 
 Q_CLUSTER = {
     'name': 'SashaSugar',
