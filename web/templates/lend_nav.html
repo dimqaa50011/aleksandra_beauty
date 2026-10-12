@@ -15,7 +15,7 @@
         </div>
         
         <!-- Десктопная кнопка -->
-        <a href="{% url 'beauty_app:booking_create' %}" class="btn btn-sm nav-btn" target="_blank" rel="noopener">Записаться</a>
+        <a href="{% url 'booking_app:booking_create' %}" class="btn btn-sm nav-btn" target="_blank" rel="noopener">Записаться</a>
         
         <!-- Кнопка бургер -->
         <button class="menu-toggle" id="menuToggle" aria-label="Меню">
@@ -35,6 +35,6 @@
         <a href="{% url 'beauty_app:landing' %}#about" class="mobile-link">О нас</a>
         <a href="{% url 'beauty_app:landing' %}#contacts" class="mobile-link">Контакты</a>
         <a href="{% url 'gen_posts_app:blog_list' %}" class="mobile-link">Блог</a>
-        <a href="{% url 'beauty_app:booking_create' %}" class="mobile-link btn-mobile">Записаться онлайн</a>
+        <a href="{% url 'booking_app:booking_create' %}" class="mobile-link btn-mobile">Записаться онлайн</a>
     </div>
 </nav>

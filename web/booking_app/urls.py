@@ -1,0 +1,41 @@
+from django.urls import path
+from . import views
+
+app_name = 'booking_app'
+
+urlpatterns = [
+    # ==========================================
+    # ПУБЛИЧНЫЕ СТРАНИЦЫ БРОНИРОВАНИЯ
+    # ==========================================
+    path('booking/', views.booking_create, name='booking_create'),
+    path('booking/success/', views.booking_success, name='booking_success'),
+    
+    # ==========================================
+    # API ЭНДПОИНТЫ (AJAX)
+    # ==========================================
+    # Проверка свободных слотов
+    path('api/available-times/', views.get_available_times, name='available_times'),
+    
+    # Умная проверка email (новый клиент или нет)
+    path('api/check-email/', views.check_email_view, name='check_email'),
+    
+    # Отправка и проверка кода подтверждения
+    path('api/send-email-code/', views.send_email_code_view, name='send_email_code'),
+    path('api/verify-email-code/', views.verify_email_code_view, name='verify_email_code'),
+    path('api/free-slots/', views.get_free_slots_for_admin, name='free_slots'),
+    
+    # ==========================================
+    # АДМИНКА: УПРАВЛЕНИЕ ЗАПИСЯМИ
+    # ==========================================
+    path('admin-dashboard/bookings/', views.BookingsListView.as_view(), name='bookings_list'),
+    path('admin-dashboard/bookings/add/', views.AdminBookingCreateView.as_view(), name='admin_booking_create'),
+    path('admin-dashboard/bookings/<int:pk>/confirm/', views.BookingConfirmView.as_view(), name='booking_confirm'),
+    path('admin-dashboard/bookings/<int:pk>/cancel/', views.BookingCancelView.as_view(), name='booking_cancel'),
+    
+    # ==========================================
+    # АДМИНКА: УПРАВЛЕНИЕ СЛОТАМИ
+    # ==========================================
+    path('admin-dashboard/blocked-slots/', views.BlockedSlotListView.as_view(), name='blocked_slots_list'),
+    path('admin-dashboard/blocked-slots/add/', views.BlockedSlotAddView.as_view(), name='blocked_slot_add'),
+    path('admin-dashboard/blocked-slots/<int:pk>/delete/', views.BlockedSlotDeleteView.as_view(), name='blocked_slot_delete'),
+]

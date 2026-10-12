@@ -6,7 +6,7 @@
 {% block page_title %}Управление блокировками{% endblock %}
 
 {% block actions %}
-    <a href="{% url 'beauty_app:blocked_slot_add' %}" class="btn btn-primary">
+    <a href="{% url 'booking_app:blocked_slot_add' %}" class="btn btn-primary">
         <i class="fas fa-plus"></i> Заблокировать время
     </a>
 {% endblock %}
@@ -38,7 +38,7 @@
                                 <div class="slot-reason">{{ slot.reason }}</div>
                             {% endif %}
                         </div>
-                        <form method="post" action="{% url 'beauty_app:blocked_slot_delete' slot.pk %}" style="display: inline;">
+                        <form method="post" action="{% url 'booking_app:blocked_slot_delete' slot.pk %}" style="display: inline;">
                             {% csrf_token %}
                             <button type="submit" class="btn btn-danger" onclick="return confirm('Удалить эту блокировку?')">
                                 <i class="fas fa-trash"></i> Удалить
@@ -52,7 +52,7 @@
                 <div class="empty-icon"></div>
                 <h3 class="empty-title">Нет заблокированных слотов</h3>
                 <p class="empty-text">Добавьте выходные или личные дела</p>
-                <a href="{% url 'beauty_app:blocked_slot_add' %}" class="btn btn-primary">
+                <a href="{% url 'booking_app:blocked_slot_add' %}" class="btn btn-primary">
                     <i class="fas fa-plus"></i> Заблокировать время
                 </a>
             </div>

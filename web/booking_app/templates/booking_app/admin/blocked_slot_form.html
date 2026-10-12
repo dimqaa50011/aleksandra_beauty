@@ -1,0 +1,381 @@
+{% extends 'dashboard_base.html' %}
+{% load static %}
+
+{% block title %}Заблокировать время{% endblock %}
+{% block page_title %}Заблокировать время{% endblock %}
+
+{% block content %}
+<div class="form-container">
+    <form method="post" class="blocked-slot-form">
+        {% csrf_token %}
+        
+        {% if form.non_field_errors %}
+            <div class="form-error">
+                {{ form.non_field_errors }}
+            </div>
+        {% endif %}
+
+        <div class="form-group">
+            <label class="form-label" for="{{ form.date.id_for_label }}">{{ form.date.label }}</label>
+            {{ form.date }}
+            {% if form.date.errors %}<div class="field-error">{{ form.date.errors }}</div>{% endif %}
+        </div>
+
+        <!-- Предупреждение о записях -->
+        <div id="bookingsWarning" class="bookings-warning" style="display: none;">
+            <div class="warning-icon">⚠️</div>
+            <div class="warning-content">
+                <strong>На этот день есть записи:</strong>
+                <ul id="bookingsList"></ul>
+                <p class="warning-note">Чтобы установить выходной на весь день, сначала отмените или перенесите эти записи.</p>
+            </div>
+        </div>
+
+        <div class="form-group checkbox-group">
+            <label class="checkbox-label" id="fullDayLabel">
+                {{ form.is_full_day }}
+                <span class="checkbox-text">{{ form.is_full_day.label }}</span>
+            </label>
+            <div id="fullDayDisabledNote" class="disabled-note" style="display: none;">
+                Невозможно установить: есть активные записи
+            </div>
+        </div>
+
+        <div id="timeFields" class="time-row">
+            <div class="form-group">
+                <label class="form-label" for="{{ form.start_time.id_for_label }}">{{ form.start_time.label }}</label>
+                {{ form.start_time }}
+                {% if form.start_time.errors %}<div class="field-error">{{ form.start_time.errors }}</div>{% endif %}
+            </div>
+            <div class="form-group">
+                <label class="form-label" for="{{ form.end_time.id_for_label }}">{{ form.end_time.label }}</label>
+                {{ form.end_time }}
+                {% if form.end_time.errors %}<div class="field-error">{{ form.end_time.errors }}</div>{% endif %}
+            </div>
+        </div>
+
+        <div class="form-group">
+            <label class="form-label" for="{{ form.slot_type.id_for_label }}">{{ form.slot_type.label }}</label>
+            {{ form.slot_type }}
+        </div>
+
+        <div class="form-group">
+            <label class="form-label" for="{{ form.reason.id_for_label }}">{{ form.reason.label }}</label>
+            {{ form.reason }}
+        </div>
+
+        <div class="form-actions">
+            <button type="submit" class="btn btn-primary">Сохранить</button>
+            <a href="{% url 'booking_app:blocked_slots_list' %}" class="btn btn-secondary">Отмена</a>
+        </div>
+    </form>
+</div>
+
+<style>
+    .form-container {
+        max-width: 600px;
+        margin: 0 auto;
+        background: #fff;
+        padding: 40px;
+        border-radius: 20px;
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
+    }
+
+    .blocked-slot-form .form-group {
+        margin-bottom: 24px;
+    }
+
+    .blocked-slot-form .form-label {
+        display: block;
+        font-weight: 600;
+        margin-bottom: 8px;
+        color: #2d2a28;
+        font-size: 0.95rem;
+    }
+
+    .blocked-slot-form input[type="date"],
+    .blocked-slot-form select,
+    .blocked-slot-form input[type="text"] {
+        width: 100%;
+        padding: 12px 16px;
+        border: 1px solid #e8e0dd;
+        border-radius: 12px;
+        font-size: 1rem;
+        background: #fcf9f7;
+        transition: all 0.2s;
+        color: #2d2a28;
+    }
+
+    .blocked-slot-form input[type="date"]:focus,
+    .blocked-slot-form select:focus,
+    .blocked-slot-form input[type="text"]:focus {
+        outline: none;
+        border-color: #f2a6b0;
+        background: #fff;
+        box-shadow: 0 0 0 3px rgba(242, 166, 176, 0.1);
+    }
+
+    .blocked-slot-form select {
+        cursor: pointer;
+        appearance: none;
+        background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%232d2a28' d='M6 9L1 4h10z'/%3E%3C/svg%3E");
+        background-repeat: no-repeat;
+        background-position: right 16px center;
+        padding-right: 40px;
+    }
+
+    .checkbox-group {
+        margin-bottom: 24px;
+    }
+
+    .checkbox-label {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        cursor: pointer;
+        font-weight: 600;
+        color: #2d2a28;
+        font-size: 1rem;
+    }
+
+    .checkbox-label input[type="checkbox"] {
+        width: 20px;
+        height: 20px;
+        cursor: pointer;
+        accent-color: #f2a6b0;
+    }
+
+    .checkbox-label input[type="checkbox"]:disabled {
+        cursor: not-allowed;
+        opacity: 0.5;
+    }
+
+    .checkbox-text {
+        user-select: none;
+    }
+
+    .disabled-note {
+        margin-top: 8px;
+        font-size: 0.85rem;
+        color: #c62828;
+        font-weight: 500;
+    }
+
+    .time-row {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 16px;
+    }
+
+    .form-actions {
+        display: flex;
+        gap: 16px;
+        margin-top: 32px;
+    }
+
+    .btn {
+        padding: 14px 32px;
+        border-radius: 60px;
+        font-weight: 600;
+        font-size: 1rem;
+        cursor: pointer;
+        transition: all 0.2s;
+        border: none;
+        text-decoration: none;
+        display: inline-block;
+        text-align: center;
+    }
+
+    .btn-primary {
+        background: #f2a6b0;
+        color: #fff;
+        box-shadow: 0 4px 16px rgba(242, 166, 176, 0.3);
+    }
+
+    .btn-primary:hover {
+        background: #e8919c;
+        transform: translateY(-2px);
+        box-shadow: 0 8px 24px rgba(242, 166, 176, 0.4);
+    }
+
+    .btn-secondary {
+        background: #f0e8e5;
+        color: #6b5f5a;
+    }
+
+    .btn-secondary:hover {
+        background: #e8e0dd;
+        color: #2d2a28;
+    }
+
+    .form-error {
+        background: #fce4ec;
+        color: #c62828;
+        padding: 12px 16px;
+        border-radius: 12px;
+        margin-bottom: 24px;
+        font-size: 0.9rem;
+    }
+
+    .field-error {
+        color: #c62828;
+        font-size: 0.85rem;
+        margin-top: 4px;
+    }
+
+    /* Стили для предупреждения о записях */
+    .bookings-warning {
+        background: #fff3e0;
+        border: 1px solid #ffe0b2;
+        border-radius: 12px;
+        padding: 16px;
+        margin-bottom: 24px;
+        display: flex;
+        gap: 12px;
+    }
+
+    .warning-icon {
+        font-size: 1.5rem;
+        flex-shrink: 0;
+    }
+
+    .warning-content {
+        flex: 1;
+    }
+
+    .warning-content strong {
+        display: block;
+        margin-bottom: 8px;
+        color: #e65100;
+        font-size: 0.95rem;
+    }
+
+    .warning-content ul {
+        margin: 8px 0;
+        padding-left: 20px;
+        color: #2d2a28;
+        font-size: 0.9rem;
+    }
+
+    .warning-content ul li {
+        margin-bottom: 4px;
+    }
+
+    .warning-note {
+        margin-top: 8px;
+        font-size: 0.85rem;
+        color: #6b5f5a;
+        font-style: italic;
+    }
+
+    @media (max-width: 600px) {
+        .form-container {
+            padding: 24px;
+        }
+
+        .time-row {
+            grid-template-columns: 1fr;
+        }
+
+        .form-actions {
+            flex-direction: column;
+        }
+
+        .btn {
+            width: 100%;
+        }
+    }
+</style>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const dateInput = document.getElementById('id_block_date');
+        const fullDayCheckbox = document.getElementById('id_is_full_day');
+        const fullDayLabel = document.getElementById('fullDayLabel');
+        const fullDayDisabledNote = document.getElementById('fullDayDisabledNote');
+        const timeFields = document.getElementById('timeFields');
+        const startTimeSelect = document.getElementById('id_start_time');
+        const endTimeSelect = document.getElementById('id_end_time');
+        const bookingsWarning = document.getElementById('bookingsWarning');
+        const bookingsList = document.getElementById('bookingsList');
+
+        // Загружаем свободные слоты и информацию о записях при изменении даты
+        dateInput.addEventListener('change', function() {
+            const date = dateInput.value;
+            if (!date) return;
+
+            startTimeSelect.innerHTML = '<option value="">Загрузка...</option>';
+            endTimeSelect.innerHTML = '<option value="">Загрузка...</option>';
+            bookingsWarning.style.display = 'none';
+
+            fetch(`/api/free-slots/?date=${date}`)
+                .then(response => response.json())
+                .then(data => {
+                    // Заполняем списки времени
+                    if (data.free_times && data.free_times.length > 0) {
+                        const options = data.free_times.map(time => 
+                            `<option value="${time}">${time}</option>`
+                        ).join('');
+                        
+                        startTimeSelect.innerHTML = '<option value="">Выберите время</option>' + options;
+                        endTimeSelect.innerHTML = '<option value="">Выберите время</option>' + options;
+                    } else {
+                        startTimeSelect.innerHTML = '<option value="">Нет свободных слотов</option>';
+                        endTimeSelect.innerHTML = '<option value="">Нет свободных слотов</option>';
+                    }
+
+                    // Проверяем, есть ли записи на этот день
+                    if (data.has_bookings) {
+                        // Блокируем галочку "На весь день"
+                        fullDayCheckbox.disabled = true;
+                        fullDayCheckbox.checked = false;
+                        fullDayLabel.style.opacity = '0.5';
+                        fullDayLabel.style.cursor = 'not-allowed';
+                        fullDayDisabledNote.style.display = 'block';
+                        
+                        // Показываем предупреждение со списком записей
+                        bookingsList.innerHTML = data.bookings.map(b => 
+                            `<li><strong>${b.time}</strong> — ${b.client_name} (${b.service})</li>`
+                        ).join('');
+                        bookingsWarning.style.display = 'flex';
+                        
+                        // Автоматически показываем поля времени
+                        timeFields.style.display = 'grid';
+                        startTimeSelect.required = true;
+                        endTimeSelect.required = true;
+                    } else {
+                        // Разблокируем галочку
+                        fullDayCheckbox.disabled = false;
+                        fullDayLabel.style.opacity = '1';
+                        fullDayLabel.style.cursor = 'pointer';
+                        fullDayDisabledNote.style.display = 'none';
+                        bookingsWarning.style.display = 'none';
+                    }
+                })
+                .catch(error => {
+                    console.error('Ошибка загрузки слотов:', error);
+                    startTimeSelect.innerHTML = '<option value="">Ошибка загрузки</option>';
+                    endTimeSelect.innerHTML = '<option value="">Ошибка загрузки</option>';
+                });
+        });
+
+        // Показываем/скрываем поля времени
+        fullDayCheckbox.addEventListener('change', function() {
+            if (fullDayCheckbox.checked) {
+                timeFields.style.display = 'none';
+                startTimeSelect.required = false;
+                endTimeSelect.required = false;
+            } else {
+                timeFields.style.display = 'grid';
+                startTimeSelect.required = true;
+                endTimeSelect.required = true;
+            }
+        });
+
+        // Инициализация при загрузке
+        if (fullDayCheckbox.checked) {
+            timeFields.style.display = 'none';
+        }
+    });
+</script>
+{% endblock %}

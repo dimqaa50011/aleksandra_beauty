@@ -47,7 +47,7 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     
     'django_q',
-
+    'booking_app',
     'beauty_app',
     'cert_app',
     'gen_posts_app',

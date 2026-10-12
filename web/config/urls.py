@@ -21,6 +21,7 @@ from django.conf.urls.static import static
 
 urlpatterns = [
     path('admin/', admin.site.urls),
+    path('', include('booking_app.urls')),
     path('', include("beauty_app.urls")),
     path('posts/', include("gen_posts_app.urls")),
     # Сертификаты (встраиваются в админку, доступ только у админов)

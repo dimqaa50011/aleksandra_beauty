@@ -4,33 +4,17 @@ from . import views
 app_name = 'beauty_app'
 
 urlpatterns = [
-    # Лендинги
+    # Лендинги и каталог
     path('', views.LandingView.as_view(), name='landing'),
     path('lending/', views.Lend2View.as_view(), name='lending'),
     path('services/<int:category_id>/', views.category_services, name='category_services'),
     path('service/<int:service_id>/', views.service_detail, name='service_detail'),
-    
-    # Бронирование (публичное)
-    path('booking/', views.booking_create, name='booking_create'),
-    path('booking/success/', views.booking_success, name='booking_success'),
-    path('api/available-times/', views.get_available_times, name='available_times'),
     
     # Авторизация
     path('login/', views.LoginView.as_view(), name='login'),
     path('logout/', views.LogoutView.as_view(), name='logout'),
     path('access-denied/', views.AccessDeniedView.as_view(), name='access_denied'),
     
-    # Админка (кастомная)
+    # Общий дашборд (статистика и т.д.)
     path('admin-dashboard/', views.DashboardView.as_view(), name='dashboard'),
-    
-    # Управление блокировками
-    path('admin-dashboard/blocked-slots/', views.BlockedSlotListView.as_view(), name='blocked_slots_list'),
-    path('admin-dashboard/blocked-slots/add/', views.BlockedSlotAddView.as_view(), name='blocked_slot_add'),
-    path('admin-dashboard/blocked-slots/<int:pk>/delete/', views.BlockedSlotDeleteView.as_view(), name='blocked_slot_delete'),
-    path('admin-dashboard/bookings/', views.BookingsListView.as_view(), name='bookings_list'),
-    path('admin-dashboard/bookings/<int:pk>/confirm/', views.BookingConfirmView.as_view(), name='booking_confirm'),
-    path('admin-dashboard/bookings/<int:pk>/cancel/', views.BookingCancelView.as_view(), name='booking_cancel'),
-    
-    # Ручное создание записи
-    path('admin-dashboard/bookings/add/', views.AdminBookingCreateView.as_view(), name='admin_booking_create'),
 ]

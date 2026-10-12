@@ -6,4 +6,4 @@ class BeautyAppConfig(AppConfig):
 
     def ready(self):
         # Импортируем сигналы при запуске приложения
-        import beauty_app.signals
+        import booking_app.signals

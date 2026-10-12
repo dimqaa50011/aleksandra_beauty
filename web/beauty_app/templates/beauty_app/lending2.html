@@ -14,7 +14,7 @@
                 <p class="sub">
                     Уход за кожей, аппаратная косметология, подбор домашнего ухода, депиляция, брови и ресницы — всё в одном месте.
                 </p>
-                <a href="{% url 'beauty_app:booking_create' %}" class="btn" target="_blank" rel="noopener">Записаться сейчас</a>
+                <a href="{% url 'booking_app:booking_create' %}" class="btn" target="_blank" rel="noopener">Записаться сейчас</a>
                 <div class="hero-stats">
                     <div class="stat">
                         <span class="number">5K+</span>
@@ -44,7 +44,9 @@
                     <!-- Оборачиваем в ссылку с ID категории -->
                     <a href="{% url 'beauty_app:category_services' category.id %}" class="category-card-link">
                         <div class="category-card">
-                            <span class="icon">{{ category.icon }}</span>
+                            {% if  category.icon %}
+                                <span class="icon">{{ category.icon }}</span>
+                            {% endif %}
                             <h4>{{ category.name }}</h4>
                             {% if category.description %}
                                 <p>{{ category.description }}</p>

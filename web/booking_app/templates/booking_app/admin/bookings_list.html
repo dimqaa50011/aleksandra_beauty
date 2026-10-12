@@ -6,7 +6,7 @@
 {% block page_title %}Расписание и записи{% endblock %}
 
 {% block actions %}
-    <a href="{% url 'beauty_app:admin_booking_create' %}" class="btn btn-primary">
+    <a href="{% url 'booking_app:admin_booking_create' %}" class="btn btn-primary">
         <i class="fas fa-plus"></i> Новая запись
     </a>
 {% endblock %}
@@ -58,13 +58,13 @@
                             
                             {% if booking.status == 'pending' %}
                                 <div class="action-buttons">
-                                    <form method="post" action="{% url 'beauty_app:booking_confirm' booking.pk %}">
+                                    <form method="post" action="{% url 'booking_app:booking_confirm' booking.pk %}">
                                         {% csrf_token %}
                                         <button type="submit" class="btn-icon btn-confirm" title="Подтвердить">
                                             <i class="fas fa-check"></i>
                                         </button>
                                     </form>
-                                    <form method="post" action="{% url 'beauty_app:booking_cancel' booking.pk %}">
+                                    <form method="post" action="{% url 'booking_app:booking_cancel' booking.pk %}">
                                         {% csrf_token %}
                                         <button type="submit" class="btn-icon btn-delete" title="Отменить" onclick="return confirm('Отменить эту запись?')">
                                             <i class="fas fa-trash"></i>
@@ -81,7 +81,7 @@
                 <div class="empty-icon"></div>
                 <h3 class="empty-title">Записей пока нет</h3>
                 <p class="empty-text">Расписание пусто. Создайте первую запись!</p>
-                <a href="{% url 'beauty_app:admin_booking_create' %}" class="btn btn-primary">
+                <a href="{% url 'booking_app:admin_booking_create' %}" class="btn btn-primary">
                     <i class="fas fa-plus"></i> Создать запись
                 </a>
             </div>
