@@ -39,12 +39,6 @@
                         {% endif %}
                         
                         <div class="service-meta">
-                            {% if service.rating %}
-                                <span class="service-rating">
-                                    ★ {{ service.rating }} <span class="reviews-count">({{ service.reviews_count }})</span>
-                                </span>
-                            {% endif %}
-                            <!-- Ссылка на полную страницу -->
                             <a href="{% url 'beauty_app:service_detail' service.id %}" class="read-more-link">
                                 Подробнее <span class="arrow">→</span>
                             </a>
