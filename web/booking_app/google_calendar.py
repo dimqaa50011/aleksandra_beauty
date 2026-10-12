@@ -47,7 +47,7 @@ def create_google_calendar_event(booking):
     }
     
     # ВАЖНО: Убедись, что здесь именно тот ID, который мы найдем ниже
-    CALENDAR_ID = 'korendyba5011@gmail.com' 
+    CALENDAR_ID = 'belkasasha1986@gmail.com' 
     
     # Этот вызов выбросит ошибку, если что-то не так. Мы её поймаем в signals.py
     created_event = service.events().insert(calendarId=CALENDAR_ID, body=event).execute()
