@@ -27,6 +27,25 @@ from .forms import BookingForm
 from django.core.mail import send_mail
 from django.conf import settings
 
+
+def get_services_by_category(request):
+    """Возвращает список услуг конкретной категории в формате JSON"""
+    category_id = request.GET.get('category_id')
+    
+    if not category_id:
+        return JsonResponse({'services': []})
+    
+    try:
+        # Фильтруем услуги по категории и статусу is_active
+        services = Service.objects.filter(
+            category_id=category_id, 
+            is_active=True
+        ).values('id', 'name', 'price')
+        
+        return JsonResponse({'services': list(services)})
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=500)
+
 def vk_booking_view(request):
     """Страница записи для VK Mini App (без шапки и подвала сайта)"""
     if request.method == 'POST':
