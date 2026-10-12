@@ -1,0 +1,318 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Запись в Sasha Sugar</title>
+    <script src="https://unpkg.com/@vkontakte/vk-bridge/dist/browser.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #fef9f7;
+            color: #2d2a28;
+            line-height: 1.5;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+        }
+        
+        h1 {
+            font-size: 2rem;
+            font-weight: 700;
+            letter-spacing: -0.5px;
+            margin-bottom: 8px;
+            text-align: center;
+        }
+        
+        h1 span {
+            color: #f2a6b0;
+        }
+        
+        .subtitle {
+            text-align: center;
+            color: #6b5f5a;
+            margin-bottom: 32px;
+            font-size: 1.1rem;
+        }
+        
+        .form-group {
+            margin-bottom: 20px;
+        }
+        
+        .form-group label {
+            display: block;
+            font-weight: 600;
+            margin-bottom: 8px;
+            color: #2d2a28;
+            font-size: 0.95rem;
+        }
+        
+        .form-group input,
+        .form-group select {
+            width: 100%;
+            padding: 12px 16px;
+            border: 1px solid #e8e0dd;
+            border-radius: 12px;
+            font-size: 1rem;
+            background: #fff;
+            transition: all 0.2s;
+            color: #2d2a28;
+        }
+        
+        .form-group input:focus,
+        .form-group select:focus {
+            outline: none;
+            border-color: #f2a6b0;
+            background: #fff;
+            box-shadow: 0 0 0 3px rgba(242, 166, 176, 0.1);
+        }
+        
+        .form-group select {
+            cursor: pointer;
+            appearance: none;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%232d2a28' d='M6 9L1 4h10z'/%3E%3C/svg%3E");
+            background-repeat: no-repeat;
+            background-position: right 16px center;
+            padding-right: 40px;
+        }
+        
+        .btn {
+            width: 100%;
+            padding: 14px 32px;
+            background: #f2a6b0;
+            color: #fff;
+            border: none;
+            border-radius: 60px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            box-shadow: 0 4px 20px rgba(242, 166, 176, 0.35);
+            margin-top: 24px;
+        }
+        
+        .btn:hover {
+            background: #e8919c;
+            transform: translateY(-2px);
+            box-shadow: 0 8px 30px rgba(242, 166, 176, 0.45);
+        }
+        
+        .btn:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+        
+        .success-message {
+            background: #e8f5e9;
+            color: #2e7d32;
+            padding: 16px;
+            border-radius: 12px;
+            margin-top: 20px;
+            display: none;
+            font-weight: 600;
+            text-align: center;
+        }
+        
+        .error-message {
+            background: #fce4ec;
+            color: #c62828;
+            padding: 16px;
+            border-radius: 12px;
+            margin-top: 20px;
+            display: none;
+            font-weight: 600;
+            text-align: center;
+        }
+        
+        .loading {
+            text-align: center;
+            color: #6b5f5a;
+            padding: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Запись в <span>Sasha Sugar</span></h1>
+        <p class="subtitle">Выберите услугу и удобное время</p>
+        
+        <form id="bookingForm">
+            <div class="form-group">
+                <label>Ваше имя *</label>
+                <input type="text" id="clientName" required placeholder="Введите ваше имя">
+            </div>
+            
+            <div class="form-group">
+                <label>Телефон *</label>
+                <input type="tel" id="phone" placeholder="+7 (999) 123-45-67" required>
+            </div>
+            
+            <div class="form-group">
+                <label>Email (необязательно)</label>
+                <input type="email" id="email" placeholder="example@mail.ru">
+            </div>
+            
+            <div class="form-group">
+                <label>Услуга *</label>
+                <select id="service" required>
+                    <option value="">Загрузка услуг...</option>
+                </select>
+            </div>
+            
+            <div class="form-group">
+                <label>Дата *</label>
+                <input type="date" id="date" required>
+            </div>
+            
+            <div class="form-group">
+                <label>Время *</label>
+                <select id="time" required>
+                    <option value="">Сначала выберите дату</option>
+                </select>
+            </div>
+            
+            <button type="submit" class="btn" id="submitBtn">Записаться</button>
+        </form>
+        
+        <div id="successMessage" class="success-message"></div>
+        <div id="errorMessage" class="error-message"></div>
+    </div>
+
+    <script>
+        // API токен (заменить на реальный)
+        const API_TOKEN = 'ЗАМЕНИ_НА_РЕАЛЬНЫЙ_ТОКЕН';
+        const API_BASE_URL = 'https://твой-домен.ru';
+        
+        // Инициализация VK Bridge
+        const vkBridge = window.vkBridge;
+        
+        vkBridge.send('VKWebAppInit').then(() => {
+            console.log('VK Bridge инициализирован');
+        });
+        
+        // Получаем данные пользователя VK
+        vkBridge.send('VKWebAppGetUserInfo').then(data => {
+            document.getElementById('clientName').value = `${data.first_name} ${data.last_name}`;
+        }).catch(err => {
+            console.log('Не удалось получить данные пользователя');
+        });
+
+        // Загружаем список услуг
+        fetch(`${API_BASE_URL}/api/services/`)
+            .then(response => response.json())
+            .then(services => {
+                const select = document.getElementById('service');
+                select.innerHTML = '<option value="">Выберите услугу</option>';
+                services.forEach(service => {
+                    const option = document.createElement('option');
+                    option.value = service.id;
+                    option.textContent = `${service.name} — ${service.price} ₽`;
+                    select.appendChild(option);
+                });
+            })
+            .catch(err => {
+                console.error('Ошибка загрузки услуг:', err);
+            });
+
+        // Загружаем свободные слоты при изменении даты
+        document.getElementById('date').addEventListener('change', function() {
+            const date = this.value;
+            const serviceId = document.getElementById('service').value;
+            
+            if (!date || !serviceId) return;
+            
+            const timeSelect = document.getElementById('time');
+            timeSelect.innerHTML = '<option value="">Загрузка...</option>';
+            
+            fetch(`${API_BASE_URL}/api/available-times/?date=${date}&service_id=${serviceId}`)
+                .then(response => response.json())
+                .then(data => {
+                    timeSelect.innerHTML = '<option value="">Выберите время</option>';
+                    
+                    if (data.times && data.times.length > 0) {
+                        data.times.forEach(time => {
+                            const option = document.createElement('option');
+                            option.value = time;
+                            option.textContent = time;
+                            timeSelect.appendChild(option);
+                        });
+                    } else {
+                        timeSelect.innerHTML = '<option value="">Нет свободных слотов</option>';
+                    }
+                })
+                .catch(err => {
+                    console.error('Ошибка загрузки времени:', err);
+                    timeSelect.innerHTML = '<option value="">Ошибка загрузки</option>';
+                });
+        });
+
+        // Отправка формы
+        document.getElementById('bookingForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const submitBtn = document.getElementById('submitBtn');
+            const successMessage = document.getElementById('successMessage');
+            const errorMessage = document.getElementById('errorMessage');
+            
+            submitBtn.disabled = true;
+            submitBtn.textContent = 'Отправка...';
+            successMessage.style.display = 'none';
+            errorMessage.style.display = 'none';
+            
+            const data = {
+                client_name: document.getElementById('clientName').value,
+                phone: document.getElementById('phone').value,
+                email: document.getElementById('email').value,
+                service_id: parseInt(document.getElementById('service').value),
+                date: document.getElementById('date').value,
+                time: document.getElementById('time').value
+            };
+            
+            fetch(`${API_BASE_URL}/api/create-booking/`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-API-Token': API_TOKEN
+                },
+                body: JSON.stringify(data)
+            })
+            .then(response => response.json())
+            .then(result => {
+                if (result.success) {
+                    successMessage.textContent = 
+                        `✅ Запись создана! ${result.booking_details.date} в ${result.booking_details.time}`;
+                    successMessage.style.display = 'block';
+                    
+                    // Уведомляем VK об успехе
+                    vkBridge.send('VKWebAppTapticNotificationOccurred', {type: 'success'});
+                    
+                    // Очищаем форму
+                    document.getElementById('bookingForm').reset();
+                } else {
+                    errorMessage.textContent = `❌ Ошибка: ${result.error}`;
+                    errorMessage.style.display = 'block';
+                }
+            })
+            .catch(err => {
+                errorMessage.textContent = '❌ Ошибка сети';
+                errorMessage.style.display = 'block';
+            })
+            .finally(() => {
+                submitBtn.disabled = false;
+                submitBtn.textContent = 'Записаться';
+            });
+        });
+    </script>
+</body>
+</html>

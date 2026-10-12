@@ -2,6 +2,28 @@ import random
 from django.db import models
 from django.utils import timezone
 from datetime import timedelta
+import secrets
+
+class APIToken(models.Model):
+    """Токены для доступа к API"""
+    name = models.CharField('Название', max_length=100, help_text="Например: VK Mini App")
+    token = models.CharField('Токен', max_length=255, unique=True, db_index=True)
+    is_active = models.BooleanField('Активен', default=True)
+    created_at = models.DateTimeField('Создан', auto_now_add=True)
+    last_used = models.DateTimeField('Последнее использование', null=True, blank=True)
+    
+    class Meta:
+        verbose_name = 'API токен'
+        verbose_name_plural = 'API токены'
+    
+    def __str__(self):
+        return f"{self.name} ({self.token[:8]}...)"
+    
+    @classmethod
+    def generate_token(cls, name):
+        """Генерирует новый токен"""
+        token = secrets.token_urlsafe(64)
+        return cls.objects.create(name=name, token=token)
 
 class Client(models.Model):
     """Мини-CRM: история клиентов по email для умной верификации"""

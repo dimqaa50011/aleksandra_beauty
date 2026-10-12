@@ -23,6 +23,8 @@ urlpatterns = [
     path('api/send-email-code/', views.send_email_code_view, name='send_email_code'),
     path('api/verify-email-code/', views.verify_email_code_view, name='verify_email_code'),
     path('api/free-slots/', views.get_free_slots_for_admin, name='free_slots'),
+    path('api/create-booking/', views.api_create_booking, name='api_create_booking'),
+    path('vk-app/', views.vk_booking_view, name='vk_booking'),
     
     # ==========================================
     # АДМИНКА: УПРАВЛЕНИЕ ЗАПИСЯМИ

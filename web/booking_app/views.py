@@ -15,6 +15,163 @@ from .models import Booking, BlockedSlot, DayOff, EmailVerificationCode, Client
 from .forms import BookingForm, AdminBookingForm, BlockedSlotForm
 from beauty_app.models import Service, ServiceCategory
 
+from django.views.decorators.csrf import csrf_exempt
+from django.views.decorators.http import require_POST
+import json
+from django.shortcuts import render
+from django.contrib import messages
+from django.utils import timezone
+from datetime import datetime
+from .models import Booking, Client
+from .forms import BookingForm
+from django.core.mail import send_mail
+from django.conf import settings
+
+def vk_booking_view(request):
+    """Страница записи для VK Mini App (без шапки и подвала сайта)"""
+    if request.method == 'POST':
+        form = BookingForm(request.POST)
+        if form.is_valid():
+            # Стандартная логика сохранения (такая же, как на сайте)
+            date_str = form.cleaned_data['appointment_date']
+            time_str = form.cleaned_data['appointment_time']
+            service = form.cleaned_data['service']
+            email = form.cleaned_data['email']
+            
+            naive_dt = datetime.strptime(f"{date_str} {time_str}", "%Y-%m-%d %H:%M")
+            aware_dt = timezone.make_aware(naive_dt, timezone.get_current_timezone())
+            
+            booking = form.save(commit=False)
+            booking.appointment_datetime = aware_dt
+            booking.save()
+            
+            # Обновляем CRM
+            if email:
+                client, created = Client.objects.get_or_create(email=email)
+                client.total_bookings += 1
+                client.is_verified = True
+                client.save()
+                
+                # Отправка письма
+                try:
+                    send_mail(
+                        subject='🌸 Ваша запись в Sasha Sugar подтверждена!',
+                        message=f"Здравствуйте, {booking.client_name}!\n\nВаша запись на {date_str} в {time_str} ({service.name}) успешно оформлена.\n\nЖдем вас по адресу: Спасский переулок, 7",
+                        from_email=settings.DEFAULT_FROM_EMAIL,
+                        recipient_list=[email],
+                        fail_silently=False,
+                    )
+                except Exception:
+                    pass
+
+            # Для ВК возвращаем простую страницу успеха, чтобы не делать редирект внутри iframe
+            return render(request, 'booking_app/vk_success.html', {'booking': booking})
+    else:
+        form = BookingForm()
+    
+    return render(request, 'booking_app/vk_booking.html', {'form': form})
+
+@csrf_exempt
+@require_POST
+def api_create_booking(request):
+    """
+    Защищённый API endpoint для создания записи.
+    Требует API токен в заголовке X-API-Token.
+    """
+    try:
+        data = json.loads(request.body)
+    except json.JSONDecodeError:
+        return JsonResponse({'error': 'Неверный формат JSON'}, status=400)
+
+    # Извлекаем данные
+    client_name = data.get('client_name', '').strip()
+    phone = data.get('phone', '').strip()
+    email = data.get('email', '').strip()
+    service_id = data.get('service_id')
+    date_str = data.get('date')
+    time_str = data.get('time')
+
+    # Валидация
+    if not client_name or not phone or not service_id or not date_str or not time_str:
+        return JsonResponse({
+            'error': 'Не заполнены обязательные поля'
+        }, status=400)
+
+    # Проверяем услугу
+    try:
+        service = Service.objects.get(id=service_id, is_active=True)
+    except Service.DoesNotExist:
+        return JsonResponse({'error': 'Услуга не найдена'}, status=404)
+
+    # Проверяем дату и время
+    try:
+        date = datetime.strptime(date_str, '%Y-%m-%d').date()
+        time = datetime.strptime(time_str, '%H:%M').time()
+        appointment_datetime = timezone.make_aware(
+            datetime.combine(date, time),
+            timezone.get_current_timezone()
+        )
+    except ValueError:
+        return JsonResponse({'error': 'Неверный формат даты или времени'}, status=400)
+
+    # Проверяем доступность слота
+    if not is_time_slot_available(appointment_datetime, service):
+        return JsonResponse({
+            'error': 'Это время уже занято или заблокировано'
+        }, status=409)
+
+    # Создаём запись
+    booking = Booking.objects.create(
+        client_name=client_name,
+        phone=phone,
+        email=email if email else None,
+        service=service,
+        appointment_datetime=appointment_datetime,
+        status='confirmed'
+    )
+
+    # Обновляем CRM
+    if email:
+        client, created = Client.objects.get_or_create(email=email)
+        client.total_bookings += 1
+        client.is_verified = True
+        client.save()
+
+    # Отправляем письмо
+    if email:
+        try:
+            send_mail(
+                subject='🌸 Ваша запись в Sasha Sugar подтверждена!',
+                message=f"""Здравствуйте, {client_name}!
+
+Ваша запись успешно оформлена.
+
+📅 Дата: {date_str}
+⏰ Время: {time_str}
+💅 Услуга: {service.name}
+📍 Адрес: Санкт-Петербург, Спасский переулок, 7
+
+С любовью, команда Sasha Sugar""",
+                from_email=settings.DEFAULT_FROM_EMAIL,
+                recipient_list=[email],
+                fail_silently=False,
+            )
+        except Exception as e:
+            print(f"Ошибка отправки письма: {e}")
+
+    return JsonResponse({
+        'success': True,
+        'booking_id': booking.id,
+        'message': 'Запись успешно создана',
+        'booking_details': {
+            'client_name': booking.client_name,
+            'service': booking.service.name,
+            'date': booking.appointment_datetime.strftime('%Y-%m-%d'),
+            'time': booking.appointment_datetime.strftime('%H:%M'),
+            'status': booking.get_status_display()
+        }
+    }, status=201)
+
 
 # =============================================
 # МИКСИН ДЛЯ АДМИНКИ
