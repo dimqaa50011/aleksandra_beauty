@@ -146,3 +146,22 @@ class BlockedSlot(models.Model):
         if self.is_full_day:
             return f"{self.date.strftime('%d.%m.%Y')} - Весь день ({self.get_slot_type_display()})"
         return f"{self.date.strftime('%d.%m.%Y')} {self.start_time.strftime('%H:%M')}-{self.end_time.strftime('%H:%M')} ({self.get_slot_type_display()})"
+    
+    
+    
+    
+class PushSubscription(models.Model):
+    """Подписки на пуш-уведомления для админов"""
+    user = models.ForeignKey('auth.User', on_delete=models.CASCADE, related_name='push_subscriptions')
+    endpoint = models.URLField(max_length=500)
+    p256dh = models.CharField(max_length=200)
+    auth = models.CharField(max_length=100)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name = 'Подписка на пуши'
+        verbose_name_plural = 'Подписки на пуши'
+        unique_together = ('user', 'endpoint')
+
+    def __str__(self):
+        return f"Push для {self.user.username}: {self.endpoint[:50]}..."

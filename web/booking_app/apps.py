@@ -1,8 +1,10 @@
 from django.apps import AppConfig
 
+
 class BookingAppConfig(AppConfig):
     default_auto_field = 'django.db.models.BigAutoField'
     name = 'booking_app'
+    verbose_name = 'Записи клиентов'
 
     def ready(self):
-        import booking_app.signals
+        import booking_app.signals  # <-- Добавь эту строку

@@ -77,6 +77,7 @@ TEMPLATES = [
                 'django.template.context_processors.request',
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
+                'booking_app.context_processors.pwa_settings',
             ],
         },
     },
@@ -105,6 +106,13 @@ DATABASES = {
 #         "NAME": "db.sqlite3",
 #     }
 # }
+
+
+# VAPID ключи для Web Push
+VAPID_PRIVATE_KEY = os.environ.get('VAPID_PRIVATE_KEY', '')
+VAPID_PUBLIC_KEY = os.environ.get('VAPID_PUBLIC_KEY', '')
+VAPID_ADMIN_EMAIL = os.environ.get('VAPID_ADMIN_EMAIL', 'admin@sasha-sugar.ru')
+
 
 X_FRAME_OPTIONS = 'ALLOWALL'
 # Разрешаем отправку Cookies из iframe (VK)

@@ -25,6 +25,7 @@ urlpatterns = [
     path('api/free-slots/', views.get_free_slots_for_admin, name='free_slots'),
     path('api/create-booking/', views.api_create_booking, name='api_create_booking'),
     path('api/services-by-category/', views.get_services_by_category, name='api_services_by_category'),
+    path('api/save-push-subscription/', views.save_push_subscription, name='save_push_subscription'),
     path('vk-app/', views.vk_booking_view, name='vk_booking'),
     
     # ==========================================

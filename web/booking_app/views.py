@@ -27,6 +27,89 @@ from .forms import BookingForm
 from django.core.mail import send_mail
 from django.conf import settings
 from .google_calendar import create_or_update_google_event
+import json
+from django.views.decorators.csrf import csrf_exempt
+from django.views.decorators.http import require_POST
+from django.http import JsonResponse
+from .models import PushSubscription
+
+try:
+    from pywebpush import webpush, WebPushException
+    HAS_WEBPUSH = True
+except ImportError:
+    HAS_WEBPUSH = False
+
+
+def send_push_notification(title, body, url=None):
+    """Отправляет пуш всем админам"""
+    if not HAS_WEBPUSH:
+        print("⚠️ pywebpush не установлен")
+        return
+    
+    subscriptions = PushSubscription.objects.all()
+    
+    if not subscriptions.exists():
+        print("Нет подписок на пуши")
+        return
+    
+    from django.conf import settings
+    
+    vapid_private_key = getattr(settings, 'VAPID_PRIVATE_KEY', '')
+    vapid_claims = {
+        'sub': f'mailto:{getattr(settings, "VAPID_ADMIN_EMAIL", "admin@example.com")}',
+    }
+    
+    payload = json.dumps({
+        'title': title,
+        'body': body,
+        'url': url or '/admin-dashboard/bookings/',
+    })
+    
+    for sub in subscriptions:
+        try:
+            webpush(
+                subscription_info={
+                    'endpoint': sub.endpoint,
+                    'keys': {
+                        'p256dh': sub.p256dh,
+                        'auth': sub.auth,
+                    }
+                },
+                data=payload,
+                vapid_private_key=vapid_private_key,
+                vapid_claims=vapid_claims,
+            )
+            print(f"✅ Пуш отправлен пользователю {sub.user.username}")
+        except WebPushException as e:
+            print(f"❌ Ошибка отправки пуша: {e}")
+            if e.response and e.response.status_code in [404, 410]:
+                sub.delete()
+                print(f"🗑️ Удалена невалидная подписка {sub.user.username}")
+
+
+@csrf_exempt
+@require_POST
+def save_push_subscription(request):
+    """Сохраняет подписку на пуши от фронтенда"""
+    if not request.user.is_authenticated:
+        return JsonResponse({'error': 'Не авторизован'}, status=401)
+    
+    try:
+        data = json.loads(request.body)
+        subscription = data['subscription']
+        
+        PushSubscription.objects.update_or_create(
+            user=request.user,
+            endpoint=subscription['endpoint'],
+            defaults={
+                'p256dh': subscription['keys']['p256dh'],
+                'auth': subscription['keys']['auth'],
+            }
+        )
+        
+        return JsonResponse({'success': True})
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=500)
 
 
 def booking_edit(request, pk):

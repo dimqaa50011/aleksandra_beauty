@@ -43,3 +43,5 @@ typing-inspection==0.4.4
 typing_extensions==4.16.0
 uritemplate==4.2.0
 urllib3==2.8.0
+py-vapid==1.9.4
+pywebpush==2.5.0

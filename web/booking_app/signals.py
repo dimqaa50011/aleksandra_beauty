@@ -3,8 +3,19 @@ from django.dispatch import receiver
 from .models import Booking
 from .google_calendar import create_google_calendar_event
 import logging
+from .views import send_push_notification
 
 logger = logging.getLogger(__name__)
+
+
+
+@receiver(post_save, sender=Booking)
+def booking_created_notification(sender, instance, created, **kwargs):
+    """Отправляет пуш при создании новой записи"""
+    if created and instance.status in ['pending', 'confirmed']:
+        title = "🔔 Новая запись!"
+        body = f"{instance.client_name} — {instance.service.name}\n{instance.appointment_datetime.strftime('%d.%m %H:%M')}"
+        send_push_notification(title, body)
 
 @receiver(post_save, sender=Booking)
 def sync_booking_to_google_calendar(sender, instance, created, **kwargs):

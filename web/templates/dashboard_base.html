@@ -10,6 +10,8 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
     <link rel="stylesheet" href="{% static 'beauty_app/css/admin.css' %}" />
     <link rel="stylesheet" href="{% static 'beauty_app/css/mobile.css' %}" />
+    <link rel="manifest" href="/static/manifest.json">
+    <meta name="theme-color" content="#f2a6b0">
 </head>
 <body>
 
@@ -145,6 +147,54 @@
     </script>
 
     {% block extra_js %}{% endblock %}
-
+<script>
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('/static/sw.js')
+      .then(registration => {
+        console.log('SW зарегистрирован:', registration);
+        return Notification.requestPermission().then(permission => {
+          if (permission === 'granted') {
+            console.log('Разрешение на пуши получено');
+            return registration.pushManager.subscribe({
+              userVisibleOnly: true,
+              applicationServerKey: urlBase64ToUint8Array('{{ VAPID_PUBLIC_KEY }}')
+            });
+          }
+        });
+      })
+      .then(subscription => {
+        if (subscription) {
+          return fetch('/api/save-push-subscription/', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+            },
+            body: JSON.stringify({ subscription: subscription.toJSON() })
+          });
+        }
+      })
+      .then(response => {
+        if (response) return response.json();
+      })
+      .then(data => {
+        if (data && data.success) {
+          console.log('✅ Пуши включены!');
+        }
+      })
+      .catch(err => console.error('Ошибка пушей:', err));
+  }
+  
+  function urlBase64ToUint8Array(base64String) {
+    const padding = '='.repeat((4 - base64String.length % 4) % 4);
+    const base64 = (base64String + padding).replace(/\-/g, '+').replace(/_/g, '/');
+    const rawData = window.atob(base64);
+    const outputArray = new Uint8Array(rawData.length);
+    for (let i = 0; i < rawData.length; ++i) {
+      outputArray[i] = rawData.charCodeAt(i);
+    }
+    return outputArray;
+  }
+</script>
 </body>
 </html>
