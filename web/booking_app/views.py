@@ -958,8 +958,7 @@ class BookingsScheduleView(AdminRequiredMixin, View):
     template_name = 'booking_app/admin/bookings_schedule.html'
 
     def get(self, request):
-        # Получаем параметры из URL
-        period = request.GET.get('period', 'day')  # 'day' или 'week'
+        period = request.GET.get('period', 'day')
         date_str = request.GET.get('date', timezone.now().date().isoformat())
         
         try:
@@ -967,7 +966,6 @@ class BookingsScheduleView(AdminRequiredMixin, View):
         except ValueError:
             current_date = timezone.now().date()
 
-        # Определяем количество дней и шаг навигации
         if period == 'week':
             days_count = 7
             nav_step = 7
@@ -975,30 +973,30 @@ class BookingsScheduleView(AdminRequiredMixin, View):
             days_count = 1
             nav_step = 1
 
-        # Генерируем список дат для периода
         dates = []
         for i in range(days_count):
             dates.append(current_date + timedelta(days=i))
 
-        # Загружаем записи для всех дат периода
-        bookings_by_date = {}
+        # Создаем удобный список словарей для идеальной работы в шаблоне Django
+        schedule_data = []
         for date in dates:
             bookings = Booking.objects.filter(
                 appointment_datetime__date=date,
                 status__in=['pending', 'confirmed']
             ).select_related('service').order_by('appointment_datetime')
             
-            bookings_by_date[date] = bookings
+            schedule_data.append({
+                'date': date,
+                'bookings': bookings
+            })
 
-        # Вычисляем даты для навигации
         prev_date = current_date - timedelta(days=nav_step)
         next_date = current_date + timedelta(days=nav_step)
 
         context = {
             'period': period,
             'current_date': current_date,
-            'dates': dates,
-            'bookings_by_date': bookings_by_date,
+            'schedule_data': schedule_data,  # <-- Передаем чистый список
             'prev_date': prev_date.isoformat(),
             'next_date': next_date.isoformat(),
             'today': timezone.now().date(),
