@@ -49,13 +49,19 @@
                         <div class="no-bookings">Нет записей</div>
                     {% else %}
                         {% for booking in item.bookings %}
-                        <div class="booking-card {% if booking.status == 'confirmed' %}confirmed{% else %}pending{% endif %}">
+                        <!-- Кликабельная карточка -->
+                        <div class="booking-card {% if booking.status == 'confirmed' %}confirmed{% else %}pending{% endif %}" 
+                             onclick="window.location.href='{% url 'booking_app:booking_edit' booking.pk %}'" 
+                             style="cursor: pointer;"
+                             title="Нажмите для редактирования">
+                            
                             <div class="booking-time">{{ booking.appointment_datetime|time:"H:i" }}</div>
                             <div class="booking-client">{{ booking.client_name }}</div>
                             <div class="booking-service">{{ booking.service.name }}</div>
                             <div class="booking-phone">{{ booking.phone }}</div>
                             
-                            <div class="booking-actions">
+                            <!-- event.stopPropagation() предотвращает переход по ссылке при клике на кнопки -->
+                            <div class="booking-actions" onclick="event.stopPropagation();">
                                 {% if booking.status == 'pending' %}
                                 <form method="post" action="{% url 'booking_app:booking_confirm' booking.pk %}">
                                     {% csrf_token %}
