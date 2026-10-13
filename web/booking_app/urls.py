@@ -31,6 +31,7 @@ urlpatterns = [
     # ==========================================
     # АДМИНКА: УПРАВЛЕНИЕ ЗАПИСЯМИ
     # ==========================================
+    path('admin-dashboard/schedule/', views.BookingsScheduleView.as_view(), name='bookings_schedule'),
     path('admin-dashboard/bookings/', views.BookingsListView.as_view(), name='bookings_list'),
     path('admin-dashboard/bookings/add/', views.AdminBookingCreateView.as_view(), name='admin_booking_create'),
     path('admin-dashboard/bookings/<int:pk>/confirm/', views.BookingConfirmView.as_view(), name='booking_confirm'),

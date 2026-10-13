@@ -70,6 +70,16 @@
             </span>
         </div>
     </a>
+    <a href="{% url 'booking_app:bookings_schedule' %}" class="dash-card dash-card-schedule">
+        <div class="dash-card-icon">🗓️</div>
+        <div class="dash-card-body">
+            <h3 class="dash-card-title">Расписание</h3>
+            <p class="dash-card-desc">Записи в виде колонок по дням</p>
+            <span class="dash-card-arrow">
+                <i class="fas fa-arrow-right"></i>
+            </span>
+        </div>
+    </a>
 
     <!-- ===== ПЛИТКА 6: Выйти ===== -->
     <a href="{% url 'beauty_app:logout' %}" class="dash-card dash-card-logout">

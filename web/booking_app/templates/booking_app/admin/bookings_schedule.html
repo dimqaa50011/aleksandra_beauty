@@ -1,0 +1,401 @@
+{% extends 'dashboard_base.html' %}
+{% load static %}
+
+{% block title %}Расписание записей{% endblock %}
+{% block page_title %}Расписание записей{% endblock %}
+
+{% block actions %}
+<div class="schedule-actions">
+    <!-- Блок 1: Переключатель периода (toggle switch) -->
+    <div class="period-switcher">
+        <a href="?period=day&date={{ current_date|date:'Y-m-d' }}" 
+           class="period-btn {% if period == 'day' %}active{% endif %}">
+            День
+        </a>
+        <a href="?period=week&date={{ current_date|date:'Y-m-d' }}" 
+           class="period-btn {% if period == 'week' %}active{% endif %}">
+            Неделя
+        </a>
+    </div>
+
+    <!-- Блок 2: Навигация по датам -->
+    <div class="date-navigation">
+        <a href="?period={{ period }}&date={{ prev_date }}" 
+           class="nav-btn">
+            ← Назад
+        </a>
+        
+        <a href="?period={{ period }}&date={{ today|date:'Y-m-d' }}" 
+           class="nav-btn nav-btn-primary">
+            Сегодня
+        </a>
+        
+        <a href="?period={{ period }}&date={{ next_date }}" 
+           class="nav-btn">
+            Вперед →
+        </a>
+    </div>
+</div>
+{% endblock %}
+
+{% block content %}
+<!-- Внешний контейнер - ограничивает ширину и обрезает всё лишнее -->
+<div class="schedule-wrapper">
+    <!-- Контейнер с горизонтальным скроллом (только внутри этого блока) -->
+    <div class="schedule-scroll-container">
+        <div class="schedule-grid">
+            {% for date in dates %}
+            <div class="schedule-column">
+                <!-- Заголовок колонки -->
+                <div class="column-header">
+                    <div class="day-name">{{ date|date:"l" }}</div>
+                    <div class="day-date">{{ date|date:"d.m" }}</div>
+                    {% if date == today %}
+                    <div class="today-badge">СЕГОДНЯ</div>
+                    {% endif %}
+                </div>
+
+                <!-- Записи -->
+                <div class="bookings-list">
+                    {% for booking in all_bookings %}
+                        {% if booking.appointment_datetime|date:"Y-m-d" == date|date:"Y-m-d" %}
+                        <div class="booking-card {% if booking.status == 'confirmed' %}confirmed{% else %}pending{% endif %}">
+                            <div class="booking-time">{{ booking.appointment_datetime|time:"H:i" }}</div>
+                            <div class="booking-client">{{ booking.client_name }}</div>
+                            <div class="booking-service">{{ booking.service.name }}</div>
+                            <div class="booking-phone">{{ booking.phone }}</div>
+                            
+                            <!-- Кнопки действий -->
+                            <div class="booking-actions">
+                                {% if booking.status == 'pending' %}
+                                <form method="post" action="{% url 'booking_app:booking_confirm' booking.pk %}">
+                                    {% csrf_token %}
+                                    <button type="submit" class="btn-confirm" title="Подтвердить">✓</button>
+                                </form>
+                                {% endif %}
+                                <form method="post" action="{% url 'booking_app:booking_cancel' booking.pk %}">
+                                    {% csrf_token %}
+                                    <button type="submit" class="btn-cancel" title="Отменить" onclick="return confirm('Отменить запись?');">✕</button>
+                                </form>
+                            </div>
+                        </div>
+                        {% endif %}
+                    {% empty %}
+                    <div class="no-bookings">Нет записей</div>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+
+<style>
+    /* === ГЛАВНОЕ: запрещаем горизонтальный скролл на всей странице === */
+    body {
+        overflow-x: hidden !important;
+    }
+
+    /* === Ширина основного контента админки === */
+    .admin-content {
+        width: 80%;
+        max-width: 80%;
+        margin: 0 auto;
+        transition: width 0.3s ease, max-width 0.3s ease;
+    }
+
+    @media (max-width: 1024px) {
+        .admin-content {
+            width: 100%;
+            max-width: 100%;
+        }
+    }
+
+    /* === Стили для блока действий (кнопки навигации) === */
+    .schedule-actions {
+        display: flex;
+        gap: 16px;
+        align-items: center;
+        flex-wrap: wrap;
+    }
+
+    /* === Переключатель периода (toggle) === */
+    .period-switcher {
+        display: flex;
+        background: #f0e8e5;
+        border-radius: 12px;
+        padding: 4px;
+        gap: 0;
+    }
+
+    .period-btn {
+        padding: 8px 20px;
+        border-radius: 8px;
+        text-decoration: none;
+        font-weight: 600;
+        font-size: 0.9rem;
+        color: #6b5f5a;
+        transition: all 0.2s;
+        flex: 1;
+        text-align: center;
+    }
+
+    .period-btn.active {
+        background: #f2a6b0;
+        color: #fff;
+        box-shadow: 0 2px 8px rgba(242, 166, 176, 0.3);
+    }
+
+    .period-btn:not(.active):hover {
+        color: #2d2a28;
+    }
+
+    /* === Навигация === */
+    .date-navigation {
+        display: flex;
+        gap: 8px;
+        align-items: center;
+    }
+
+    .nav-btn {
+        padding: 8px 16px;
+        background: #f0e8e5;
+        color: #6b5f5a;
+        border-radius: 8px;
+        text-decoration: none;
+        font-size: 0.9rem;
+        font-weight: 600;
+        transition: all 0.2s;
+    }
+
+    .nav-btn:hover {
+        background: #e8e0dd;
+        color: #2d2a28;
+    }
+
+    .nav-btn-primary {
+        background: #f2a6b0;
+        color: #fff;
+    }
+
+    .nav-btn-primary:hover {
+        background: #e8919c;
+    }
+
+    /* === Стили для расписания === */
+    .schedule-wrapper {
+        width: 100%;
+        max-width: 100%;
+        overflow: hidden;
+        box-sizing: border-box;
+    }
+
+    /* Инвертируем направление скролла: вправо = будущее */
+    .schedule-scroll-container {
+        overflow-x: auto;
+        overflow-y: hidden;
+        width: 100%;
+        max-width: 100%;
+        padding: 16px;
+        -webkit-overflow-scrolling: touch;
+        scrollbar-width: thin;
+        scrollbar-color: #f2a6b0 #f0e8e5;
+        box-sizing: border-box;
+        direction: rtl; /* Инвертируем направление скролла */
+    }
+
+    .schedule-scroll-container::-webkit-scrollbar {
+        height: 6px;
+    }
+
+    .schedule-scroll-container::-webkit-scrollbar-track {
+        background: #f0e8e5;
+        border-radius: 10px;
+    }
+
+    .schedule-scroll-container::-webkit-scrollbar-thumb {
+        background: #f2a6b0;
+        border-radius: 10px;
+    }
+
+    .schedule-scroll-container::-webkit-scrollbar-thumb:hover {
+        background: #e8919c;
+    }
+
+    .schedule-grid {
+        display: flex;
+        gap: 16px;
+        width: max-content;
+        min-width: 100%;
+        direction: ltr; /* Возвращаем нормальное направление для содержимого */
+    }
+
+    .schedule-column {
+        background: #fff;
+        border-radius: 16px;
+        padding: 16px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+        min-height: 400px;
+        width: 220px;
+        flex-shrink: 0;
+        box-sizing: border-box;
+        direction: ltr; /* Возвращаем нормальное направление для содержимого */
+    }
+
+    .column-header {
+        text-align: center;
+        margin-bottom: 16px;
+        padding-bottom: 12px;
+        border-bottom: 2px solid #f0e8e5;
+    }
+
+    .day-name {
+        font-size: 0.85rem;
+        color: #6b5f5a;
+        text-transform: uppercase;
+        font-weight: 600;
+    }
+
+    .day-date {
+        font-size: 1.5rem;
+        font-weight: 700;
+        color: #2d2a28;
+        margin-top: 4px;
+    }
+
+    .today-badge {
+        display: inline-block;
+        background: #f2a6b0;
+        color: #fff;
+        padding: 4px 12px;
+        border-radius: 20px;
+        font-size: 0.75rem;
+        font-weight: 600;
+        margin-top: 8px;
+    }
+
+    .booking-card {
+        padding: 12px;
+        border-radius: 8px;
+        margin-bottom: 8px;
+        transition: all 0.2s;
+    }
+
+    .booking-card.confirmed {
+        background: #e8f5e9;
+        border-left: 4px solid #4caf50;
+    }
+
+    .booking-card.pending {
+        background: #fff3e0;
+        border-left: 4px solid #ff9800;
+    }
+
+    .booking-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    }
+
+    .booking-time {
+        font-weight: 700;
+        font-size: 1.1rem;
+        color: #2d2a28;
+        margin-bottom: 4px;
+    }
+
+    .booking-client {
+        font-size: 0.9rem;
+        color: #2d2a28;
+        margin-bottom: 4px;
+    }
+
+    .booking-service {
+        font-size: 0.85rem;
+        color: #6b5f5a;
+    }
+
+    .booking-phone {
+        font-size: 0.8rem;
+        color: #9b8f8a;
+        margin-top: 4px;
+    }
+
+    .booking-actions {
+        margin-top: 8px;
+        display: flex;
+        gap: 4px;
+    }
+
+    .btn-confirm, .btn-cancel {
+        border: none;
+        padding: 4px 8px;
+        border-radius: 4px;
+        font-size: 0.75rem;
+        cursor: pointer;
+        color: #fff;
+    }
+
+    .btn-confirm {
+        background: #4caf50;
+    }
+
+    .btn-cancel {
+        background: #f44336;
+    }
+
+    .no-bookings {
+        text-align: center;
+        color: #9b8f8a;
+        padding: 20px;
+        font-size: 0.9rem;
+    }
+
+    /* === Мобильный адаптив === */
+    @media (max-width: 768px) {
+        /* Блоки действий друг под другом */
+        .schedule-actions {
+            flex-direction: column;
+            align-items: stretch;
+            gap: 12px;
+        }
+
+        .period-switcher {
+            justify-content: center;
+        }
+
+        .period-btn {
+            flex: 1;
+        }
+
+        .date-navigation {
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+
+        /* Расписание */
+        .schedule-scroll-container {
+            padding: 16px 8px;
+        }
+
+        .schedule-grid {
+            gap: 12px;
+        }
+
+        .schedule-column {
+            width: 200px;
+            padding: 12px;
+        }
+    }
+
+    @media (max-width: 480px) {
+        .nav-btn {
+            padding: 6px 12px;
+            font-size: 0.85rem;
+        }
+
+        .schedule-column {
+            width: 180px;
+        }
+    }
+</style>
+{% endblock %}

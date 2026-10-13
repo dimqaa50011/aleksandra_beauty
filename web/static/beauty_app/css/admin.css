@@ -315,3 +315,22 @@ a {
     background: #fce8e5;
     color: #d4838e;
 }
+
+    .dash-card-schedule .dash-card-icon { color: #e67e22; }
+    .dash-card-schedule:hover { border-color: #e67e22; }
+
+    /* === Ширина основного контента админки === */
+.admin-content {
+    width: 80%;
+    max-width: 80%;
+    margin: 0 auto;
+    transition: width 0.3s ease, max-width 0.3s ease;
+}
+
+/* Когда боковое меню скрывается (мобильные) — контент на всю ширину */
+@media (max-width: 1024px) {
+    .admin-content {
+        width: 100%;
+        max-width: 100%;
+    }
+}
