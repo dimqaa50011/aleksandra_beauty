@@ -26,7 +26,78 @@ from .models import Booking, Client
 from .forms import BookingForm
 from django.core.mail import send_mail
 from django.conf import settings
+from .google_calendar import create_or_update_google_event
 
+
+def booking_edit(request, pk):
+    """Редактирование записи администратором"""
+    booking = get_object_or_404(Booking, pk=pk)
+    
+    if request.method == 'POST':
+        form = AdminBookingForm(request.POST, instance=booking)
+        
+        if form.is_valid():
+            # Собираем дату и время
+            date_str = form.cleaned_data['appointment_date']
+            time_str = form.cleaned_data['appointment_time']
+            service = form.cleaned_data['service']
+            
+            naive_dt = datetime.strptime(f"{date_str} {time_str}", "%Y-%m-%d %H:%M")
+            aware_dt = timezone.make_aware(naive_dt, timezone.get_current_timezone())
+            
+            # Проверяем доступность слота (с исключением текущей записи)
+            duration = getattr(service, 'duration', 60)
+            new_end_time = aware_dt + timedelta(minutes=duration)
+            
+            # Проверяем конфликты (исключая саму редактируемую запись)
+            conflicting = Booking.objects.filter(
+                appointment_datetime__date=aware_dt.date(),
+                status__in=['pending', 'confirmed']
+            ).exclude(pk=booking.pk)
+            
+            is_available = True
+            for b in conflicting:
+                b_start = b.appointment_datetime
+                b_end = b_start + timedelta(minutes=getattr(b.service, 'duration', 60))
+                if aware_dt < b_end and new_end_time > b_start:
+                    is_available = False
+                    break
+            
+            if not is_available:
+                form.add_error('appointment_time', 'Это время уже занято другой записью.')
+                return render(request, 'booking_app/admin/booking_edit.html', {
+                    'form': form,
+                    'booking': booking
+                })
+            
+            # Сохраняем изменения
+            booking = form.save(commit=False)
+            booking.appointment_datetime = aware_dt
+            booking.save()
+            
+            # Обновляем Google Calendar
+            try:
+                event_id = create_or_update_google_event(booking)
+                if event_id:
+                    booking.google_event_id = event_id
+                    booking.save(update_fields=['google_event_id'])
+            except Exception as e:
+                print(f"Ошибка обновления Google Calendar: {e}")
+            
+            messages.success(request, f'Запись для {booking.client_name} обновлена')
+            return redirect('booking_app:bookings_list')
+    else:
+        # Предзаполняем форму данными из существующей записи
+        initial_data = {
+            'appointment_date': booking.appointment_datetime.date(),
+            'appointment_time': booking.appointment_datetime.strftime('%H:%M'),
+        }
+        form = AdminBookingForm(instance=booking, initial=initial_data)
+    
+    return render(request, 'booking_app/admin/booking_edit.html', {
+        'form': form,
+        'booking': booking
+    })
 
 def get_services_by_category(request):
     """Возвращает список услуг конкретной категории в формате JSON"""
@@ -692,18 +763,47 @@ class BlockedSlotDeleteView(AdminRequiredMixin, View):
 # =============================================
 # АДМИНКА: ЗАПИСИ
 # =============================================
-class BookingsListView(AdminRequiredMixin, ListView):
-    """Страница списка всех записей клиентов"""
-    model = Booking
+class BookingsListView(AdminRequiredMixin, TemplateView):
+    """Список записей с навигацией по дням"""
     template_name = 'booking_app/admin/bookings_list.html'
-    context_object_name = 'bookings'
-
-    def get_queryset(self):
-        return Booking.objects.all().order_by('appointment_datetime')
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
+        
+        # Получаем дату из GET-параметра или используем сегодня
+        date_str = self.request.GET.get('date')
+        if date_str:
+            try:
+                from datetime import datetime as dt
+                current_date = dt.strptime(date_str, '%Y-%m-%d').date()
+            except ValueError:
+                current_date = timezone.now().date()
+        else:
+            current_date = timezone.now().date()
+
+        # Загружаем записи на этот день, отсортированные по времени
+        bookings = Booking.objects.filter(
+            appointment_datetime__date=current_date,
+            status__in=['pending', 'confirmed']
+        ).order_by('appointment_datetime')
+
+        # Статистика дня
+        total_bookings = bookings.count()
+        confirmed_count = bookings.filter(status='confirmed').count()
+        pending_count = bookings.filter(status='pending').count()
+
+        context['current_date'] = current_date
+        context['bookings'] = bookings
+        context['total_bookings'] = total_bookings
+        context['confirmed_count'] = confirmed_count
+        context['pending_count'] = pending_count
+        
+        # Даты для навигации
+        from datetime import timedelta
+        context['prev_date'] = current_date - timedelta(days=1)
+        context['next_date'] = current_date + timedelta(days=1)
         context['today'] = timezone.now().date()
+        
         return context
 
 

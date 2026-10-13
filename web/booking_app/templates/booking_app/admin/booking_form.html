@@ -170,60 +170,50 @@
         .form-row { flex-direction: column; gap: 0; }
     }
 </style>
-
 <script>
     document.addEventListener('DOMContentLoaded', function() {
-        const dateInput = document.querySelector('input[name="appointment_date"]');
+        const categorySelect = document.querySelector('select[name="category"]');
         const serviceSelect = document.querySelector('select[name="service"]');
-        const timeSelect = document.querySelector('select[name="appointment_time"]');
-        const timeHelp = document.getElementById('timeHelp');
 
-        function fetchAvailableTimes() {
-            const date = dateInput.value;
-            const serviceId = serviceSelect.value;
+        if (categorySelect && serviceSelect) {
+            function updateServices() {
+                const categoryId = categorySelect.value;
+                
+                serviceSelect.innerHTML = '<option value="">Загрузка...</option>';
 
-            if (!date || !serviceId) {
-                timeSelect.innerHTML = '<option value="">Сначала выберите дату и услугу</option>';
-                timeHelp.style.display = 'block';
-                return;
+                if (!categoryId) {
+                    serviceSelect.innerHTML = '<option value="">Сначала выберите категорию</option>';
+                    return;
+                }
+
+                fetch(`/api/services-by-category/?category_id=${categoryId}`)
+                    .then(response => response.json())
+                    .then(data => {
+                        serviceSelect.innerHTML = '<option value="">Выберите услугу</option>';
+                        
+                        if (data.services && data.services.length > 0) {
+                            data.services.forEach(service => {
+                                const option = document.createElement('option');
+                                option.value = service.id;
+                                option.textContent = `${service.name} — ${service.price} ₽`;
+                                serviceSelect.appendChild(option);
+                            });
+                        } else {
+                            serviceSelect.innerHTML = '<option value="">В этой категории пока нет услуг</option>';
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Ошибка загрузки услуг:', error);
+                        serviceSelect.innerHTML = '<option value="">Ошибка загрузки</option>';
+                    });
             }
 
-            timeHelp.style.display = 'none';
-            timeSelect.innerHTML = '<option value="">Загрузка...</option>';
+            categorySelect.addEventListener('change', updateServices);
 
-            fetch(`/api/available-times/?date=${date}&service_id=${serviceId}`)
-                .then(response => response.json())
-                .then(data => {
-                    if (data.is_blocked) {
-                        timeSelect.innerHTML = '<option value="" disabled>🚫 Этот день полностью заблокирован</option>';
-                        timeHelp.textContent = 'Студия не работает в эту дату.';
-                        timeHelp.style.display = 'block';
-                        timeHelp.style.color = '#d4838e';
-                    } else if (data.times.length === 0) {
-                        timeSelect.innerHTML = '<option value="" disabled>Нет свободных окон</option>';
-                        timeHelp.textContent = 'Все мастера заняты. Попробуйте другую дату.';
-                        timeHelp.style.display = 'block';
-                    } else {
-                        timeSelect.innerHTML = '<option value="">Выберите время</option>';
-                        data.times.forEach(time => {
-                            const option = document.createElement('option');
-                            option.value = time;
-                            option.textContent = time;
-                            timeSelect.appendChild(option);
-                        });
-                    }
-                })
-                .catch(error => {
-                    console.error('Ошибка:', error);
-                    timeSelect.innerHTML = '<option value="">Ошибка загрузки</option>';
-                });
-        }
-
-        dateInput.addEventListener('change', fetchAvailableTimes);
-        serviceSelect.addEventListener('change', fetchAvailableTimes);
-
-        if (serviceSelect.value && dateInput.value) {
-            fetchAvailableTimes();
+            // Если при загрузке категория уже выбрана (при редактировании), подгружаем услуги
+            if (categorySelect.value) {
+                updateServices();
+            }
         }
     });
 </script>

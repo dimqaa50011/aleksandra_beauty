@@ -34,6 +34,7 @@ urlpatterns = [
     path('admin-dashboard/bookings/add/', views.AdminBookingCreateView.as_view(), name='admin_booking_create'),
     path('admin-dashboard/bookings/<int:pk>/confirm/', views.BookingConfirmView.as_view(), name='booking_confirm'),
     path('admin-dashboard/bookings/<int:pk>/cancel/', views.BookingCancelView.as_view(), name='booking_cancel'),
+    path('admin-dashboard/bookings/<int:pk>/edit/', views.booking_edit, name='booking_edit'),
     
     # ==========================================
     # АДМИНКА: УПРАВЛЕНИЕ СЛОТАМИ

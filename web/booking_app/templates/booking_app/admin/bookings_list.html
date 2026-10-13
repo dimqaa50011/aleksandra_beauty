@@ -2,8 +2,7 @@
 {% load static %}
 
 {% block title %}Записи клиентов{% endblock %}
-
-{% block page_title %}Расписание и записи{% endblock %}
+{% block page_title %}Записи клиентов{% endblock %}
 
 {% block actions %}
     <a href="{% url 'booking_app:admin_booking_create' %}" class="btn btn-primary">
@@ -12,84 +11,218 @@
 {% endblock %}
 
 {% block content %}
-<div class="dashboard">
+<div class="bookings-container">
     
-    {% if messages %}
-        <div class="messages">
-            {% for message in messages %}
-                <div class="alert alert-{{ message.tags }}">{{ message }}</div>
-            {% endfor %}
+    <!-- Навигация по дням -->
+    <div class="date-navigator">
+        <a href="?date={{ prev_date|date:'Y-m-d' }}" class="nav-btn {% if current_date == today %}disabled{% endif %}">
+            ← {{ prev_date|date:"d.m" }}
+        </a>
+        
+        <div class="current-date-display">
+            <h2 class="date-title">
+                {% if current_date == today %}
+                    Сегодня
+                {% elif current_date == today|add:"1" %}
+                    Завтра
+                {% else %}
+                    {{ current_date|date:"d E Y" }}
+                {% endif %}
+            </h2>
+            <div class="date-subtitle">{{ current_date|date:"l" }}</div>
         </div>
-    {% endif %}
+        
+        <a href="?date={{ next_date|date:'Y-m-d' }}" class="nav-btn">
+            {{ next_date|date:"d.m" }} →
+        </a>
+    </div>
 
-    <div class="bookings-section">
+    <!-- Статистика дня -->
+    <div class="day-stats">
+        <div class="stat-item">
+            <span class="stat-number">{{ total_bookings }}</span>
+            <span class="stat-label">Всего записей</span>
+        </div>
+        <div class="stat-item confirmed">
+            <span class="stat-number">{{ confirmed_count }}</span>
+            <span class="stat-label">Подтверждено</span>
+        </div>
+        <div class="stat-item pending">
+            <span class="stat-number">{{ pending_count }}</span>
+            <span class="stat-label">Ожидает</span>
+        </div>
+    </div>
+
+    <!-- Список записей -->
+    <div class="bookings-list">
         {% if bookings %}
-            <div class="bookings-list">
-                {% for booking in bookings %}
-                    <div class="booking-card {% if booking.appointment_datetime.date == today %}booking-today{% endif %} {% if booking.status == 'cancelled' %}booking-cancelled{% endif %}">
-                        
-                        <!-- Левая колонка: Дата и время -->
-                        <div class="booking-datetime">
-                            <div class="booking-date">
-                                {% if booking.appointment_datetime.date == today %}
-                                    <span class="today-badge">Сегодня</span>
-                                {% endif %}
-                                {{ booking.appointment_datetime|date:"d.m.Y" }}
-                            </div>
-                            <div class="booking-time">{{ booking.appointment_datetime|date:"H:i" }}</div>
-                        </div>
-
-                        <!-- Центральная колонка: Информация -->
-                        <div class="booking-info">
-                            <div class="client-name">{{ booking.client_name }}</div>
-                            <div class="client-phone">
-                                <a href="tel:{{ booking.phone }}">{{ booking.phone }}</a>
-                            </div>
-                            <div class="service-name">
-                                <i class="fas fa-cut"></i> {{ booking.service.name }}
-                            </div>
-                        </div>
-
-                        <!-- Правая колонка: Статус и кнопки -->
-                        <div class="booking-actions">
-                            <span class="status-badge status-{{ booking.status }}">
-                                {{ booking.get_status_display }}
-                            </span>
-                            
-                            {% if booking.status == 'pending' %}
-                                <div class="action-buttons">
-                                    <form method="post" action="{% url 'booking_app:booking_confirm' booking.pk %}">
-                                        {% csrf_token %}
-                                        <button type="submit" class="btn-icon btn-confirm" title="Подтвердить">
-                                            <i class="fas fa-check"></i>
-                                        </button>
-                                    </form>
-                                    <form method="post" action="{% url 'booking_app:booking_cancel' booking.pk %}">
-                                        {% csrf_token %}
-                                        <button type="submit" class="btn-icon btn-delete" title="Отменить" onclick="return confirm('Отменить эту запись?')">
-                                            <i class="fas fa-trash"></i>
-                                        </button>
-                                    </form>
-                                </div>
-                            {% endif %}
-                        </div>
+            {% for booking in bookings %}
+            <div class="booking-card status-{{ booking.status }}" 
+                 data-edit-url="{% url 'booking_app:booking_edit' booking.pk %}">
+                <div class="booking-time">
+                    <div class="time">{{ booking.appointment_datetime|date:"H:i" }}</div>
+                    <div class="duration">{{ booking.service.duration }} мин</div>
+                </div>
+                
+                <div class="booking-info">
+                    <div class="client-name">{{ booking.client_name }}</div>
+                    <div class="service-name">{{ booking.service.name }}</div>
+                    <div class="client-contact">
+                        <a href="tel:{{ booking.phone }}" class="contact-link">{{ booking.phone }}</a>
+                        {% if booking.email %}
+                            · <a href="mailto:{{ booking.email }}" class="contact-link">{{ booking.email }}</a>
+                        {% endif %}
                     </div>
-                {% endfor %}
+                </div>
+                
+                <div class="booking-status">
+                    <span class="status-badge status-{{ booking.status }}">
+                        {{ booking.get_status_display }}
+                    </span>
+                </div>
+                
+                <div class="booking-actions">
+                    {% if booking.status == 'pending' %}
+                        <form method="post" action="{% url 'booking_app:booking_confirm' booking.pk %}" class="action-form">
+                            {% csrf_token %}
+                            <button type="submit" class="action-btn confirm" title="Подтвердить">✓</button>
+                        </form>
+                    {% endif %}
+                    
+                    <a href="{% url 'booking_app:booking_edit' booking.pk %}" class="action-btn edit" title="Редактировать">✎</a>
+                    
+                    <form method="post" action="{% url 'booking_app:booking_cancel' booking.pk %}" class="action-form"
+                          onsubmit="return confirm('Отменить запись {{ booking.client_name }}?');">
+                        {% csrf_token %}
+                        <button type="submit" class="action-btn cancel" title="Отменить">✕</button>
+                    </form>
+                </div>
             </div>
+            {% endfor %}
         {% else %}
-            <div class="empty-state">
-                <div class="empty-icon"></div>
-                <h3 class="empty-title">Записей пока нет</h3>
-                <p class="empty-text">Расписание пусто. Создайте первую запись!</p>
-                <a href="{% url 'booking_app:admin_booking_create' %}" class="btn btn-primary">
-                    <i class="fas fa-plus"></i> Создать запись
-                </a>
+            <div class="no-bookings">
+                <div class="no-bookings-icon">📭</div>
+                <div class="no-bookings-text">
+                    {% if current_date == today %}
+                        На сегодня записей нет
+                    {% elif current_date < today %}
+                        В этот день записей не было
+                    {% else %}
+                        На этот день ещё нет записей
+                    {% endif %}
+                </div>
+                {% if current_date == today %}
+                    <a href="{% url 'booking_app:admin_booking_create' %}" class="btn btn-primary" style="margin-top: 16px; display: inline-block; text-decoration: none;">
+                        Создать запись вручную
+                    </a>
+                {% endif %}
             </div>
         {% endif %}
     </div>
+
+    <!-- Быстрая навигация: кнопка "Сегодня" -->
+    {% if current_date != today %}
+    <div class="quick-nav">
+        <a href="?" class="btn-today">← Вернуться к сегодняшнему дню</a>
+    </div>
+    {% endif %}
+
 </div>
 
 <style>
+    .bookings-container {
+        max-width: 900px;
+        margin: 0 auto;
+        padding: 20px;
+    }
+
+    /* Навигация по дням */
+    .date-navigator {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        background: #fff;
+        border-radius: 16px;
+        padding: 16px 24px;
+        margin-bottom: 20px;
+        box-shadow: 0 2px 12px rgba(0,0,0,0.04);
+    }
+
+    .nav-btn {
+        padding: 10px 18px;
+        background: #fcf9f7;
+        border: 1px solid #e8e0dd;
+        border-radius: 12px;
+        text-decoration: none;
+        color: #2d2a28;
+        font-weight: 600;
+        font-size: 0.9rem;
+        transition: all 0.2s;
+    }
+
+    .nav-btn:hover {
+        background: #f2a6b0;
+        color: #fff;
+        border-color: #f2a6b0;
+    }
+
+    .nav-btn.disabled {
+        opacity: 0.4;
+        pointer-events: none;
+    }
+
+    .current-date-display {
+        text-align: center;
+    }
+
+    .date-title {
+        margin: 0;
+        font-size: 1.4rem;
+        font-weight: 700;
+        color: #2d2a28;
+    }
+
+    .date-subtitle {
+        font-size: 0.85rem;
+        color: #6b5f5a;
+        text-transform: capitalize;
+        margin-top: 2px;
+    }
+
+    /* Статистика дня */
+    .day-stats {
+        display: flex;
+        gap: 12px;
+        margin-bottom: 20px;
+    }
+
+    .stat-item {
+        flex: 1;
+        background: #fff;
+        border-radius: 12px;
+        padding: 16px;
+        text-align: center;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+    }
+
+    .stat-number {
+        display: block;
+        font-size: 1.8rem;
+        font-weight: 700;
+        color: #2d2a28;
+    }
+
+    .stat-label {
+        font-size: 0.8rem;
+        color: #6b5f5a;
+        margin-top: 4px;
+        display: block;
+    }
+
+    .stat-item.confirmed .stat-number { color: #388e3c; }
+    .stat-item.pending .stat-number { color: #f57c00; }
+
+    /* Список записей */
     .bookings-list {
         display: flex;
         flex-direction: column;
@@ -97,220 +230,259 @@
     }
 
     .booking-card {
-        background: #ffffff;
-        border: 1px solid #f0e8e5;
-        border-radius: 16px;
-        padding: 20px 24px;
         display: flex;
         align-items: center;
-        gap: 24px;
-        transition: all 0.2s ease;
+        gap: 16px;
+        background: #fff;
+        border-radius: 16px;
+        padding: 16px 20px;
+        box-shadow: 0 2px 12px rgba(0,0,0,0.04);
+        border-left: 4px solid #f2a6b0;
+        transition: transform 0.2s, box-shadow 0.2s;
+        cursor: pointer;
     }
 
     .booking-card:hover {
-        border-color: #f2a6b0;
-        box-shadow: 0 4px 16px rgba(242, 166, 176, 0.1);
+        transform: translateY(-2px);
+        box-shadow: 0 6px 20px rgba(242, 166, 176, 0.15);
     }
 
-    /* Подсветка записей на сегодня */
-    .booking-today {
-        background: #fff9f5;
-        border-color: #f5b342;
-        border-left: 4px solid #f5b342;
+    .booking-card:active {
+        transform: translateY(0);
     }
 
-    /* Отмененные записи */
-    .booking-cancelled {
-        opacity: 0.5;
+    .booking-card.status-confirmed {
+        border-left-color: #388e3c;
     }
 
-    /* Левая колонка: Дата и время */
-    .booking-datetime {
-        flex-shrink: 0;
-        text-align: center;
-        min-width: 100px;
-        padding-right: 24px;
-        border-right: 1px solid #f0e8e5;
+    .booking-card.status-pending {
+        border-left-color: #f57c00;
     }
 
-    .booking-date {
-        font-size: 0.85rem;
-        font-weight: 600;
-        color: #2d2a28;
-        margin-bottom: 4px;
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        gap: 4px;
-    }
-
-    .today-badge {
-        background: #f5b342;
-        color: #fff;
-        font-size: 0.65rem;
-        padding: 2px 8px;
-        border-radius: 20px;
-        font-weight: 700;
-        text-transform: uppercase;
+    .booking-card.status-cancelled {
+        border-left-color: #c62828;
+        opacity: 0.6;
     }
 
     .booking-time {
-        font-size: 1.2rem;
-        font-weight: 700;
-        color: #f2a6b0;
+        text-align: center;
+        min-width: 70px;
     }
 
-    /* Центральная колонка: Информация */
+    .booking-time .time {
+        font-size: 1.3rem;
+        font-weight: 700;
+        color: #2d2a28;
+    }
+
+    .booking-time .duration {
+        font-size: 0.75rem;
+        color: #6b5f5a;
+        margin-top: 2px;
+    }
+
     .booking-info {
         flex: 1;
-        display: flex;
-        flex-direction: column;
-        gap: 4px;
     }
 
     .client-name {
         font-size: 1.05rem;
-        font-weight: 700;
+        font-weight: 600;
         color: #2d2a28;
-    }
-
-    .client-phone a {
-        font-size: 0.9rem;
-        color: #6b5f5a;
-        text-decoration: none;
-        transition: color 0.2s;
-    }
-
-    .client-phone a:hover {
-        color: #f2a6b0;
+        margin-bottom: 4px;
     }
 
     .service-name {
-        font-size: 0.85rem;
-        color: #9b8f8a;
-        margin-top: 4px;
+        font-size: 0.9rem;
+        color: #f2a6b0;
+        font-weight: 500;
+        margin-bottom: 4px;
     }
 
-    /* Правая колонка: Статус и кнопки */
-    .booking-actions {
-        flex-shrink: 0;
-        display: flex;
-        flex-direction: column;
-        align-items: flex-end;
-        gap: 12px;
+    .client-contact {
+        font-size: 0.8rem;
+        color: #6b5f5a;
+    }
+
+    .client-contact .contact-link {
+        color: #6b5f5a;
+        text-decoration: none;
+    }
+
+    .client-contact .contact-link:hover {
+        color: #f2a6b0;
+        text-decoration: underline;
+    }
+
+    .booking-status {
+        min-width: 120px;
+        text-align: center;
     }
 
     .status-badge {
-        font-size: 0.7rem;
+        display: inline-block;
+        padding: 6px 12px;
+        border-radius: 20px;
+        font-size: 0.75rem;
         font-weight: 600;
-        padding: 4px 12px;
-        border-radius: 40px;
-        text-transform: uppercase;
-        letter-spacing: 0.3px;
     }
 
-    .status-pending { background: #fff3e0; color: #f57c00; }
-    .status-confirmed { background: #e8f5e9; color: #388e3c; }
-    .status-cancelled { background: #fce4ec; color: #c62828; }
-
-    .action-buttons {
-        display: flex;
-        gap: 8px;
-    }
-
-    .btn-icon {
-        width: 36px;
-        height: 36px;
-        border-radius: 50%;
-        border: none;
-        cursor: pointer;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        transition: all 0.2s ease;
-        font-size: 0.9rem;
-    }
-
-    .btn-confirm {
+    .status-badge.status-confirmed {
         background: #e8f5e9;
         color: #388e3c;
     }
 
-    .btn-confirm:hover {
-        background: #388e3c;
-        color: #fff;
+    .status-badge.status-pending {
+        background: #fff3e0;
+        color: #f57c00;
     }
 
-    .btn-delete {
+    .status-badge.status-cancelled {
         background: #fce4ec;
         color: #c62828;
     }
 
-    .btn-delete:hover {
+    .booking-actions {
+        display: flex;
+        gap: 8px;
+    }
+
+    .action-btn {
+        width: 36px;
+        height: 36px;
+        border-radius: 10px;
+        border: none;
+        cursor: pointer;
+        font-size: 1rem;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        text-decoration: none;
+        transition: all 0.2s;
+    }
+
+    .action-btn.confirm {
+        background: #e8f5e9;
+        color: #388e3c;
+    }
+
+    .action-btn.confirm:hover {
+        background: #388e3c;
+        color: #fff;
+    }
+
+    .action-btn.edit {
+        background: #e3f2fd;
+        color: #1976d2;
+    }
+
+    .action-btn.edit:hover {
+        background: #1976d2;
+        color: #fff;
+    }
+
+    .action-btn.cancel {
+        background: #fce4ec;
+        color: #c62828;
+    }
+
+    .action-btn.cancel:hover {
         background: #c62828;
         color: #fff;
     }
 
-    .empty-state {
+    /* Пустое состояние */
+    .no-bookings {
         text-align: center;
-        padding: 48px 20px;
+        padding: 60px 20px;
+        background: #fff;
+        border-radius: 16px;
+        box-shadow: 0 2px 12px rgba(0,0,0,0.04);
     }
 
-    .empty-icon { font-size: 3rem; margin-bottom: 12px; opacity: 0.6; }
-    .empty-title { font-size: 1.1rem; font-weight: 600; color: #2d2a28; margin-bottom: 4px; }
-    .empty-text { font-size: 0.9rem; color: #6b5f5a; margin-bottom: 20px; }
+    .no-bookings-icon {
+        font-size: 3rem;
+        margin-bottom: 16px;
+    }
 
-    .btn {
-        display: inline-flex;
-        align-items: center;
-        gap: 8px;
-        padding: 10px 24px;
-        border-radius: 60px;
-        font-weight: 600;
+    .no-bookings-text {
+        font-size: 1.1rem;
+        color: #6b5f5a;
+        font-weight: 500;
+    }
+
+    /* Быстрая навигация */
+    .quick-nav {
+        text-align: center;
+        margin-top: 24px;
+    }
+
+    .btn-today {
+        color: #f2a6b0;
         text-decoration: none;
-        transition: all 0.25s ease;
-        border: none;
-        cursor: pointer;
+        font-weight: 600;
+        font-size: 0.95rem;
     }
 
-    .btn-primary { background: #f2a6b0; color: #fff; }
-    .btn-primary:hover { background: #e8919c; transform: translateY(-2px); }
+    .btn-today:hover {
+        text-decoration: underline;
+    }
 
-    .messages { margin-bottom: 24px; }
-    .alert { padding: 14px 20px; border-radius: 12px; margin-bottom: 12px; font-size: 0.9rem; }
-    .alert-success { background: #e8f5e9; color: #2e7d32; }
-    .alert-error { background: #fce4ec; color: #c62828; }
-
-    /* Адаптив для мобильных */
+    /* Адаптив */
     @media (max-width: 768px) {
         .booking-card {
-            flex-direction: column;
-            align-items: stretch;
-            gap: 16px;
-        }
-
-        .booking-datetime {
-            border-right: none;
-            border-bottom: 1px solid #f0e8e5;
-            padding-right: 0;
-            padding-bottom: 12px;
-            display: flex;
-            justify-content: center;
+            flex-wrap: wrap;
             gap: 12px;
-            align-items: center;
         }
 
-        .booking-date {
-            flex-direction: row;
-            align-items: center;
-            margin-bottom: 0;
+        .booking-status {
+            min-width: auto;
+            order: 3;
+            width: 100%;
+            text-align: left;
         }
 
         .booking-actions {
-            align-items: center;
-            flex-direction: row;
-            justify-content: center;
+            order: 4;
+            width: 100%;
+            justify-content: flex-end;
+        }
+
+        .day-stats {
+            flex-direction: column;
+        }
+
+        .date-navigator {
+            padding: 12px 16px;
+        }
+
+        .date-title {
+            font-size: 1.1rem;
         }
     }
 </style>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Делаем всю карточку кликабельной для перехода к редактированию
+        const cards = document.querySelectorAll('.booking-card');
+        
+        cards.forEach(card => {
+            card.addEventListener('click', function(e) {
+                // Игнорируем клики по кнопкам действий, формам и ссылкам внутри карточки
+                if (e.target.closest('.action-btn') || 
+                    e.target.closest('.action-form') || 
+                    e.target.closest('.contact-link')) {
+                    return;
+                }
+                
+                // Переходим на страницу редактирования
+                const editUrl = this.getAttribute('data-edit-url');
+                if (editUrl) {
+                    window.location.href = editUrl;
+                }
+            });
+        });
+    });
+</script>
 {% endblock %}

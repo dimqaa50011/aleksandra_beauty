@@ -50,8 +50,8 @@ class BookingForm(forms.ModelForm):
     
     # Явно делаем Email обязательным для верификации
     email = forms.EmailField(
-        label='Email для подтверждения *',
-        required=True,
+        label='Email для подтверждения',
+        required=False,
         widget=forms.EmailInput(attrs={
             'class': 'form-control', 
             'placeholder': 'example@mail.ru',

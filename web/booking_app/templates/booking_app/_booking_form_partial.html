@@ -112,14 +112,173 @@
         .form-control { padding: 10px !important; font-size: 0.9rem !important; }
     }
 </style>
+<form method="post" id="bookingForm" class="booking-form">
+    {% csrf_token %}
+    
+    <div class="form-group">
+        <label>Категория</label>
+        {{ form.category }}
+    </div>
+    
+    <div class="form-group">
+        <label>Услуга *</label>
+        {{ form.service }}
+    </div>
+
+    <div class="form-row">
+        <div class="form-group" style="flex: 1;">
+            <label>Дата *</label>
+            {{ form.appointment_date }}
+        </div>
+        <div class="form-group" style="flex: 1;">
+            <label>Время *</label>
+            {{ form.appointment_time }}
+            <small id="timeHelp" style="color: #6b5f5a; display: none;">Выберите дату и услугу, чтобы увидеть доступное время</small>
+        </div>
+    </div>
+
+    <div class="form-group">
+        <label>Ваше имя *</label>
+        {{ form.client_name }}
+    </div>
+    
+    <div class="form-row">
+        <div class="form-group" style="flex: 1;">
+            <label>Телефон *</label>
+            {{ form.phone }}
+        </div>
+        <div class="form-group" style="flex: 1;">
+            <label>Email (необязательно)</label>
+            <div class="email-verification-group" style="display: flex; gap: 8px; align-items: flex-start;">
+                {{ form.email }}
+                <button type="button" id="sendCodeBtn" class="btn btn-sm" style="white-space: nowrap; display: none; padding: 10px 16px; background: #f2a6b0; color: #fff; border: none; border-radius: 12px; font-size: 0.85rem; font-weight: 600; cursor: pointer;">
+                    Получить код
+                </button>
+            </div>
+            
+            <!-- Статус проверки (для старых клиентов) -->
+            <div id="knownClientStatus" style="display: none; margin-top: 8px; font-size: 0.85rem; color: #388e3c; font-weight: 600;">
+                ✅ С возвращением! Код подтверждения не требуется.
+            </div>
+
+            <!-- Блок ввода кода (только для новых клиентов) -->
+            <div id="codeVerificationBlock" style="display: none; margin-top: 12px; background: #fcf9f7; padding: 12px; border-radius: 12px; border: 1px solid #e8e0dd;">
+                <label style="font-size: 0.85rem; margin-bottom: 6px; display: block; font-weight: 600;">Введите 6-значный код из письма:</label>
+                <div style="display: flex; gap: 8px; max-width: 280px;">
+                    <input type="text" id="verificationCode" class="form-control" placeholder="000000" maxlength="6" style="text-align: center; letter-spacing: 4px; font-size: 1.1rem;">
+                    <button type="button" id="verifyCodeBtn" class="btn btn-sm" style="padding: 10px 16px; background: #f2a6b0; color: #fff; border: none; border-radius: 12px; font-size: 0.85rem; font-weight: 600; cursor: pointer;">Проверить</button>
+                </div>
+                <div id="verificationStatus" style="margin-top: 6px; font-size: 0.8rem; font-weight: 600;"></div>
+            </div>
+            
+            <!-- Скрытое поле: пройдена ли верификация email -->
+            <input type="hidden" id="emailVerified" name="email_verified" value="false">
+        </div>
+    </div>
+
+    {% if form.errors %}
+        <div class="form-errors" style="color: #c62828; background: #fce4ec; padding: 12px; border-radius: 8px; margin-bottom: 16px;">
+            {% for field, errors in form.errors.items %}
+                {% for error in errors %}
+                    <p style="margin: 0;">{{ error }}</p>
+                {% endfor %}
+            {% endfor %}
+        </div>
+    {% endif %}
+
+    <button type="submit" class="btn btn-primary" id="submitBtn" style="width: 100%; margin-top: 24px; padding: 14px 32px; background: #f2a6b0; color: #fff; border: none; border-radius: 60px; font-size: 1rem; font-weight: 600; cursor: pointer; transition: all 0.3s; box-shadow: 0 4px 20px rgba(242, 166, 176, 0.35);">
+        Записаться
+    </button>
+</form>
+
+<style>
+    .form-group { margin-bottom: 20px; }
+    .form-group label { display: block; font-weight: 600; margin-bottom: 8px; color: #2d2a28; }
+    .form-row { display: flex; gap: 16px; }
+    .form-control {
+        width: 100%; padding: 12px; border: 1px solid #e8e0dd; border-radius: 12px;
+        font-size: 1rem; background: #fcf9f7; transition: border-color 0.2s;
+    }
+    .form-control:focus { outline: none; border-color: #f2a6b0; background: #fff; }
+    
+    .btn-primary {
+        width: 100%;
+        padding: 14px 32px;
+        background: #f2a6b0;
+        color: #fff;
+        border: none;
+        border-radius: 60px;
+        font-size: 1rem;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.3s;
+        box-shadow: 0 4px 20px rgba(242, 166, 176, 0.35);
+        margin-top: 24px;
+    }
+    
+    .btn-primary:hover {
+        background: #e8919c;
+        transform: translateY(-2px);
+        box-shadow: 0 8px 30px rgba(242, 166, 176, 0.45);
+    }
+    
+    .btn-primary:active {
+        transform: translateY(0);
+    }
+    
+    .btn-primary:disabled {
+        background: #ccc;
+        cursor: not-allowed;
+        transform: none;
+        box-shadow: none;
+        opacity: 0.6;
+    }
+    
+    @media (max-width: 600px) {
+        .form-row { flex-direction: column; gap: 0; }
+    }
+    @media (max-width: 768px) {
+        .form-group { margin-bottom: 16px !important; }
+        .form-group label { font-size: 0.9rem !important; margin-bottom: 6px !important; }
+        .form-control { padding: 10px 12px !important; font-size: 0.95rem !important; }
+        .form-row { flex-direction: column !important; gap: 0 !important; }
+        .form-row .form-group { width: 100% !important; }
+        .form-errors { font-size: 0.85rem !important; padding: 10px !important; }
+    }
+    @media (max-width: 480px) {
+        .form-control { padding: 10px !important; font-size: 0.9rem !important; }
+    }
+</style>
 
 <script>
     document.addEventListener('DOMContentLoaded', function() {
         // ==========================================
-        // 1. МАСКА ДЛЯ ТЕЛЕФОНА (+7)
+        // ЭЛЕМЕНТЫ ФОРМЫ
         // ==========================================
         const phoneInput = document.querySelector('input[name="phone"]');
-        
+        const emailInput = document.querySelector('input[name="email"]');
+        const categorySelect = document.querySelector('select[name="category"]');
+        const serviceSelect = document.querySelector('select[name="service"]');
+        const dateInput = document.querySelector('input[name="appointment_date"]');
+        const timeSelect = document.querySelector('select[name="appointment_time"]');
+        const timeHelp = document.getElementById('timeHelp');
+        const bookingForm = document.getElementById('bookingForm');
+        const submitBtn = document.getElementById('submitBtn');
+        const emailVerifiedInput = document.getElementById('emailVerified');
+        const sendCodeBtn = document.getElementById('sendCodeBtn');
+        const knownClientStatus = document.getElementById('knownClientStatus');
+        const codeBlock = document.getElementById('codeVerificationBlock');
+        const codeInput = document.getElementById('verificationCode');
+        const verifyCodeBtn = document.getElementById('verifyCodeBtn');
+        const statusDiv = document.getElementById('verificationStatus');
+
+        let checkTimeout;
+        let countdown = 0;
+        let countdownInterval;
+
+        // ==========================================
+        // 1. МАСКА ДЛЯ ТЕЛЕФОНА (+7)
+        // ==========================================
         if (phoneInput) {
             phoneInput.setAttribute('placeholder', '+7 (999) 123-45-67');
 
@@ -134,21 +293,11 @@
                 }
 
                 let formattedValue = '';
-                if (value.length > 0) {
-                    formattedValue = '+7';
-                }
-                if (value.length > 1) {
-                    formattedValue += ' (' + value.substring(1, 4);
-                }
-                if (value.length >= 5) {
-                    formattedValue += ') ' + value.substring(4, 7);
-                }
-                if (value.length >= 8) {
-                    formattedValue += '-' + value.substring(7, 9);
-                }
-                if (value.length >= 10) {
-                    formattedValue += '-' + value.substring(9, 11);
-                }
+                if (value.length > 0) formattedValue = '+7';
+                if (value.length > 1) formattedValue += ' (' + value.substring(1, 4);
+                if (value.length >= 5) formattedValue += ') ' + value.substring(4, 7);
+                if (value.length >= 8) formattedValue += '-' + value.substring(7, 9);
+                if (value.length >= 10) formattedValue += '-' + value.substring(9, 11);
 
                 e.target.value = formattedValue;
             });
@@ -174,14 +323,185 @@
         }
 
         // ==========================================
-        // 3. ЗАВИСИМОСТЬ: КАТЕГОРИЯ -> УСЛУГИ
+        // 3. УМНАЯ ПРОВЕРКА EMAIL
         // ==========================================
-        const categorySelect = document.querySelector('select[name="category"]');
-        const serviceSelect = document.querySelector('select[name="service"]');
-        const dateInput = document.querySelector('input[name="appointment_date"]');
-        const timeSelect = document.querySelector('select[name="appointment_time"]');
-        const timeHelp = document.getElementById('timeHelp');
+        function unlockForm() {
+            if (submitBtn) {
+                submitBtn.disabled = false;
+                submitBtn.style.opacity = '1';
+                submitBtn.style.cursor = 'pointer';
+                submitBtn.textContent = 'Записаться';
+            }
+            if (emailVerifiedInput) emailVerifiedInput.value = 'true';
+        }
 
+        function lockForm(message) {
+            if (submitBtn) {
+                submitBtn.disabled = true;
+                submitBtn.style.opacity = '0.6';
+                submitBtn.style.cursor = 'not-allowed';
+                submitBtn.textContent = message || 'Подтвердите Email';
+            }
+            if (emailVerifiedInput) emailVerifiedInput.value = 'false';
+        }
+
+        function checkEmailStatus(email) {
+            fetch('/api/check-email/', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+                },
+                body: JSON.stringify({ email: email })
+            })
+            .then(r => r.json())
+            .then(data => {
+                if (data.is_known) {
+                    // Старый клиент — код не нужен
+                    if (knownClientStatus) knownClientStatus.style.display = 'block';
+                    if (sendCodeBtn) sendCodeBtn.style.display = 'none';
+                    if (codeBlock) codeBlock.style.display = 'none';
+                    unlockForm();
+                } else {
+                    // Новый клиент — показываем кнопку "Получить код"
+                    if (sendCodeBtn) sendCodeBtn.style.display = 'inline-block';
+                    if (knownClientStatus) knownClientStatus.style.display = 'none';
+                    lockForm('Подтвердите Email');
+                }
+            })
+            .catch(err => console.error('Ошибка проверки email:', err));
+        }
+
+        if (emailInput) {
+            emailInput.addEventListener('input', function() {
+                const email = emailInput.value.trim();
+                clearTimeout(checkTimeout);
+                
+                // Сброс состояний
+                if (knownClientStatus) knownClientStatus.style.display = 'none';
+                if (codeBlock) codeBlock.style.display = 'none';
+                if (sendCodeBtn) sendCodeBtn.style.display = 'none';
+                if (statusDiv) statusDiv.textContent = '';
+
+                // === Email пустой — сразу разблокируем форму ===
+                if (!email) {
+                    unlockForm();
+                    return;
+                }
+
+                // Email введён, но без @ — блокируем
+                if (!email.includes('@')) {
+                    lockForm('Введите корректный Email');
+                    return;
+                }
+
+                // Проверяем через API с задержкой
+                checkTimeout = setTimeout(() => {
+                    checkEmailStatus(email);
+                }, 1000);
+            });
+        }
+
+        // Отправка кода
+        if (sendCodeBtn) {
+            sendCodeBtn.addEventListener('click', function() {
+                const email = emailInput.value.trim();
+                if (!email) return;
+
+                sendCodeBtn.disabled = true;
+                sendCodeBtn.textContent = 'Отправка...';
+
+                fetch('/api/send-email-code/', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+                    },
+                    body: JSON.stringify({ email: email })
+                })
+                .then(r => r.json())
+                .then(data => {
+                    if (data.success) {
+                        if (codeBlock) codeBlock.style.display = 'block';
+                        if (statusDiv) {
+                            statusDiv.textContent = '✅ Код отправлен! Проверьте почту (и папку "Спам").';
+                            statusDiv.style.color = '#388e3c';
+                        }
+                        // Таймер повторной отправки
+                        countdown = 60;
+                        sendCodeBtn.textContent = `Ждите ${countdown}с`;
+                        countdownInterval = setInterval(() => {
+                            countdown--;
+                            sendCodeBtn.textContent = `Ждите ${countdown}с`;
+                            if (countdown <= 0) {
+                                clearInterval(countdownInterval);
+                                sendCodeBtn.disabled = false;
+                                sendCodeBtn.textContent = 'Получить код';
+                            }
+                        }, 1000);
+                    } else {
+                        if (statusDiv) {
+                            statusDiv.textContent = '❌ ' + (data.error || 'Ошибка отправки');
+                            statusDiv.style.color = '#c62828';
+                        }
+                        sendCodeBtn.disabled = false;
+                        sendCodeBtn.textContent = 'Получить код';
+                    }
+                });
+            });
+        }
+
+        // Проверка кода
+        if (verifyCodeBtn) {
+            verifyCodeBtn.addEventListener('click', function() {
+                const email = emailInput.value.trim();
+                const code = codeInput.value.trim();
+
+                if (code.length !== 6) {
+                    if (statusDiv) {
+                        statusDiv.textContent = 'Введите 6 цифр';
+                        statusDiv.style.color = '#c62828';
+                    }
+                    return;
+                }
+
+                verifyCodeBtn.disabled = true;
+                verifyCodeBtn.textContent = 'Проверка...';
+
+                fetch('/api/verify-email-code/', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+                    },
+                    body: JSON.stringify({ email: email, code: code })
+                })
+                .then(r => r.json())
+                .then(data => {
+                    if (data.success) {
+                        if (statusDiv) {
+                            statusDiv.textContent = '✅ Email подтвержден!';
+                            statusDiv.style.color = '#388e3c';
+                        }
+                        unlockForm();
+                        if (sendCodeBtn) sendCodeBtn.style.display = 'none';
+                        if (verifyCodeBtn) verifyCodeBtn.style.display = 'none';
+                        if (codeInput) codeInput.readOnly = true;
+                    } else {
+                        if (statusDiv) {
+                            statusDiv.textContent = '❌ ' + (data.error || 'Неверный код');
+                            statusDiv.style.color = '#c62828';
+                        }
+                        verifyCodeBtn.disabled = false;
+                        verifyCodeBtn.textContent = 'Проверить';
+                    }
+                });
+            });
+        }
+
+        // ==========================================
+        // 4. ЗАВИСИМОСТЬ: КАТЕГОРИЯ -> УСЛУГИ
+        // ==========================================
         function updateServices() {
             const categoryId = categorySelect.value;
             
@@ -224,7 +544,7 @@
         }
 
         // ==========================================
-        // 4. ЗАВИСИМОСТЬ: УСЛУГА + ДАТА -> ВРЕМЯ
+        // 5. ЗАВИСИМОСТЬ: УСЛУГА + ДАТА -> ВРЕМЯ
         // ==========================================
         function fetchAvailableTimes() {
             const date = dateInput ? dateInput.value : '';
@@ -282,14 +602,33 @@
         }
 
         // ==========================================
-        // 5. БЛОКИРОВКА КНОПКИ ПРИ ОТПРАВКЕ ФОРМЫ
+        // 6. ОБРАБОТКА ОТПРАВКИ ФОРМЫ
         // ==========================================
-        const bookingForm = document.getElementById('bookingForm');
-
         if (bookingForm) {
             bookingForm.addEventListener('submit', function(e) {
-                const submitBtn = document.getElementById('submitBtn');
-                
+                const emailValue = emailInput ? emailInput.value.trim() : '';
+
+                // Если email не введён — форма отправляется сразу (без верификации)
+                if (!emailValue) {
+                    if (submitBtn) {
+                        submitBtn.disabled = true;
+                        submitBtn.textContent = 'Отправка...';
+                        submitBtn.style.opacity = '0.6';
+                        submitBtn.style.cursor = 'not-allowed';
+                    }
+                    return;
+                }
+
+                // Если email введён, но НЕ подтверждён — блокируем отправку
+                if (emailVerifiedInput && emailVerifiedInput.value !== 'true') {
+                    e.preventDefault();
+                    alert('Пожалуйста, подтвердите Email с помощью кода перед записью.');
+                    if (codeBlock) codeBlock.style.display = 'block';
+                    if (emailInput) emailInput.focus();
+                    return;
+                }
+
+                // Email подтверждён — блокируем кнопку и отправляем
                 if (submitBtn) {
                     submitBtn.disabled = true;
                     submitBtn.textContent = 'Отправка...';

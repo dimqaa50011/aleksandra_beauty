@@ -1,0 +1,142 @@
+{% extends 'dashboard_base.html' %}
+{% load static %}
+
+{% block title %}Редактирование записи{% endblock %}
+{% block page_title %}Редактирование записи{% endblock %}
+
+{% block content %}
+<div class="form-container">
+    <div class="card">
+        <div class="card-header">
+            <h3>Запись: {{ booking.client_name }} — {{ booking.service.name }}</h3>
+            <p style="color: #6b5f5a; margin-top: 8px;">
+                Текущее время: {{ booking.appointment_datetime|date:"d.m.Y H:i" }}
+            </p>
+        </div>
+        
+        <div class="card-body">
+            <form method="post" class="booking-form">
+                {% csrf_token %}
+                
+                {% if form.non_field_errors %}
+                    <div class="alert alert-danger">
+                        {{ form.non_field_errors }}
+                    </div>
+                {% endif %}
+
+                <div class="form-group">
+                    <label>Имя клиента</label>
+                    {{ form.client_name }}
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Телефон</label>
+                        {{ form.phone }}
+                    </div>
+                    <div class="form-group">
+                        <label>Email</label>
+                        {{ form.email }}
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label>Категория</label>
+                    {{ form.category }}
+                </div>
+
+                <div class="form-group">
+                    <label>Услуга</label>
+                    {{ form.service }}
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Дата</label>
+                        {{ form.appointment_date }}
+                    </div>
+                    <div class="form-group">
+                        <label>Время</label>
+                        {{ form.appointment_time }}
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label>Статус</label>
+                    {{ form.status }}
+                </div>
+
+                <div class="form-actions">
+                    <button type="submit" class="btn btn-primary">Сохранить изменения</button>
+                    <a href="{% url 'booking_app:bookings_list' %}" class="btn btn-secondary">Отмена</a>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<style>
+    .form-container { max-width: 700px; margin: 0 auto; }
+    .card { background: #fff; border-radius: 16px; padding: 32px; box-shadow: 0 4px 20px rgba(0,0,0,0.05); }
+    .card-header h3 { margin: 0; font-size: 1.3rem; color: #2d2a28; }
+    .form-group { margin-bottom: 20px; }
+    .form-group label { display: block; font-weight: 600; margin-bottom: 8px; color: #2d2a28; }
+    .form-control { width: 100%; padding: 12px; border: 1px solid #e8e0dd; border-radius: 12px; font-size: 1rem; }
+    .form-control:focus { outline: none; border-color: #f2a6b0; }
+    .form-row { display: flex; gap: 16px; }
+    .form-row .form-group { flex: 1; }
+    .form-actions { display: flex; gap: 16px; margin-top: 24px; }
+    .btn { padding: 12px 24px; border-radius: 60px; font-weight: 600; cursor: pointer; border: none; text-decoration: none; }
+    .btn-primary { background: #f2a6b0; color: #fff; }
+    .btn-primary:hover { background: #e8919c; }
+    .btn-secondary { background: #f0e8e5; color: #6b5f5a; }
+    .alert-danger { background: #fce4ec; color: #c62828; padding: 12px; border-radius: 8px; margin-bottom: 16px; }
+</style>
+
+<!-- Скрипт для фильтрации услуг по категории (тот же, что и в моменте 1) -->
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const categorySelect = document.querySelector('select[name="category"]');
+        const serviceSelect = document.querySelector('select[name="service"]');
+
+        if (categorySelect && serviceSelect) {
+            function updateServices() {
+                const categoryId = categorySelect.value;
+                serviceSelect.innerHTML = '<option value="">Загрузка...</option>';
+
+                if (!categoryId) {
+                    serviceSelect.innerHTML = '<option value="">Сначала выберите категорию</option>';
+                    return;
+                }
+
+                fetch(`/api/services-by-category/?category_id=${categoryId}`)
+                    .then(r => r.json())
+                    .then(data => {
+                        serviceSelect.innerHTML = '<option value="">Выберите услугу</option>';
+                        if (data.services && data.services.length > 0) {
+                            data.services.forEach(service => {
+                                const option = document.createElement('option');
+                                option.value = service.id;
+                                option.textContent = `${service.name} — ${service.price} ₽`;
+                                serviceSelect.appendChild(option);
+                            });
+                        } else {
+                            serviceSelect.innerHTML = '<option value="">В этой категории пока нет услуг</option>';
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Ошибка:', error);
+                        serviceSelect.innerHTML = '<option value="">Ошибка загрузки</option>';
+                    });
+            }
+
+            categorySelect.addEventListener('change', updateServices);
+
+            // При редактировании категория уже выбрана — подгружаем услуги
+            if (categorySelect.value) {
+                updateServices();
+            }
+        }
+    });
+</script>
+{% endblock %}
