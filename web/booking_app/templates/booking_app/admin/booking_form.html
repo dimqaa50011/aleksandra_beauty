@@ -239,6 +239,8 @@
     }
 </style>
 
+
+
 <script>
     document.addEventListener('DOMContentLoaded', function() {
         const categorySelect = document.querySelector('select[name="category"]');
@@ -279,7 +281,6 @@
                             const option = document.createElement('option');
                             option.value = service.id;
                             option.textContent = `${service.name} — ${service.price} ₽`;
-                            // Сохраняем данные в атрибуты для быстрого доступа JS
                             option.dataset.price = service.price;
                             option.dataset.duration = service.duration || 60; 
                             serviceSelect.appendChild(option);
@@ -302,7 +303,52 @@
         }
 
         // ==========================================
-        // 2. ЛОГИКА "КОРЗИНЫ" УСЛУГ
+        // 2. ПОЛУЧЕНИЕ СВОБОДНЫХ СЛОТОВ (НОВОЕ!)
+        // ==========================================
+        function fetchAvailableTimes() {
+            const date = dateInput ? dateInput.value : '';
+            const ids = servicesIdsInput.value; // Берем актуальный список ID из скрытого поля
+
+            if (!date || !ids) {
+                if (timeSelect) timeSelect.innerHTML = '<option value="">Сначала выберите дату и услуги</option>';
+                if (timeHelp) timeHelp.style.display = 'block';
+                return;
+            }
+
+            if (timeHelp) timeHelp.style.display = 'none';
+            if (timeSelect) timeSelect.innerHTML = '<option value="">Загрузка...</option>';
+
+            fetch(`/api/available-times/?date=${date}&services_ids=${ids}`)
+                .then(r => r.json())
+                .then(data => {
+                    if (!timeSelect) return;
+                    if (data.is_blocked) {
+                        timeSelect.innerHTML = '<option value="" disabled>День заблокирован</option>';
+                    } else if (data.times.length === 0) {
+                        timeSelect.innerHTML = '<option value="" disabled>Нет свободных окон для выбранных услуг</option>';
+                    } else {
+                        timeSelect.innerHTML = '<option value="">Выберите время</option>';
+                        data.times.forEach(t => {
+                            const opt = document.createElement('option');
+                            opt.value = t;
+                            opt.textContent = t;
+                            timeSelect.appendChild(opt);
+                        });
+                    }
+                })
+                .catch(error => {
+                    console.error('Ошибка загрузки времени:', error);
+                    if (timeSelect) timeSelect.innerHTML = '<option value="">Ошибка загрузки</option>';
+                });
+        }
+
+        // Запускаем проверку времени при изменении даты
+        if (dateInput) {
+            dateInput.addEventListener('change', fetchAvailableTimes);
+        }
+
+        // ==========================================
+        // 3. ЛОГИКА "КОРЗИНЫ" УСЛУГ
         // ==========================================
         function updateCartUI() {
             selectedServicesList.innerHTML = '';
@@ -331,15 +377,20 @@
             document.querySelectorAll('.remove-service').forEach(btn => {
                 btn.addEventListener('click', function() {
                     delete selectedServices[this.dataset.id];
-                    updateCartUI();
+                    updateCartUI(); // При удалении услуги пересчитываем и обновляем слоты!
                 });
             });
 
             totalDurationEl.textContent = totalDur;
             totalPriceEl.textContent = totalPri;
-            servicesIdsInput.value = ids.join(','); // "1,3,5"
+            servicesIdsInput.value = ids.join(',');
 
             selectedServicesBlock.style.display = Object.keys(selectedServices).length > 0 ? 'block' : 'none';
+
+            // ВАЖНО: Если дата уже выбрана, обновляем слоты, так как изменилась общая длительность
+            if (dateInput && dateInput.value) {
+                fetchAvailableTimes();
+            }
         }
 
         if (addServiceBtn) {
@@ -354,13 +405,13 @@
                     duration: option.dataset.duration
                 };
                 
-                updateCartUI();
+                updateCartUI(); // При добавлении услуги пересчитываем и обновляем слоты!
                 serviceSelect.value = ""; // Сброс селекта
             });
         }
 
         // ==========================================
-        // 3. БЛОКИРОВКА КНОПКИ ПРИ ОТПРАВКЕ
+        // 4. БЛОКИРОВКА КНОПКИ ПРИ ОТПРАВКЕ
         // ==========================================
         const adminBookingForm = document.getElementById('adminBookingForm');
         const submitBtn = adminBookingForm.querySelector('button[type="submit"]');
@@ -379,7 +430,7 @@
                     submitBtn.style.cursor = 'not-allowed'; 
                 }
             });
-        }
+        }   
     });
 </script>
 {% endblock %}
