@@ -334,7 +334,7 @@ def max_booking_view(request):
     else:
         form = BookingForm()
     
-    return render(request, 'booking_app/max_booking.html', {'form': form})
+    return render(request, 'booking_app/max_booking.html', {'form': form})  
 
 @csrf_exempt
 @require_POST
