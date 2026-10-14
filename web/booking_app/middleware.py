@@ -1,32 +1,28 @@
-# booking_app/middleware.py
 from django.http import JsonResponse
 from .models import APIToken
+from django.utils import timezone
 
 class APITokenMiddleware:
+    """Проверяет API токен в заголовке запроса"""
+    
     def __init__(self, get_response):
         self.get_response = get_response
-
+    
     def __call__(self, request):
-        # СПИСОК ИСКЛЮЧЕНИЙ: пути, которые НЕ должны проверяться на API токен.
-        # Мы добавили сюда '/api/save-push-subscription/', чтобы пуши работали из браузера.
-        allowed_paths = [
-            '/admin/',
-            '/login/',
-            '/logout/',
-            '/api/save-push-subscription/', 
-        ]
+        # Проверяем только API endpoints
+        # if request.path.startswith('/api/') and request.method in ['POST', 'PUT', 'DELETE']:
+        #     token = request.META.get('HTTP_X_API_TOKEN') or request.GET.get('token')
+            
+        #     if not token:
+        #         return JsonResponse({'error': 'Отсутствует API токен'}, status=401)
+            
+        #     try:
+        #         api_token = APIToken.objects.get(token=token, is_active=True)
+        #         api_token.last_used = timezone.now()
+        #         api_token.save(update_fields=['last_used'])
+        #         request.api_token = api_token
+        #     except APIToken.DoesNotExist:
+        #         return JsonResponse({'error': 'Недействительный API токен'}, status=403)
         
-        # Если URL начинается с одного из разрешенных путей, пропускаем проверку токена
-        if any(request.path.startswith(path) for path in allowed_paths):
-            return self.get_response(request)
-
-        # Проверяем наличие заголовка X-API-Token для остальных запросов
-        token = request.headers.get('X-API-Token')
-        if not token:
-            return JsonResponse({'error': 'Отсутствует API токен'}, status=401)
-
-        # Проверяем, есть ли такой активный токен в базе
-        if not APIToken.objects.filter(token=token, is_active=True).exists():
-            return JsonResponse({'error': 'Неверный или неактивный API токен'}, status=401)
-
-        return self.get_response(request)
+        response = self.get_response(request)
+        return response
