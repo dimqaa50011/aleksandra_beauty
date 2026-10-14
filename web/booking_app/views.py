@@ -15,6 +15,10 @@ import json
 from .models import Booking, BlockedSlot, DayOff, EmailVerificationCode, Client, PushSubscription
 from .forms import BookingForm, AdminBookingForm, BlockedSlotForm
 from beauty_app.models import Service, ServiceCategory
+import json
+import logging
+from django.conf import settings
+from .models import PushSubscription  # Убедись, что путь к модели верный!
 
 try:
     from pywebpush import webpush, WebPushException
@@ -22,21 +26,29 @@ try:
 except ImportError:
     HAS_WEBPUSH = False
 
+logger = logging.getLogger(__name__)
 
 def send_push_notification(title, body, url=None):
     """Отправляет пуш всем админам"""
     if not HAS_WEBPUSH:
-        print("⚠️ pywebpush не установлен")
+        logger.warning("⚠️ pywebpush не установлен, отправка пушей пропущена")
         return
     
     subscriptions = PushSubscription.objects.all()
     if not subscriptions.exists():
-        print("Нет подписок на пуши")
+        logger.info("ℹ️ Нет активных подписок на пуши в базе")
         return
     
     vapid_private_key = getattr(settings, 'VAPID_PRIVATE_KEY', '')
+    vapid_admin_email = getattr(settings, 'VAPID_ADMIN_EMAIL', 'admin@example.com')
+    
+    # Проверка на случай, если ключи не загрузились из .env
+    if not vapid_private_key or vapid_private_key == 'None':
+        logger.error("❌ VAPID_PRIVATE_KEY пустой или равен 'None'. Проверь .env.prod")
+        return
+
     vapid_claims = {
-        'sub': f'mailto:{getattr(settings, "VAPID_ADMIN_EMAIL", "admin@example.com")}',
+        'sub': f'mailto:{vapid_admin_email}',
     }
     
     payload = json.dumps({
@@ -59,14 +71,19 @@ def send_push_notification(title, body, url=None):
                 vapid_private_key=vapid_private_key,
                 vapid_claims=vapid_claims,
             )
-            print(f"✅ Пуш отправлен пользователю {sub.user.username}")
+            logger.info(f"✅ Пуш успешно отправлен пользователю {sub.user.username}")
+            
         except WebPushException as e:
-            print(f"❌ Ошибка отправки пуша: {e}")
+            logger.error(f"❌ Ошибка WebPush для {sub.user.username}: {e}")
+            # Если подписка больше не действительна (404 или 410), удаляем её
             if e.response and e.response.status_code in [404, 410]:
                 sub.delete()
-                print(f"🗑️ Удалена невалидная подписка {sub.user.username}")
-
-
+                logger.info(f"🗑️ Удалена невалидная подписка {sub.user.username}")
+                
+        except Exception as e:
+            # Ловим любые другие ошибки (например, проблемы с форматом ключа), 
+            # чтобы они не ломали весь процесс создания записи (не давали 500 ошибку)
+            logger.error(f"❌ Критическая ошибка при отправке пуша {sub.user.username}: {e}", exc_info=True)
 @csrf_exempt
 @require_POST
 def save_push_subscription(request):
