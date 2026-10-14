@@ -797,11 +797,16 @@ def booking_create(request):
                 appointment_datetime=aware_dt,
                 status='confirmed'
             )
-            
+            services_names = ""
             if services_ids:
                 services = Service.objects.filter(id__in=services_ids, is_active=True)
                 booking.services.set(services)
-            
+                services_names = ", ".join([s.name for s in services])
+            send_push_notification(
+                title='🔔 Новая запись!',
+                body=f'{booking.client_name} записался на {services_names}',
+                url='/admin-dashboard/bookings/'
+            )
             return redirect('booking_app:booking_success')
     else:
         form = BookingForm()
