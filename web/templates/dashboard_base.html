@@ -147,80 +147,74 @@
 
     <!-- СКРИПТ WEB PUSH УВЕДОМЛЕНИЙ -->
     <script>
-        // 1. Безопасно получаем ключ из Django (защита от пустых значений и кавычек)
-        const rawVapidKey = "{{ vapid_public_key|default:''|escapejs }}".trim();
-        
-        if (!rawVapidKey || rawVapidKey === 'None' || rawVapidKey.length < 50) {
-            console.warn("⚠️ VAPID_PUBLIC_KEY не найден или некорректен. Проверьте context_processors.py и settings.py");
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('/sw.js')
+      .then(registration => {
+        console.log('✅ SW зарегистрирован:', registration);
+        return Notification.requestPermission().then(permission => {
+          if (permission === 'granted') {
+            console.log('✅ Разрешение на пуши получено');
+            
+            // Берем ключ из Django (имя переменной должно совпадать с контекст-процессором)
+            const rawVapidKey = "{{ VAPID_PUBLIC_KEY|escapejs }}".trim();
+            console.log('🔑 Полученный VAPID ключ:', rawVapidKey);
+
+            if (!rawVapidKey || rawVapidKey === 'None' || rawVapidKey.length < 50) {
+                console.error("❌ ОШИБКА: VAPID_PUBLIC_KEY пустой или некорректный! Проверьте settings.py и context_processors.");
+                return;
+            }
+
+            return registration.pushManager.subscribe({
+              userVisibleOnly: true,
+              applicationServerKey: urlBase64ToUint8Array(rawVapidKey)
+            });
+          } else {
+            console.warn('⚠️ Пользователь запретил уведомления');
+          }
+        });
+      })
+      .then(subscription => {
+        if (subscription) {
+          console.log('📡 Отправка подписки на сервер...');
+          return fetch('/api/save-push-subscription/', {
+            method: 'POST',
+            credentials: 'same-origin', // КРИТИЧЕСКИ ВАЖНО для отправки куки авторизации
+            headers: {
+              'Content-Type': 'application/json',
+              'X-CSRFToken': document.querySelector('meta[name="csrf-token"]')?.content || 
+                             document.querySelector('[name=csrfmiddlewaretoken]')?.value || ''
+            },
+            body: JSON.stringify({ subscription: subscription.toJSON() })
+          });
+        }
+      })
+      .then(response => {
+        if (response) {
+            if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+            return response.json();
+        }
+      })
+      .then(data => {
+        if (data && data.success) {
+          console.log('✅ Подписка на пуши успешно сохранена в базе!');
         } else {
-            console.log("✅ VAPID ключ загружен корректно");
-
-            if ('serviceWorker' in navigator) {
-                navigator.serviceWorker.register('/sw.js')
-                    .then(registration => {
-                        console.log('✅ SW зарегистрирован:', registration);
-                        return Notification.requestPermission().then(permission => {
-                            if (permission === 'granted') {
-                                console.log('✅ Разрешение на пуши получено');
-                                return registration.pushManager.subscribe({
-                                    userVisibleOnly: true,
-                                    applicationServerKey: urlBase64ToUint8Array(rawVapidKey)
-                                });
-                            } else {
-                                console.warn('⚠️ Пользователь запретил уведомления');
-                            }
-                        });
-                    })
-                    .then(subscription => {
-                        if (subscription) {
-                            console.log('📡 Отправка подписки на сервер...');
-                            
-                            // Получаем CSRF токен из meta-тега (самый надежный способ)
-                            const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content || '';
-
-                            return fetch('/api/save-push-subscription/', {
-                                method: 'POST',
-                                credentials: 'same-origin', // <--- КРИТИЧЕСКИ ВАЖНО: исправляет ошибку 401 Unauthorized
-                                headers: {
-                                    'Content-Type': 'application/json',
-                                    'X-CSRFToken': csrfToken
-                                },
-                                body: JSON.stringify({ subscription: subscription.toJSON() })
-                            });
-                        }
-                    })
-                    .then(response => {
-                        if (response) {
-                            if (!response.ok) {
-                                throw new Error(`HTTP error! status: ${response.status}`);
-                            }
-                            return response.json();
-                        }
-                    })
-                    .then(data => {
-                        if (data && data.success) {
-                            console.log('✅ Подписка на пуши успешно сохранена в базе!');
-                        } else {
-                            console.error('❌ Ошибка сохранения на сервере:', data);
-                        }
-                    })
-                    .catch(err => {
-                        console.error('❌ Ошибка процесса push-подписки:', err);
-                    });
-            }
+          console.error('❌ Ошибка сохранения на сервере:', data);
         }
-
-        // Функция конвертации base64 в Uint8Array (остается без изменений, она рабочая)
-        function urlBase64ToUint8Array(base64String) {
-            const padding = '='.repeat((4 - base64String.length % 4) % 4);
-            const base64 = (base64String + padding).replace(/\-/g, '+').replace(/_/g, '/');
-            const rawData = window.atob(base64);
-            const outputArray = new Uint8Array(rawData.length);
-            for (let i = 0; i < rawData.length; ++i) {
-                outputArray[i] = rawData.charCodeAt(i);
-            }
-            return outputArray;
-        }
-    </script>
+      })
+      .catch(err => console.error('❌ Ошибка процесса push-подписки:', err));
+  }
+  
+  // Функция конвертации base64 в Uint8Array
+  function urlBase64ToUint8Array(base64String) {
+    const padding = '='.repeat((4 - base64String.length % 4) % 4);
+    const base64 = (base64String + padding).replace(/\-/g, '+').replace(/_/g, '/');
+    const rawData = window.atob(base64);
+    const outputArray = new Uint8Array(rawData.length);
+    for (let i = 0; i < rawData.length; ++i) {
+      outputArray[i] = rawData.charCodeAt(i);
+    }
+    return outputArray;
+  }
+</script>
 </body>
 </html>
