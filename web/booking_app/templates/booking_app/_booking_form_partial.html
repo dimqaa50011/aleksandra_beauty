@@ -145,6 +145,8 @@
     }
 </style>
 
+
+
 <script>
     document.addEventListener('DOMContentLoaded', function() {
         const phoneInput = document.querySelector('input[name="phone"]');
@@ -156,7 +158,7 @@
         const bookingForm = document.getElementById('bookingForm');
         const submitBtn = document.getElementById('submitBtn');
         
-        // Элементы "корзины"
+        // Элементы корзины
         const addServiceBtn = document.getElementById('addServiceBtn');
         const selectedServicesBlock = document.getElementById('selectedServicesBlock');
         const selectedServicesList = document.getElementById('selectedServicesList');
@@ -164,11 +166,157 @@
         const totalPriceEl = document.getElementById('totalPrice');
         const servicesIdsInput = document.getElementById('servicesIdsInput');
 
-        // Хранилище: { id: {name, price, duration} }
         let selectedServices = {};
 
         // ==========================================
-        // 1. МАСКА ТЕЛЕФОНА (+7)
+        // 1. ОПРЕДЕЛЕНИЕ ПЛАТФОРМЫ (исправлен порядок)
+        // ==========================================
+        function detectPlatform() {
+            // Telegram проверяем первым, так как он использует window.Telegram.WebApp
+            if (window.Telegram && window.Telegram.WebApp) return 'telegram';
+            // VK использует window.vkBridge
+            if (window.vkBridge) return 'vk';
+            // MAX использует window.WebApp
+            if (window.WebApp) return 'max';
+            // Обычный сайт
+            return 'web';
+        }
+
+        const platform = detectPlatform();
+        console.log('Platform detected:', platform);
+
+        // ==========================================
+        // 1.1 ИНИЦИАЛИЗАЦИЯ ПЛАТФОРМ
+        // ==========================================
+        function initPlatform() {
+            if (platform === 'telegram') {
+                // Инициализация Telegram WebApp
+                try {
+                    window.Telegram.WebApp.ready();
+                    window.Telegram.WebApp.expand();
+                    console.log('Telegram WebApp initialized');
+                } catch (e) {
+                    console.log('Telegram init error:', e);
+                }
+            }
+            // MAX и VK не требуют явной инициализации в этом контексте
+        }
+
+        initPlatform();
+
+        // ==========================================
+        // 2. АВТОЗАПОЛНЕНИЕ ИМЕНИ ПО ПЛАТФОРМЕ
+        // ==========================================
+        function autofillName() {
+            const nameInput = document.querySelector('input[name="client_name"]');
+            if (!nameInput || nameInput.value) return;
+
+            let firstName = '';
+            let lastName = '';
+
+            if (platform === 'vk') {
+                // VK Mini App
+                try {
+                    window.vkBridge.send('VKWebAppGetUserInfo')
+                        .then(data => {
+                            firstName = data.first_name || '';
+                            lastName = data.last_name || '';
+                            nameInput.value = `${firstName} ${lastName}`.trim();
+                        })
+                        .catch(() => {
+                            console.log('VK user info not available');
+                        });
+                } catch (e) {
+                    console.log('VK bridge error:', e);
+                }
+            } 
+            else if (platform === 'max') {
+                // MAX Mini App
+                try {
+                    const userData = window.WebApp.initDataUnsafe?.user;
+                    if (userData) {
+                        firstName = userData.first_name || '';
+                        lastName = userData.last_name || '';
+                        nameInput.value = `${firstName} ${lastName}`.trim();
+                    }
+                } catch (e) {
+                    console.log('MAX user data not available');
+                }
+            } 
+            else if (platform === 'telegram') {
+                // Telegram WebApp
+                try {
+                    const userData = window.Telegram.WebApp.initDataUnsafe?.user;
+                    if (userData) {
+                        firstName = userData.first_name || '';
+                        lastName = userData.last_name || '';
+                        nameInput.value = `${firstName} ${lastName}`.trim();
+                    }
+                } catch (e) {
+                    console.log('Telegram user data not available');
+                }
+            }
+            // Для 'web' ничего не делаем
+        }
+
+        // Запускаем автозаполнение имени
+        autofillName();
+
+        // ==========================================
+        // 3. АВТОЗАПОЛНЕНИЕ ТЕЛЕФОНА (MAX)
+        // ==========================================
+        function requestPhone() {
+            if (platform !== 'max') return;
+            
+            const phoneField = document.querySelector('input[name="phone"]');
+            if (!phoneField || phoneField.value) return;
+
+            // Показываем кнопку запроса телефона для MAX
+            const phoneGroup = phoneField.closest('.form-group');
+            if (!phoneGroup.querySelector('.request-phone-btn')) {
+                const requestBtn = document.createElement('button');
+                requestBtn.type = 'button';
+                requestBtn.className = 'request-phone-btn';
+                requestBtn.textContent = '📱 Получить телефон из MAX';
+                requestBtn.style.cssText = 'margin-top: 8px; padding: 8px 16px; background: #f2a6b0; color: #fff; border: none; border-radius: 8px; font-size: 0.85rem; cursor: pointer;';
+                
+                requestBtn.addEventListener('click', async function() {
+                    try {
+                        const result = await window.WebApp.requestContact();
+                        if (result && result.phone) {
+                            // Форматируем телефон
+                            let phone = result.phone.replace(/\D/g, '');
+                            if (phone.startsWith('8')) phone = '7' + phone.substring(1);
+                            if (!phone.startsWith('7')) phone = '7' + phone;
+                            
+                            let formatted = '+7';
+                            if (phone.length > 1) formatted += ' (' + phone.substring(1, 4);
+                            if (phone.length >= 5) formatted += ') ' + phone.substring(4, 7);
+                            if (phone.length >= 8) formatted += '-' + phone.substring(7, 9);
+                            if (phone.length >= 10) formatted += '-' + phone.substring(9, 11);
+                            
+                            phoneField.value = formatted;
+                            requestBtn.style.display = 'none';
+                            
+                            // Тактильный отклик
+                            if (window.WebApp.HapticFeedback) {
+                                window.WebApp.HapticFeedback.notificationOccurred('success');
+                            }
+                        }
+                    } catch (e) {
+                        console.log('Phone request failed:', e);
+                    }
+                });
+                
+                phoneGroup.appendChild(requestBtn);
+            }
+        }
+
+        // Запускаем запрос телефона для MAX
+        requestPhone();
+
+        // ==========================================
+        // 4. МАСКА ТЕЛЕФОНА (+7)
         // ==========================================
         if (phoneInput) {
             phoneInput.setAttribute('placeholder', '+7 (999) 123-45-67');
@@ -191,52 +339,50 @@
         }
 
         // ==========================================
-        // 2. VK АВТОЗАПОЛНЕНИЕ
-        // ==========================================
-        if (window.vkBridge) {
-            window.vkBridge.send('VKWebAppInit');
-            window.vkBridge.send('VKWebAppGetUserInfo').then(data => {
-                const nameInput = document.querySelector('input[name="client_name"]');
-                if (nameInput && !nameInput.value) nameInput.value = `${data.first_name} ${data.last_name}`;
-            }).catch(() => {});
-        }
-
-        // ==========================================
-        // 3. ЗАГРУЗКА УСЛУГ ПО КАТЕГОРИИ
+        // 5. ЗАГРУЗКА УСЛУГ ПО КАТЕГОРИИ
         // ==========================================
         function updateServices() {
             const categoryId = categorySelect.value;
             serviceSelect.innerHTML = '<option value="">Загрузка...</option>';
-            if (!categoryId) { 
-                serviceSelect.innerHTML = '<option value="">Сначала выберите категорию</option>'; 
-                return; 
+
+            if (!categoryId) {
+                serviceSelect.innerHTML = '<option value="">Сначала выберите категорию</option>';
+                return;
             }
-            
+
             fetch(`/api/services-by-category/?category_id=${categoryId}`)
-                .then(r => r.json())
+                .then(response => response.json())
                 .then(data => {
                     serviceSelect.innerHTML = '<option value="">Выберите услугу для добавления</option>';
+                    
                     if (data.services && data.services.length > 0) {
-                        data.services.forEach(s => {
-                            const opt = document.createElement('option');
-                            opt.value = s.id; 
-                            opt.textContent = `${s.name} — ${s.price} ₽`;
-                            opt.dataset.price = s.price;
-                            opt.dataset.duration = s.duration || 60; 
-                            serviceSelect.appendChild(opt);
+                        data.services.forEach(service => {
+                            const option = document.createElement('option');
+                            option.value = service.id;
+                            option.textContent = `${service.name} — ${service.price} ₽`;
+                            option.dataset.price = service.price;
+                            option.dataset.duration = service.duration || 60;
+                            serviceSelect.appendChild(option);
                         });
+                    } else {
+                        serviceSelect.innerHTML = '<option value="">В этой категории пока нет услуг</option>';
                     }
                 })
-                .catch(error => console.error('Ошибка загрузки услуг:', error));
+                .catch(error => {
+                    console.error('Ошибка загрузки услуг:', error);
+                    serviceSelect.innerHTML = '<option value="">Ошибка загрузки</option>';
+                });
         }
 
         if (categorySelect) {
             categorySelect.addEventListener('change', updateServices);
-            if (categorySelect.value) updateServices();
+            if (categorySelect.value) {
+                updateServices();
+            }
         }
 
         // ==========================================
-        // 4. ЛОГИКА "КОРЗИНЫ" УСЛУГ
+        // 6. ЛОГИКА "КОРЗИНЫ" УСЛУГ
         // ==========================================
         function updateCartUI() {
             selectedServicesList.innerHTML = '';
@@ -292,11 +438,16 @@
                 updateCartUI();
                 fetchAvailableTimes();
                 serviceSelect.value = "";
+                
+                // Тактильный отклик при добавлении услуги
+                if (platform === 'max' && window.WebApp.HapticFeedback) {
+                    window.WebApp.HapticFeedback.impactOccurred('light');
+                }
             });
         }
 
         // ==========================================
-        // 5. ПРОВЕРКА ДОСТУПНОСТИ ВРЕМЕНИ
+        // 7. ПРОВЕРКА ДОСТУПНОСТИ ВРЕМЕНИ
         // ==========================================
         function fetchAvailableTimes() {
             const date = dateInput ? dateInput.value : '';
@@ -334,7 +485,7 @@
         if (dateInput) dateInput.addEventListener('change', fetchAvailableTimes);
 
         // ==========================================
-        // 6. ОТПРАВКА ФОРМЫ
+        // 8. ОТПРАВКА ФОРМЫ
         // ==========================================
         if (bookingForm) {
             bookingForm.addEventListener('submit', function(e) {
@@ -349,22 +500,33 @@
                     submitBtn.style.opacity = '0.6'; 
                     submitBtn.style.cursor = 'not-allowed'; 
                 }
+                
+                // Тактильный отклик при успешной отправке
+                if (platform === 'max' && window.WebApp.HapticFeedback) {
+                    window.WebApp.HapticFeedback.notificationOccurred('success');
+                } else if (platform === 'vk' && window.vkBridge) {
+                    try {
+                        window.vkBridge.send('VKWebAppTapticNotificationOccurred', { type: 'success' });
+                    } catch (e) {
+                        console.log('VK haptic error:', e);
+                    }
+                } else if (platform === 'telegram' && window.Telegram.WebApp.HapticFeedback) {
+                    window.Telegram.WebApp.HapticFeedback.notificationOccurred('success');
+                }
             });
         }
 
         // ==========================================
-        // 7. АВТОМАТИЧЕСКАЯ ИНИЦИАЛИЗАЦИЯ ПРИ ЗАГРУЗКЕ
+        // 9. АВТОМАТИЧЕСКАЯ ИНИЦИАЛИЗАЦИЯ ПРИ ЗАГРУЗКЕ
         // ==========================================
         function initializeForm() {
             const savedCategory = categorySelect ? categorySelect.value : '';
             const savedDate = dateInput ? dateInput.value : '';
             const savedServicesIds = servicesIdsInput ? servicesIdsInput.value : '';
             
-            // Если есть категория — загружаем услуги
             if (savedCategory) {
                 updateServices();
                 
-                // Ждём загрузки услуг, затем восстанавливаем корзину и слоты
                 setTimeout(() => {
                     if (savedServicesIds) {
                         const ids = savedServicesIds.split(',');
@@ -381,13 +543,11 @@
                         updateCartUI();
                     }
                     
-                    // Если есть дата и услуги — загружаем слоты
                     if (savedDate && Object.keys(selectedServices).length > 0) {
                         fetchAvailableTimes();
                     }
                 }, 600);
             }
-            // Если нет категории, но есть дата — показываем подсказку
             else if (savedDate) {
                 if (timeHelp) {
                     timeHelp.textContent = 'Сначала выберите категорию и услуги';
@@ -396,7 +556,6 @@
             }
         }
         
-        // Запускаем инициализацию при загрузке страницы
         initializeForm();
     });
 </script>

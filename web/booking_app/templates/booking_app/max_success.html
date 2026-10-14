@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Запись подтверждена</title>
+    <script src="https://st.max.ru/js/max-web-app.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #fef9f7;
+            color: #2d2a28;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            padding: 20px;
+        }
+        .success-card {
+            background: #ffffff;
+            border-radius: 24px;
+            padding: 32px 24px;
+            text-align: center;
+            width: 100%;
+            max-width: 400px;
+            box-shadow: 0 8px 32px rgba(242, 166, 176, 0.15);
+        }
+        .success-icon {
+            width: 80px; height: 80px;
+            background: #e8f5e9;
+            border-radius: 50%;
+            display: flex; align-items: center; justify-content: center;
+            margin: 0 auto 24px;
+            font-size: 2.5rem;
+        }
+        h1 { font-size: 1.5rem; font-weight: 700; margin-bottom: 8px; }
+        .greeting { font-size: 1rem; color: #6b5f5a; margin-bottom: 32px; }
+        .details {
+            background: #fcf9f7;
+            border-radius: 16px;
+            padding: 20px;
+            text-align: left;
+            margin-bottom: 24px;
+        }
+        .detail-row {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 12px;
+            font-size: 0.95rem;
+        }
+        .detail-row:last-child { margin-bottom: 0; }
+        .detail-row .label { color: #6b5f5a; font-weight: 500; }
+        .detail-row .value { color: #2d2a28; font-weight: 600; text-align: right; }
+        .footer-note { font-size: 0.85rem; color: #9b8f8a; line-height: 1.5; margin-bottom: 24px; }
+        .btn-close {
+            width: 100%;
+            padding: 14px 32px;
+            background: #f2a6b0;
+            color: #fff;
+            border: none;
+            border-radius: 60px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+    <div class="success-card">
+        <div class="success-icon">✨</div>
+        <h1>Вы успешно записаны!</h1>
+        <p class="greeting">Ждем вас, {{ booking.client_name }}</p>
+
+        <div class="details">
+            <div class="detail-row">
+                <span class="label">Услуги:</span>
+                <span class="value">
+                    {% for service in booking.services.all %}
+                        {{ service.name }}{% if not forloop.last %}, {% endif %}
+                    {% endfor %}
+                </span>
+            </div>
+            <div class="detail-row">
+                <span class="label">Дата:</span>
+                <span class="value">{{ booking.appointment_datetime|date:"d E Y" }}</span>
+            </div>
+            <div class="detail-row">
+                <span class="label">Время:</span>
+                <span class="value">{{ booking.appointment_datetime|date:"H:i" }}</span>
+            </div>
+        </div>
+
+        <p class="footer-note">
+            Мы отправили подтверждение на вашу почту (если вы её указали).<br>
+            До встречи в Sasha Sugar! 🌸
+        </p>
+
+        <button class="btn-close" onclick="closeApp()">Отлично</button>
+    </div>
+
+    <script>
+        if (window.WebApp) {
+            // Виброотклик
+            if (window.WebApp.HapticFeedback) {
+                window.WebApp.HapticFeedback.notificationOccurred('success');
+            }
+        }
+
+        function closeApp() {
+            if (window.WebApp) {
+                // MAX не имеет метода close(), поэтому просто показываем сообщение
+                alert('Запись создана! Можете закрыть это окно.');
+            } else {
+                window.location.href = '/';
+            }
+        }
+    </script>
+</body>
+</html>

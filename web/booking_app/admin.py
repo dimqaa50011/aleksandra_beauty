@@ -1,7 +1,11 @@
 from django.contrib import admin
-from .models import APIToken, Client, EmailVerificationCode, Booking, DayOff, BlockedSlot
+from .models import APIToken, Client, EmailVerificationCode, Booking, DayOff, BlockedSlot, PushSubscription
 
 
+
+@admin.register(PushSubscription)
+class PushSubscriptionAdmin(admin.ModelAdmin):
+    pass
 # =============================================
 # APIToken
 # =============================================

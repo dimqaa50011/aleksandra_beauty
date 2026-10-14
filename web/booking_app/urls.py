@@ -27,6 +27,8 @@ urlpatterns = [
     path('api/services-by-category/', views.get_services_by_category, name='api_services_by_category'),
     path('api/save-push-subscription/', views.save_push_subscription, name='save_push_subscription'),
     path('vk-app/', views.vk_booking_view, name='vk_booking'),
+    path('telegram/', views.telegram_booking_view, name='telegram_booking'),
+    path('max/', views.max_booking_view, name='max_booking'),
     
     # ==========================================
     # АДМИНКА: УПРАВЛЕНИЕ ЗАПИСЯМИ

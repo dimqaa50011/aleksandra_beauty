@@ -237,6 +237,104 @@ def vk_booking_view(request):
     
     return render(request, 'booking_app/vk_booking.html', {'form': form})
 
+def telegram_booking_view(request):
+    """Страница записи для Telegram Mini App"""
+    if request.method == 'POST':
+        form = BookingForm(request.POST)
+        if form.is_valid():
+            date_str = form.cleaned_data['appointment_date']
+            time_str = form.cleaned_data['appointment_time']
+            email = form.cleaned_data['email']
+            
+            naive_dt = datetime.strptime(f"{date_str} {time_str}", "%Y-%m-%d %H:%M")
+            aware_dt = timezone.make_aware(naive_dt, timezone.get_current_timezone())
+            
+            booking = form.save(commit=False)
+            booking.appointment_datetime = aware_dt
+            booking.save()
+            
+            # Сохранение нескольких услуг
+            services_ids_str = request.POST.get('services_ids', '')
+            if services_ids_str:
+                services_ids = [int(id) for id in services_ids_str.split(',') if id]
+                services = Service.objects.filter(id__in=services_ids, is_active=True)
+                booking.services.set(services)
+            
+            services_names = ", ".join([s.name for s in booking.services.all()])
+            
+            # Обновляем CRM
+            if email:
+                client, created = Client.objects.get_or_create(email=email)
+                client.total_bookings += 1
+                client.is_verified = True
+                client.save()
+                
+                try:
+                    send_mail(
+                        subject=' Ваша запись в Sasha Sugar подтверждена!',
+                        message=f"Здравствуйте, {booking.client_name}!\n\nВаша запись на {date_str} в {time_str} ({services_names}) успешно оформлена.\n\nЖдем вас по адресу: Спасский переулок, 7",
+                        from_email=settings.DEFAULT_FROM_EMAIL,
+                        recipient_list=[email],
+                        fail_silently=False,
+                    )
+                except Exception:
+                    pass
+
+            return render(request, 'booking_app/telegram_success.html', {'booking': booking})
+    else:
+        form = BookingForm()
+    
+    return render(request, 'booking_app/telegram_booking.html', {'form': form})
+
+
+def max_booking_view(request):
+    """Страница записи для MAX Mini App"""
+    if request.method == 'POST':
+        form = BookingForm(request.POST)
+        if form.is_valid():
+            date_str = form.cleaned_data['appointment_date']
+            time_str = form.cleaned_data['appointment_time']
+            email = form.cleaned_data['email']
+            
+            naive_dt = datetime.strptime(f"{date_str} {time_str}", "%Y-%m-%d %H:%M")
+            aware_dt = timezone.make_aware(naive_dt, timezone.get_current_timezone())
+            
+            booking = form.save(commit=False)
+            booking.appointment_datetime = aware_dt
+            booking.save()
+            
+            # Сохранение нескольких услуг
+            services_ids_str = request.POST.get('services_ids', '')
+            if services_ids_str:
+                services_ids = [int(id) for id in services_ids_str.split(',') if id]
+                services = Service.objects.filter(id__in=services_ids, is_active=True)
+                booking.services.set(services)
+            
+            services_names = ", ".join([s.name for s in booking.services.all()])
+            
+            # Обновляем CRM
+            if email:
+                client, created = Client.objects.get_or_create(email=email)
+                client.total_bookings += 1
+                client.is_verified = True
+                client.save()
+                
+                try:
+                    send_mail(
+                        subject='🌸 Ваша запись в Sasha Sugar подтверждена!',
+                        message=f"Здравствуйте, {booking.client_name}!\n\nВаша запись на {date_str} в {time_str} ({services_names}) успешно оформлена.\n\nЖдем вас по адресу: Спасский переулок, 7",
+                        from_email=settings.DEFAULT_FROM_EMAIL,
+                        recipient_list=[email],
+                        fail_silently=False,
+                    )
+                except Exception:
+                    pass
+
+            return render(request, 'booking_app/max_success.html', {'booking': booking})
+    else:
+        form = BookingForm()
+    
+    return render(request, 'booking_app/max_booking.html', {'form': form})
 
 @csrf_exempt
 @require_POST
