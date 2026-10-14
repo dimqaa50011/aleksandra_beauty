@@ -8,30 +8,13 @@ from django.views.decorators.http import require_POST
 from django.utils import timezone
 from django.core.mail import send_mail
 from django.conf import settings
+from django.views.decorators.csrf import csrf_exempt
 from datetime import datetime, timedelta, time as dt_time
 import json
 
-from .models import Booking, BlockedSlot, DayOff, EmailVerificationCode, Client
+from .models import Booking, BlockedSlot, DayOff, EmailVerificationCode, Client, PushSubscription
 from .forms import BookingForm, AdminBookingForm, BlockedSlotForm
 from beauty_app.models import Service, ServiceCategory
-
-from django.views.decorators.csrf import csrf_exempt
-from django.views.decorators.http import require_POST
-import json
-from django.shortcuts import render
-from django.contrib import messages
-from django.utils import timezone
-from datetime import datetime
-from .models import Booking, Client
-from .forms import BookingForm
-from django.core.mail import send_mail
-from django.conf import settings
-from .google_calendar import create_or_update_google_event
-import json
-from django.views.decorators.csrf import csrf_exempt
-from django.views.decorators.http import require_POST
-from django.http import JsonResponse
-from .models import PushSubscription
 
 try:
     from pywebpush import webpush, WebPushException
@@ -47,12 +30,9 @@ def send_push_notification(title, body, url=None):
         return
     
     subscriptions = PushSubscription.objects.all()
-    
     if not subscriptions.exists():
         print("Нет подписок на пуши")
         return
-    
-    from django.conf import settings
     
     vapid_private_key = getattr(settings, 'VAPID_PRIVATE_KEY', '')
     vapid_claims = {
@@ -106,7 +86,6 @@ def save_push_subscription(request):
                 'auth': subscription['keys']['auth'],
             }
         )
-        
         return JsonResponse({'success': True})
     except Exception as e:
         return JsonResponse({'error': str(e)}, status=500)
@@ -120,28 +99,35 @@ def booking_edit(request, pk):
         form = AdminBookingForm(request.POST, instance=booking)
         
         if form.is_valid():
-            # Собираем дату и время
             date_str = form.cleaned_data['appointment_date']
             time_str = form.cleaned_data['appointment_time']
-            service = form.cleaned_data['service']
+            
+            # Получаем услуги из скрытого поля services_ids или из формы
+            services_ids_str = request.POST.get('services_ids', '')
+            if services_ids_str:
+                services_ids = [int(id) for id in services_ids_str.split(',') if id]
+                services = Service.objects.filter(id__in=services_ids, is_active=True)
+            else:
+                services = form.cleaned_data.get('services', booking.services.all())
             
             naive_dt = datetime.strptime(f"{date_str} {time_str}", "%Y-%m-%d %H:%M")
             aware_dt = timezone.make_aware(naive_dt, timezone.get_current_timezone())
             
-            # Проверяем доступность слота (с исключением текущей записи)
-            duration = getattr(service, 'duration', 60)
+            # Считаем общую длительность
+            duration = sum(s.duration for s in services if s.duration)
             new_end_time = aware_dt + timedelta(minutes=duration)
             
             # Проверяем конфликты (исключая саму редактируемую запись)
             conflicting = Booking.objects.filter(
                 appointment_datetime__date=aware_dt.date(),
                 status__in=['pending', 'confirmed']
-            ).exclude(pk=booking.pk)
+            ).exclude(pk=booking.pk).prefetch_related('services')
             
             is_available = True
             for b in conflicting:
+                b_duration = sum(s.duration for s in b.services.all() if s.duration)
                 b_start = b.appointment_datetime
-                b_end = b_start + timedelta(minutes=getattr(b.service, 'duration', 60))
+                b_end = b_start + timedelta(minutes=b_duration)
                 if aware_dt < b_end and new_end_time > b_start:
                     is_available = False
                     break
@@ -157,9 +143,11 @@ def booking_edit(request, pk):
             booking = form.save(commit=False)
             booking.appointment_datetime = aware_dt
             booking.save()
+            booking.services.set(services) # <-- Сохраняем M2M связи
             
-            # Обновляем Google Calendar
+            # Обновляем Google Calendar (если функция существует)
             try:
+                from .google_calendar import create_or_update_google_event
                 event_id = create_or_update_google_event(booking)
                 if event_id:
                     booking.google_event_id = event_id
@@ -170,7 +158,6 @@ def booking_edit(request, pk):
             messages.success(request, f'Запись для {booking.client_name} обновлена')
             return redirect('booking_app:bookings_list')
     else:
-        # Предзаполняем форму данными из существующей записи
         initial_data = {
             'appointment_date': booking.appointment_datetime.date(),
             'appointment_time': booking.appointment_datetime.strftime('%H:%M'),
@@ -182,6 +169,7 @@ def booking_edit(request, pk):
         'booking': booking
     })
 
+
 def get_services_by_category(request):
     """Возвращает список услуг конкретной категории в формате JSON"""
     category_id = request.GET.get('category_id')
@@ -190,25 +178,23 @@ def get_services_by_category(request):
         return JsonResponse({'services': []})
     
     try:
-        # Фильтруем услуги по категории и статусу is_active
         services = Service.objects.filter(
             category_id=category_id, 
             is_active=True
-        ).values('id', 'name', 'price')
+        ).values('id', 'name', 'price', 'duration') # <-- Добавили duration для фронтенда
         
         return JsonResponse({'services': list(services)})
     except Exception as e:
         return JsonResponse({'error': str(e)}, status=500)
 
+
 def vk_booking_view(request):
-    """Страница записи для VK Mini App (без шапки и подвала сайта)"""
+    """Страница записи для VK Mini App"""
     if request.method == 'POST':
         form = BookingForm(request.POST)
         if form.is_valid():
-            # Стандартная логика сохранения (такая же, как на сайте)
             date_str = form.cleaned_data['appointment_date']
             time_str = form.cleaned_data['appointment_time']
-            service = form.cleaned_data['service']
             email = form.cleaned_data['email']
             
             naive_dt = datetime.strptime(f"{date_str} {time_str}", "%Y-%m-%d %H:%M")
@@ -218,6 +204,15 @@ def vk_booking_view(request):
             booking.appointment_datetime = aware_dt
             booking.save()
             
+            # === СОХРАНЕНИЕ НЕСКОЛЬКИХ УСЛУГ ===
+            services_ids_str = request.POST.get('services_ids', '')
+            if services_ids_str:
+                services_ids = [int(id) for id in services_ids_str.split(',') if id]
+                services = Service.objects.filter(id__in=services_ids, is_active=True)
+                booking.services.set(services)
+            
+            services_names = ", ".join([s.name for s in booking.services.all()])
+            
             # Обновляем CRM
             if email:
                 client, created = Client.objects.get_or_create(email=email)
@@ -225,11 +220,10 @@ def vk_booking_view(request):
                 client.is_verified = True
                 client.save()
                 
-                # Отправка письма
                 try:
                     send_mail(
                         subject='🌸 Ваша запись в Sasha Sugar подтверждена!',
-                        message=f"Здравствуйте, {booking.client_name}!\n\nВаша запись на {date_str} в {time_str} ({service.name}) успешно оформлена.\n\nЖдем вас по адресу: Спасский переулок, 7",
+                        message=f"Здравствуйте, {booking.client_name}!\n\nВаша запись на {date_str} в {time_str} ({services_names}) успешно оформлена.\n\nЖдем вас по адресу: Спасский переулок, 7",
                         from_email=settings.DEFAULT_FROM_EMAIL,
                         recipient_list=[email],
                         fail_silently=False,
@@ -237,46 +231,42 @@ def vk_booking_view(request):
                 except Exception:
                     pass
 
-            # Для ВК возвращаем простую страницу успеха, чтобы не делать редирект внутри iframe
             return render(request, 'booking_app/vk_success.html', {'booking': booking})
     else:
         form = BookingForm()
     
     return render(request, 'booking_app/vk_booking.html', {'form': form})
 
+
 @csrf_exempt
 @require_POST
 def api_create_booking(request):
-    """
-    Защищённый API endpoint для создания записи.
-    Требует API токен в заголовке X-API-Token.
-    """
+    """Защищённый API endpoint для создания записи"""
     try:
         data = json.loads(request.body)
     except json.JSONDecodeError:
         return JsonResponse({'error': 'Неверный формат JSON'}, status=400)
 
-    # Извлекаем данные
     client_name = data.get('client_name', '').strip()
     phone = data.get('phone', '').strip()
     email = data.get('email', '').strip()
-    service_id = data.get('service_id')
     date_str = data.get('date')
     time_str = data.get('time')
+    
+    # Поддержка и services_ids (новое), и service_id (старое, для совместимости)
+    services_ids_input = data.get('services_ids') or data.get('service_id')
 
-    # Валидация
-    if not client_name or not phone or not service_id or not date_str or not time_str:
-        return JsonResponse({
-            'error': 'Не заполнены обязательные поля'
-        }, status=400)
+    if not client_name or not phone or not services_ids_input or not date_str or not time_str:
+        return JsonResponse({'error': 'Не заполнены обязательные поля'}, status=400)
 
-    # Проверяем услугу
     try:
-        service = Service.objects.get(id=service_id, is_active=True)
-    except Service.DoesNotExist:
-        return JsonResponse({'error': 'Услуга не найдена'}, status=404)
+        services_ids = [int(id) for id in str(services_ids_input).split(',') if id]
+        services = Service.objects.filter(id__in=services_ids, is_active=True)
+        if not services.exists():
+            return JsonResponse({'error': 'Услуги не найдены'}, status=404)
+    except ValueError:
+        return JsonResponse({'error': 'Неверный формат ID услуг'}, status=400)
 
-    # Проверяем дату и время
     try:
         date = datetime.strptime(date_str, '%Y-%m-%d').date()
         time = datetime.strptime(time_str, '%H:%M').time()
@@ -287,44 +277,31 @@ def api_create_booking(request):
     except ValueError:
         return JsonResponse({'error': 'Неверный формат даты или времени'}, status=400)
 
-    # Проверяем доступность слота
-    if not is_time_slot_available(appointment_datetime, service):
-        return JsonResponse({
-            'error': 'Это время уже занято или заблокировано'
-        }, status=409)
+    total_duration = sum(s.duration for s in services if s.duration)
 
-    # Создаём запись
+    if not is_time_slot_available(appointment_datetime, services=services, duration=total_duration):
+        return JsonResponse({'error': 'Это время уже занято или заблокировано'}, status=409)
+
     booking = Booking.objects.create(
         client_name=client_name,
         phone=phone,
         email=email if email else None,
-        service=service,
         appointment_datetime=appointment_datetime,
         status='confirmed'
     )
+    booking.services.set(services) # <-- Сохраняем M2M
 
-    # Обновляем CRM
     if email:
         client, created = Client.objects.get_or_create(email=email)
         client.total_bookings += 1
         client.is_verified = True
         client.save()
 
-    # Отправляем письмо
-    if email:
         try:
+            services_names = ", ".join([s.name for s in services])
             send_mail(
                 subject='🌸 Ваша запись в Sasha Sugar подтверждена!',
-                message=f"""Здравствуйте, {client_name}!
-
-Ваша запись успешно оформлена.
-
-📅 Дата: {date_str}
-⏰ Время: {time_str}
-💅 Услуга: {service.name}
-📍 Адрес: Санкт-Петербург, Спасский переулок, 7
-
-С любовью, команда Sasha Sugar""",
+                message=f"Здравствуйте, {client_name}!\n\nВаша запись успешно оформлена.\n\n📅 Дата: {date_str}\n⏰ Время: {time_str}\n💅 Услуги: {services_names}\n📍 Адрес: Санкт-Петербург, Спасский переулок, 7",
                 from_email=settings.DEFAULT_FROM_EMAIL,
                 recipient_list=[email],
                 fail_silently=False,
@@ -338,7 +315,7 @@ def api_create_booking(request):
         'message': 'Запись успешно создана',
         'booking_details': {
             'client_name': booking.client_name,
-            'service': booking.service.name,
+            'services': [s.name for s in services],
             'date': booking.appointment_datetime.strftime('%Y-%m-%d'),
             'time': booking.appointment_datetime.strftime('%H:%M'),
             'status': booking.get_status_display()
@@ -365,61 +342,50 @@ class AdminRequiredMixin(LoginRequiredMixin, UserPassesTestMixin):
 # =============================================
 # ЛОГИКА ПРОВЕРКИ СВОБОДНЫХ СЛОТОВ
 # =============================================
-def is_time_slot_available(new_start_time, service, duration=None):
-    """
-    Проверяет, свободен ли слот (учитывает записи и заблокированные слоты).
-    new_start_time: timezone-aware datetime
-    """
-    if duration is None:
-        duration = getattr(service, 'duration', 60)
+def is_time_slot_available(new_start_time, services=None, duration=None):
+    """Проверяет, свободен ли слот (учитывает записи и заблокированные слоты)."""
+    if duration is None and services:
+        duration = sum(s.duration for s in services if s.duration)
+    elif duration is None:
+        duration = 60 # fallback
 
     new_end_time = new_start_time + timedelta(minutes=duration)
-
-    # 1. Проверяем существующие записи
     target_date = new_start_time.date()
-    blocked_slots = BlockedSlot.objects.filter(date=target_date)
+    current_tz = timezone.get_current_timezone()
 
+    # 1. Проверяем заблокированные слоты
+    blocked_slots = BlockedSlot.objects.filter(date=target_date)
     for slot in blocked_slots:
-        # Если слот заблокирован на весь день
         if slot.is_full_day:
             return False
         
-        # Если слот заблокирован по времени
         if slot.start_time and slot.end_time:
-            slot_start = timezone.make_aware(
-                datetime.combine(target_date, slot.start_time),
-                timezone.get_current_timezone()
-            )
-            slot_end = timezone.make_aware(
-                datetime.combine(target_date, slot.end_time),
-                timezone.get_current_timezone()
-            )
+            slot_start = timezone.make_aware(datetime.combine(target_date, slot.start_time), current_tz)
+            slot_end = timezone.make_aware(datetime.combine(target_date, slot.end_time), current_tz)
 
             if new_start_time < slot_end and new_end_time > slot_start:
                 return False    
 
-    # 2. Проверяем заблокированные слоты
-    target_date = new_start_time.date()
-    blocked_slots = BlockedSlot.objects.filter(date=target_date)
+    # 2. Проверяем существующие записи
+    existing_bookings = Booking.objects.filter(
+        appointment_datetime__date=target_date,
+        status__in=['pending', 'confirmed']
+    ).prefetch_related('services')
 
-    for slot in blocked_slots:
-        slot_start = timezone.make_aware(
-            datetime.combine(target_date, slot.start_time),
-            timezone.get_current_timezone()
-        )
-        slot_end = timezone.make_aware(
-            datetime.combine(target_date, slot.end_time),
-            timezone.get_current_timezone()
-        )
+    for booking in existing_bookings:
+        booking_duration = sum(s.duration for s in booking.services.all() if s.duration)
+        booking_start = booking.appointment_datetime
+        booking_end = booking_start + timedelta(minutes=booking_duration)
 
-        if new_start_time < slot_end and new_end_time > slot_start:
+        if new_start_time < booking_end and new_end_time > booking_start:
             return False
 
     return True
+
+
 def get_free_slots_for_admin(request):
     """API для админки: возвращает свободные слоты и информацию о записях"""
     date_str = request.GET.get('date')
-    
     if not date_str:
         return JsonResponse({'error': 'Не указана дата'}, status=400)
     
@@ -428,25 +394,21 @@ def get_free_slots_for_admin(request):
     except ValueError:
         return JsonResponse({'error': 'Неверный формат даты'}, status=400)
     
-    # Параметры рабочего времени
     WORK_START = dt_time(9, 0)
     WORK_END = dt_time(23, 0)
     SLOT_STEP = 30
     
-    # Генерируем все возможные слоты
     all_times = []
     current_time = WORK_START
-    
     while current_time < WORK_END:
         all_times.append(current_time.strftime('%H:%M'))
         current_time = (datetime.combine(date, current_time) + timedelta(minutes=SLOT_STEP)).time()
     
-    # Получаем заблокированные слоты и существующие записи
     blocked_slots = BlockedSlot.objects.filter(date=date)
     existing_bookings = Booking.objects.filter(
         appointment_datetime__date=date,
         status__in=['pending', 'confirmed']
-    )
+    ).prefetch_related('services') # <-- ИЗМЕНЕНО
     
     current_tz = timezone.get_current_timezone()
     free_times = []
@@ -459,21 +421,14 @@ def get_free_slots_for_admin(request):
         slot_start = timezone.make_aware(slot_start_naive, current_tz)
         slot_end = timezone.make_aware(slot_end_naive, current_tz)
         
-        # Проверяем пересечение с заблокированными слотами
         is_blocked = False
         for blocked in blocked_slots:
             if blocked.is_full_day:
                 is_blocked = True
                 break
-            
             if blocked.start_time and blocked.end_time:
-                blocked_start = timezone.make_aware(
-                    datetime.combine(date, blocked.start_time), current_tz
-                )
-                blocked_end = timezone.make_aware(
-                    datetime.combine(date, blocked.end_time), current_tz
-                )
-                
+                blocked_start = timezone.make_aware(datetime.combine(date, blocked.start_time), current_tz)
+                blocked_end = timezone.make_aware(datetime.combine(date, blocked.end_time), current_tz)
                 if slot_start < blocked_end and slot_end > blocked_start:
                     is_blocked = True
                     break
@@ -481,11 +436,11 @@ def get_free_slots_for_admin(request):
         if is_blocked:
             continue
         
-        # Проверяем пересечение с существующими записями
         is_booked = False
         for booking in existing_bookings:
+            booking_duration = sum(s.duration for s in booking.services.all() if s.duration) # <-- ИЗМЕНЕНО
             booking_start = booking.appointment_datetime
-            booking_end = booking_start + timedelta(minutes=getattr(booking.service, 'duration', 60))
+            booking_end = booking_start + timedelta(minutes=booking_duration)
             
             if slot_start < booking_end and slot_end > booking_start:
                 is_booked = True
@@ -494,13 +449,13 @@ def get_free_slots_for_admin(request):
         if not is_booked:
             free_times.append(time_str)
     
-    # Формируем список записей на этот день
     bookings_info = []
     for booking in existing_bookings:
+        services_names = ", ".join([s.name for s in booking.services.all()]) # <-- ИЗМЕНЕНО
         bookings_info.append({
             'client_name': booking.client_name,
             'time': booking.appointment_datetime.strftime('%H:%M'),
-            'service': booking.service.name
+            'services': services_names
         })
     
     return JsonResponse({
@@ -511,12 +466,12 @@ def get_free_slots_for_admin(request):
         'bookings': bookings_info
     })
 
+
 # =============================================
-# API: ПРОВЕРКА EMAIL (НОВЫЙ ЭНДПОИНТ)
+# API: ПРОВЕРКА EMAIL
 # =============================================
 @require_POST
 def check_email_view(request):
-    """Проверяет, был ли клиент раньше (для умной верификации)"""
     try:
         data = json.loads(request.body)
         email = data.get('email', '').strip().lower()
@@ -524,7 +479,6 @@ def check_email_view(request):
         if not email:
             return JsonResponse({'error': 'Email не указан'}, status=400)
 
-        # Проверяем, есть ли клиент в базе и подтвержден ли он
         client = Client.objects.filter(email=email, is_verified=True).first()
 
         if client:
@@ -537,7 +491,6 @@ def check_email_view(request):
                 'is_known': False,
                 'message': 'Новый клиент. Требуется подтверждение email.'
             })
-
     except json.JSONDecodeError:
         return JsonResponse({'error': 'Неверный формат данных'}, status=400)
     except Exception as e:
@@ -549,7 +502,6 @@ def check_email_view(request):
 # =============================================
 @require_POST
 def send_email_code_view(request):
-    """Генерирует и отправляет код на email"""
     try:
         data = json.loads(request.body)
         email = data.get('email', '').strip().lower()
@@ -557,7 +509,6 @@ def send_email_code_view(request):
         if not email:
             return JsonResponse({'error': 'Email не указан'}, status=400)
 
-        # Защита от спама: не даем запрашивать код чаще раза в 60 секунд
         recent_codes = EmailVerificationCode.objects.filter(
             email=email,
             created_at__gte=timezone.now() - timedelta(seconds=60)
@@ -565,10 +516,8 @@ def send_email_code_view(request):
         if recent_codes.exists():
             return JsonResponse({'error': 'Подождите 1 минуту перед повторной отправкой'}, status=429)
 
-        # Генерируем и сохраняем код
         verification = EmailVerificationCode.generate_code(email)
 
-        # Отправляем письмо
         try:
             send_mail(
                 subject='Код подтверждения записи — Sasha Sugar',
@@ -581,7 +530,6 @@ def send_email_code_view(request):
         except Exception as e:
             verification.delete()
             return JsonResponse({'error': 'Не удалось отправить письмо. Проверьте адрес.'}, status=500)
-
     except Exception as e:
         return JsonResponse({'error': 'Ошибка сервера'}, status=500)
 
@@ -591,7 +539,6 @@ def send_email_code_view(request):
 # =============================================
 @require_POST
 def verify_email_code_view(request):
-    """Проверяет введенный пользователем код"""
     try:
         data = json.loads(request.body)
         email = data.get('email', '').strip().lower()
@@ -616,74 +563,62 @@ def verify_email_code_view(request):
             verification.save()
             return JsonResponse({'error': f'Неверный код. Осталось попыток: {5 - verification.attempts}'}, status=400)
 
-        # Код верный! Помечаем как использованный
         verification.is_used = True
         verification.save()
 
         return JsonResponse({'success': True, 'message': 'Email успешно подтвержден'})
-
     except Exception as e:
         return JsonResponse({'error': 'Ошибка сервера'}, status=500)
 
 
 # =============================================
-# API: ПОЛУЧЕНИЕ СВОБОДНЫХ СЛОТОВ
+# API: ПОЛУЧЕНИЕ СВОБОДНЫХ СЛОТОВ (ДЛЯ ФОРМЫ)
 # =============================================
 def get_available_times(request):
-    """API endpoint для получения свободных слотов"""
+    """API endpoint для получения свободных слотов с учетом нескольких услуг"""
     date_str = request.GET.get('date')
-    service_id = request.GET.get('service_id')
+    services_ids_str = request.GET.get('services_ids')
 
-    if not date_str or not service_id:
-        return JsonResponse({'error': 'Не указана дата или услуга'}, status=400)
+    if not date_str or not services_ids_str:
+        return JsonResponse({'error': 'Не указана дата или услуги'}, status=400)
 
     try:
         date = datetime.strptime(date_str, '%Y-%m-%d').date()
-        service = Service.objects.get(id=service_id, is_active=True)
+        services_ids = [int(id) for id in services_ids_str.split(',') if id]
+        services = Service.objects.filter(id__in=services_ids, is_active=True)
+        
+        if not services.exists():
+            return JsonResponse({'error': 'Услуги не найдены'}, status=404)
     except (ValueError, Service.DoesNotExist):
         return JsonResponse({'error': 'Неверные параметры'}, status=400)
 
-    # Проверяем, не заблокирован ли день полностью
-    is_blocked = BlockedSlot.objects.filter(
-        date=date,
-        slot_type='full_day'
-    ).exists()
+    is_blocked = BlockedSlot.objects.filter(date=date, is_full_day=True).exists()
 
     if is_blocked:
-        return JsonResponse({
-            'is_blocked': True,
-            'times': [],
-            'blocked_count': 0
-        })
+        return JsonResponse({'is_blocked': True, 'times': [], 'blocked_count': 0})
 
-    # Параметры рабочего времени
     WORK_START = dt_time(9, 0)
     WORK_END = dt_time(23, 0)
     SLOT_STEP = 30
 
-    # Длительность услуги + буфер на подготовку (10 минут)
-    duration_minutes = getattr(service, 'duration', 60)
+    duration_minutes = sum(s.duration for s in services if s.duration)
     buffer_minutes = 10
     total_duration = duration_minutes + buffer_minutes
 
-    # Генерируем все возможные слоты
     all_times = []
     current_time = WORK_START
 
     while current_time < WORK_END:
         slot_end_time = (datetime.combine(date, current_time) + timedelta(minutes=total_duration)).time()
-
         if slot_end_time <= WORK_END:
             all_times.append(current_time.strftime('%H:%M'))
-
         current_time = (datetime.combine(date, current_time) + timedelta(minutes=SLOT_STEP)).time()
 
-    # Получаем заблокированные слоты и существующие записи
     blocked_slots = BlockedSlot.objects.filter(date=date)
     existing_bookings = Booking.objects.filter(
         appointment_datetime__date=date,
         status__in=['pending', 'confirmed']
-    )
+    ).prefetch_related('services')
 
     current_tz = timezone.get_current_timezone()
     available_times = []
@@ -696,27 +631,26 @@ def get_available_times(request):
         slot_start = timezone.make_aware(slot_start_naive, current_tz)
         slot_end = timezone.make_aware(slot_end_naive, current_tz)
 
-        # Проверяем пересечение с заблокированными слотами
         is_slot_blocked = False
         for blocked in blocked_slots:
-            blocked_start_naive = datetime.combine(date, blocked.start_time)
-            blocked_end_naive = datetime.combine(date, blocked.end_time)
-
-            blocked_start = timezone.make_aware(blocked_start_naive, current_tz)
-            blocked_end = timezone.make_aware(blocked_end_naive, current_tz)
-
-            if slot_start < blocked_end and slot_end > blocked_start:
+            if blocked.is_full_day:
                 is_slot_blocked = True
                 break
+            if blocked.start_time and blocked.end_time:
+                blocked_start = timezone.make_aware(datetime.combine(date, blocked.start_time), current_tz)
+                blocked_end = timezone.make_aware(datetime.combine(date, blocked.end_time), current_tz)
+                if slot_start < blocked_end and slot_end > blocked_start:
+                    is_slot_blocked = True
+                    break
 
         if is_slot_blocked:
             continue
 
-        # Проверяем пересечение с существующими записями
         is_slot_booked = False
         for booking in existing_bookings:
+            booking_duration = sum(s.duration for s in booking.services.all() if s.duration)
             booking_start = booking.appointment_datetime
-            booking_end = booking_start + timedelta(minutes=duration_minutes)
+            booking_end = booking_start + timedelta(minutes=booking_duration)
 
             if slot_start < booking_end and slot_end > booking_start:
                 is_slot_booked = True
@@ -728,7 +662,9 @@ def get_available_times(request):
     return JsonResponse({
         'is_blocked': False,
         'times': available_times,
-        'blocked_count': blocked_slots.count()
+        'blocked_count': blocked_slots.count(),
+        'total_duration': total_duration,
+        'services_count': len(services)
     })
 
 
@@ -736,78 +672,42 @@ def get_available_times(request):
 # СТРАНИЦА УСПЕШНОЙ ЗАПИСИ
 # =============================================
 def booking_success(request):
-    """Страница подтверждения успешной записи"""
     return render(request, 'booking_app/booking_success.html')
 
 
-# =============================================
-# СОЗДАНИЕ ЗАПИСИ КЛИЕНТОМ
-# =============================================
 def booking_create(request):
-    """Страница создания записи"""
-    service_id = request.GET.get('service')
-    initial_data = {}
-
-    if service_id:
-        try:
-            service = Service.objects.get(id=service_id, is_active=True)
-            initial_data['service'] = service
-            initial_data['category'] = service.category
-        except Service.DoesNotExist:
-            pass
-
+    """Создание записи клиентом"""
     if request.method == 'POST':
-        form = BookingForm(request.POST, initial=initial_data)
-
+        form = BookingForm(request.POST)
         if form.is_valid():
+            client_name = form.cleaned_data['client_name']
+            phone = form.cleaned_data['phone']
+            email = form.cleaned_data.get('email')
             date_str = form.cleaned_data['appointment_date']
             time_str = form.cleaned_data['appointment_time']
-            service = form.cleaned_data['service']
-            email = form.cleaned_data['email']
-
-            # Собираем datetime
+            
+            services_ids_str = request.POST.get('services_ids', '')
+            services_ids = [int(id) for id in services_ids_str.split(',') if id]
+            
             naive_dt = datetime.strptime(f"{date_str} {time_str}", "%Y-%m-%d %H:%M")
             aware_dt = timezone.make_aware(naive_dt, timezone.get_current_timezone())
-
-            # Сохраняем запись
-            booking = form.save(commit=False)
-            booking.appointment_datetime = aware_dt
-            booking.save()
-
-            # Обновляем или создаем клиента в CRM
-            client, created = Client.objects.get_or_create(email=email)
-            client.total_bookings += 1
-            client.is_verified = True
-            client.save()
-
-            # Отправляем письмо с подтверждением
-            try:
-                send_mail(
-                    subject='🌸 Ваша запись в Sasha Sugar подтверждена!',
-                    message=f"""Здравствуйте, {booking.client_name}!
-
-Спасибо, что выбрали студию Sasha Sugar. Ваша онлайн-запись успешно оформлена.
-
-📅 Дата: {booking.appointment_datetime.strftime('%d.%m.%Y')}
-⏰ Время: {booking.appointment_datetime.strftime('%H:%M')}
-💅 Услуга: {booking.service.name}
-📍 Адрес: Санкт-Петербург, Спасский переулок, 7
-
-Если у вас изменились планы, пожалуйста, предупредите нас не менее чем за 24 часа.
-
-С любовью и заботой о вашей красоте,
-Команда Sasha Sugar""",
-                    from_email=settings.DEFAULT_FROM_EMAIL,
-                    recipient_list=[email],
-                    fail_silently=False,
-                )
-            except Exception as e:
-                print(f"Ошибка отправки письма: {e}")
-
+            
+            booking = Booking.objects.create(
+                client_name=client_name,
+                phone=phone,
+                email=email,
+                appointment_datetime=aware_dt,
+                status='confirmed'
+            )
+            
+            if services_ids:
+                services = Service.objects.filter(id__in=services_ids, is_active=True)
+                booking.services.set(services)
+            
             return redirect('booking_app:booking_success')
     else:
-        form = BookingForm(initial=initial_data)
-
+        form = BookingForm()
+    
     return render(request, 'booking_app/booking_form.html', {'form': form})
 
 
@@ -815,27 +715,23 @@ def booking_create(request):
 # АДМИНКА: ЗАБЛОКИРОВАННЫЕ СЛОТЫ
 # =============================================
 class BlockedSlotListView(AdminRequiredMixin, ListView):
-    """Список заблокированных слотов"""
     model = BlockedSlot
     template_name = 'booking_app/admin/blocked_slots_list.html'
     context_object_name = 'blocked_slots'
 
-class BlockedSlotAddView(AdminRequiredMixin, FormView): # Или CreateView, но FormView тоже ок с form.save()
-    """Добавление заблокированного слота"""
+
+class BlockedSlotAddView(AdminRequiredMixin, FormView):
     template_name = 'booking_app/admin/blocked_slot_form.html'
     form_class = BlockedSlotForm
     success_url = reverse_lazy('booking_app:blocked_slots_list')
 
     def form_valid(self, form):
-        # form.save() автоматически создаст объект, так как это ModelForm
         form.save()
         messages.success(self.request, 'Временной слот успешно заблокирован')
         return super().form_valid(form)
 
 
 class BlockedSlotDeleteView(AdminRequiredMixin, View):
-    """Удаление заблокированного слота"""
-
     def post(self, request, pk):
         slot = get_object_or_404(BlockedSlot, pk=pk)
         slot.delete()
@@ -847,42 +743,29 @@ class BlockedSlotDeleteView(AdminRequiredMixin, View):
 # АДМИНКА: ЗАПИСИ
 # =============================================
 class BookingsListView(AdminRequiredMixin, TemplateView):
-    """Список записей с навигацией по дням"""
     template_name = 'booking_app/admin/bookings_list.html'
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        
-        # Получаем дату из GET-параметра или используем сегодня
         date_str = self.request.GET.get('date')
         if date_str:
             try:
-                from datetime import datetime as dt
-                current_date = dt.strptime(date_str, '%Y-%m-%d').date()
+                current_date = datetime.strptime(date_str, '%Y-%m-%d').date()
             except ValueError:
                 current_date = timezone.now().date()
         else:
             current_date = timezone.now().date()
 
-        # Загружаем записи на этот день, отсортированные по времени
         bookings = Booking.objects.filter(
             appointment_datetime__date=current_date,
             status__in=['pending', 'confirmed']
         ).order_by('appointment_datetime')
 
-        # Статистика дня
-        total_bookings = bookings.count()
-        confirmed_count = bookings.filter(status='confirmed').count()
-        pending_count = bookings.filter(status='pending').count()
-
         context['current_date'] = current_date
         context['bookings'] = bookings
-        context['total_bookings'] = total_bookings
-        context['confirmed_count'] = confirmed_count
-        context['pending_count'] = pending_count
-        
-        # Даты для навигации
-        from datetime import timedelta
+        context['total_bookings'] = bookings.count()
+        context['confirmed_count'] = bookings.filter(status='confirmed').count()
+        context['pending_count'] = bookings.filter(status='pending').count()
         context['prev_date'] = current_date - timedelta(days=1)
         context['next_date'] = current_date + timedelta(days=1)
         context['today'] = timezone.now().date()
@@ -891,7 +774,6 @@ class BookingsListView(AdminRequiredMixin, TemplateView):
 
 
 class AdminBookingCreateView(AdminRequiredMixin, FormView):
-    """Ручное создание записи администратором"""
     template_name = 'booking_app/admin/booking_form.html'
     form_class = AdminBookingForm
     success_url = reverse_lazy('booking_app:bookings_list')
@@ -902,8 +784,7 @@ class AdminBookingCreateView(AdminRequiredMixin, FormView):
         if service_id:
             try:
                 service = Service.objects.get(id=service_id, is_active=True)
-                form.initial['service'] = service
-                form.initial['category'] = service.category
+                form.initial['services'] = [service] # Для обратной совместимости
             except Service.DoesNotExist:
                 pass
         return form
@@ -916,11 +797,23 @@ class AdminBookingCreateView(AdminRequiredMixin, FormView):
             naive_dt = datetime.strptime(f"{date_str} {time_str}", "%Y-%m-%d %H:%M")
             aware_dt = timezone.make_aware(naive_dt, timezone.get_current_timezone())
 
-            if is_time_slot_available(aware_dt, form.cleaned_data['service']):
+            # Получаем услуги
+            services_ids_str = self.request.POST.get('services_ids', '')
+            if services_ids_str:
+                services_ids = [int(id) for id in services_ids_str.split(',') if id]
+                services = Service.objects.filter(id__in=services_ids, is_active=True)
+            else:
+                services = form.cleaned_data.get('services', Service.objects.none())
+
+            duration = sum(s.duration for s in services if s.duration)
+
+            if is_time_slot_available(aware_dt, services=services, duration=duration):
                 booking = form.save(commit=False)
                 booking.appointment_datetime = aware_dt
-                booking.status = form.cleaned_data['status']
+                booking.status = form.cleaned_data.get('status', 'confirmed')
                 booking.save()
+                booking.services.set(services) # <-- Сохраняем M2M
+                
                 messages.success(self.request, f'Запись для {booking.client_name} создана')
                 return redirect('booking_app:bookings_list')
             else:
@@ -931,8 +824,6 @@ class AdminBookingCreateView(AdminRequiredMixin, FormView):
 
 
 class BookingConfirmView(AdminRequiredMixin, View):
-    """Подтверждение записи"""
-
     def post(self, request, pk):
         booking = get_object_or_404(Booking, pk=pk)
         booking.status = 'confirmed'
@@ -942,8 +833,6 @@ class BookingConfirmView(AdminRequiredMixin, View):
 
 
 class BookingCancelView(AdminRequiredMixin, View):
-    """Отмена/удаление записи"""
-
     def post(self, request, pk):
         booking = get_object_or_404(Booking, pk=pk)
         booking.status = 'cancelled'
@@ -951,7 +840,6 @@ class BookingCancelView(AdminRequiredMixin, View):
         messages.success(request, f'Запись для {booking.client_name} отменена')
         return redirect('booking_app:bookings_list')
     
-
 
 class BookingsScheduleView(AdminRequiredMixin, View):
     """Расписание записей в виде колонок по дням"""
@@ -977,13 +865,12 @@ class BookingsScheduleView(AdminRequiredMixin, View):
         for i in range(days_count):
             dates.append(current_date + timedelta(days=i))
 
-        # Создаем удобный список словарей для идеальной работы в шаблоне Django
         schedule_data = []
         for date in dates:
             bookings = Booking.objects.filter(
                 appointment_datetime__date=date,
                 status__in=['pending', 'confirmed']
-            ).select_related('service').order_by('appointment_datetime')
+            ).prefetch_related('services').order_by('appointment_datetime') # <-- ИЗМЕНЕНО
             
             schedule_data.append({
                 'date': date,
@@ -996,7 +883,7 @@ class BookingsScheduleView(AdminRequiredMixin, View):
         context = {
             'period': period,
             'current_date': current_date,
-            'schedule_data': schedule_data,  # <-- Передаем чистый список
+            'schedule_data': schedule_data,
             'prev_date': prev_date.isoformat(),
             'next_date': next_date.isoformat(),
             'today': timezone.now().date(),

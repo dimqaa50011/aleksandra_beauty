@@ -2,6 +2,24 @@ from django.contrib import admin
 from . import models
 
 
+@admin.register(models.FAQ)
+class FAQAdmin(admin.ModelAdmin):
+    list_display = ('question', 'order', 'is_active', 'created_at')
+    list_filter = ('is_active',)
+    search_fields = ('question', 'answer')
+    list_editable = ('order', 'is_active')
+    ordering = ('order', 'created_at')
+    
+    fieldsets = (
+        ('Содержание', {
+            'fields': ('question', 'answer')
+        }),
+        ('Настройки', {
+            'fields': ('order', 'is_active')
+        }),
+    )
+    
+    
 @admin.register(models.SiteSettings)
 class SiteSettingsAdmin(admin.ModelAdmin):
     list_display = ('site_name', 'phone', 'email')

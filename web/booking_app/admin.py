@@ -49,21 +49,26 @@ class EmailVerificationCodeAdmin(admin.ModelAdmin):
 
 # =============================================
 # Booking (Записи)
-# =============================================
 @admin.register(Booking)
 class BookingAdmin(admin.ModelAdmin):
-    list_display = ('client_name', 'phone', 'service', 'appointment_datetime', 'status', 'created_at')
-    list_filter = ('status', 'service', 'appointment_datetime')
+    list_display = ('client_name', 'phone', 'get_services_list', 'appointment_datetime', 'status')
+    list_filter = ('status', 'appointment_datetime')  # <-- Убрали 'service'
     search_fields = ('client_name', 'phone', 'email')
     readonly_fields = ('created_at', 'updated_at', 'google_event_id')
     date_hierarchy = 'appointment_datetime'
+    filter_horizontal = ('services',)  # <-- Удобный выбор нескольких услуг
+
+    def get_services_list(self, obj):
+        """Возвращает список услуг через запятую"""
+        return ", ".join([s.name for s in obj.services.all()])
+    get_services_list.short_description = 'Услуги'
 
     fieldsets = (
         ('Клиент', {
             'fields': ('client_name', 'phone', 'email')
         }),
         ('Запись', {
-            'fields': ('service', 'appointment_datetime', 'status')
+            'fields': ('services', 'appointment_datetime', 'status')  # <-- Заменили service на services
         }),
         ('Системное', {
             'fields': ('google_event_id', 'created_at', 'updated_at'),

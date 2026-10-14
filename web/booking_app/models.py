@@ -25,6 +25,7 @@ class APIToken(models.Model):
         token = secrets.token_urlsafe(64)
         return cls.objects.create(name=name, token=token)
 
+
 class Client(models.Model):
     """Мини-CRM: история клиентов по email для умной верификации"""
     email = models.EmailField('Email клиента', unique=True, db_index=True)
@@ -75,11 +76,10 @@ class Booking(models.Model):
     phone = models.CharField('Телефон', max_length=20)
     email = models.EmailField('Электронная почта', blank=True, null=True)
     
-    # ВАЖНО: Ссылаемся на модель из beauty_app через строку
-    service = models.ForeignKey(
+    # === ИЗМЕНЕНО: Теперь поддерживаем несколько услуг ===
+    services = models.ManyToManyField(
         'beauty_app.Service', 
-        on_delete=models.PROTECT, 
-        verbose_name='Услуга',
+        verbose_name='Услуги',
         related_name='bookings'
     )
     
@@ -97,7 +97,14 @@ class Booking(models.Model):
         db_table = 'beauty_app_booking' # <-- ТРЮК: используем старую таблицу в БД
 
     def __str__(self):
-        return f"{self.client_name} — {self.service.name} ({self.appointment_datetime.strftime('%d.%m.%Y %H:%M')})"
+        # === ИЗМЕНЕНО: Собираем названия всех услуг через запятую ===
+        services_names = ", ".join([s.name for s in self.services.all()])
+        return f"{self.client_name} — {services_names} ({self.appointment_datetime.strftime('%d.%m.%Y %H:%M')})"
+    
+    @property
+    def total_duration(self):
+        """Возвращает общую длительность всех услуг в записи"""
+        return sum(s.duration for s in self.services.all() if s.duration)
 
 
 class DayOff(models.Model):
@@ -117,7 +124,6 @@ class DayOff(models.Model):
         return f"{self.date.strftime('%d.%m.%Y')}{reason_str}"
 
 
-    
 class BlockedSlot(models.Model):
     """Заблокированные временные слоты (выходные, личные дела, перерывы)"""
     
@@ -129,9 +135,9 @@ class BlockedSlot(models.Model):
     ]
     
     date = models.DateField('Дата')
-    is_full_day = models.BooleanField('На весь день', default=False) # <-- НОВОЕ ПОЛЕ
-    start_time = models.TimeField('Начало', blank=True, null=True)    # <-- ТЕПЕРЬ НЕОБЯЗАТЕЛЬНО
-    end_time = models.TimeField('Конец', blank=True, null=True)       # <-- ТЕПЕРЬ НЕОБЯЗАТЕЛЬНО
+    is_full_day = models.BooleanField('На весь день', default=False)
+    start_time = models.TimeField('Начало', blank=True, null=True)
+    end_time = models.TimeField('Конец', blank=True, null=True)
     reason = models.CharField('Причина', max_length=100, blank=True)
     slot_type = models.CharField('Тип', max_length=20, choices=TYPE_CHOICES, default='day_off')
     created_at = models.DateTimeField('Создано', auto_now_add=True)
@@ -146,10 +152,8 @@ class BlockedSlot(models.Model):
         if self.is_full_day:
             return f"{self.date.strftime('%d.%m.%Y')} - Весь день ({self.get_slot_type_display()})"
         return f"{self.date.strftime('%d.%m.%Y')} {self.start_time.strftime('%H:%M')}-{self.end_time.strftime('%H:%M')} ({self.get_slot_type_display()})"
-    
-    
-    
-    
+
+
 class PushSubscription(models.Model):
     """Подписки на пуш-уведомления для админов"""
     user = models.ForeignKey('auth.User', on_delete=models.CASCADE, related_name='push_subscriptions')

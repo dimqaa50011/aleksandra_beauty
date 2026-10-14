@@ -78,6 +78,7 @@ TEMPLATES = [
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
                 'booking_app.context_processors.pwa_settings',
+                'beauty_app.context_processors.faq_context',
             ],
         },
     },
@@ -89,23 +90,25 @@ WSGI_APPLICATION = 'config.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/6.0/ref/settings/#databases
 
-DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.postgresql',
-        'NAME': env.str('POSTGRES_DB'),
-        'USER': env.str('POSTGRES_USER'),
-        'PASSWORD': env.str('POSTGRES_PASSWORD'),
-        'HOST': env.str('POSTGRES_HOST', default='db'), # 'db' - это имя сервиса в docker-compose
-        'PORT': env.str('POSTGRES_PORT', default='5432'),
+if DEBUG:
+    DATABASES = {
+    "default": {
+        "ENGINE": "django.db.backends.sqlite3",
+        "NAME": "db.sqlite3",
     }
 }
+else:
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.postgresql',
+            'NAME': env.str('POSTGRES_DB'),
+            'USER': env.str('POSTGRES_USER'),
+            'PASSWORD': env.str('POSTGRES_PASSWORD'),
+            'HOST': env.str('POSTGRES_HOST', default='db'), # 'db' - это имя сервиса в docker-compose
+            'PORT': env.str('POSTGRES_PORT', default='5432'),
+        }
+    }
 
-# DATABASES = {
-#     "default": {
-#         "ENGINE": "django.db.backends.sqlite3",
-#         "NAME": "db.sqlite3",
-#     }
-# }
 
 
 # VAPID ключи для Web Push

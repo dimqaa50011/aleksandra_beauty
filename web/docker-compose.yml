@@ -52,6 +52,7 @@ services:
       - static_volume:/vol/static
       - media_volume:/vol/media
       - ./certs:/etc/nginx/certs:ro
+      - ./root_files:/app/root_files 
     depends_on:
       web:
         condition: service_healthy

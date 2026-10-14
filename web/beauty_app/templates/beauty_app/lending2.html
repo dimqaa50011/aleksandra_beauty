@@ -137,5 +137,165 @@
     </section>
 
 
+    <!-- ===== БЛОК FAQ ===== -->
+<section id="faq" class="faq-section">
+    <div class="container">
+        <h2 class="section-title">Часто задаваемые вопросы</h2>
+        <p class="section-subtitle">Не нашли ответ? Напишите нам в мессенджер!</p>
+        
+        <div class="faq-list">
+            {% for faq in faqs %}
+            <div class="faq-item">
+                <button class="faq-question" onclick="toggleFaq(this)">
+                    <span>{{ faq.question }}</span>
+                    <i class="faq-icon">+</i>
+                </button>
+                <div class="faq-answer">
+                    <p>{{ faq.answer|linebreaksbr }}</p>
+                </div>
+            </div>
+            {% empty %}
+            <p style="text-align: center; color: #6b5f5a;">Пока нет вопросов. Добавьте их в админке.</p>
+            {% endfor %}
+        </div>
+    </div>
+</section>
+
+<style>
+    /* === Стили для блока FAQ === */
+    .faq-section {
+        padding: 80px 0;
+        background: #fef9f7;
+    }
+
+    .faq-section .section-title {
+        text-align: center;
+        font-size: 2rem;
+        font-weight: 700;
+        color: #2d2a28;
+        margin-bottom: 12px;
+    }
+
+    .faq-section .section-subtitle {
+        text-align: center;
+        font-size: 1rem;
+        color: #6b5f5a;
+        margin-bottom: 48px;
+    }
+
+    .faq-list {
+        max-width: 800px;
+        margin: 0 auto;
+    }
+
+    .faq-item {
+        background: #fff;
+        border-radius: 16px;
+        margin-bottom: 16px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+        overflow: hidden;
+        border: 1px solid #f0e8e5;
+        transition: all 0.3s;
+    }
+
+    .faq-item:hover {
+        box-shadow: 0 4px 16px rgba(0,0,0,0.08);
+    }
+
+    .faq-question {
+        width: 100%;
+        padding: 20px 24px;
+        background: none;
+        border: none;
+        text-align: left;
+        font-size: 1.05rem;
+        font-weight: 600;
+        color: #2d2a28;
+        cursor: pointer;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 16px;
+        transition: all 0.3s;
+    }
+
+    .faq-question:hover {
+        color: #f2a6b0;
+    }
+
+    .faq-icon {
+        font-size: 1.5rem;
+        font-weight: 300;
+        color: #f2a6b0;
+        transition: transform 0.3s;
+        flex-shrink: 0;
+    }
+
+    .faq-item.active .faq-icon {
+        transform: rotate(45deg);
+    }
+
+    .faq-answer {
+        max-height: 0;
+        overflow: hidden;
+        transition: max-height 0.4s ease, padding 0.4s ease;
+        padding: 0 24px;
+    }
+
+    .faq-item.active .faq-answer {
+        max-height: 500px;
+        padding: 0 24px 20px 24px;
+    }
+
+    .faq-answer p {
+        color: #6b5f5a;
+        line-height: 1.6;
+        font-size: 0.95rem;
+        margin: 0;
+    }
+
+    /* Мобильный адаптив */
+    @media (max-width: 768px) {
+        .faq-section {
+            padding: 60px 0;
+        }
+
+        .faq-section .section-title {
+            font-size: 1.6rem;
+        }
+
+        .faq-question {
+            padding: 16px 20px;
+            font-size: 0.95rem;
+        }
+
+        .faq-answer {
+            padding: 0 20px;
+        }
+
+        .faq-item.active .faq-answer {
+            padding: 0 20px 16px 20px;
+        }
+    }
+</style>
+
+<script>
+    function toggleFaq(button) {
+        const item = button.parentElement;
+        const isActive = item.classList.contains('active');
+        
+        // Закрываем все остальные
+        document.querySelectorAll('.faq-item').forEach(faq => {
+            faq.classList.remove('active');
+        });
+        
+        // Открываем текущий, если он был закрыт
+        if (!isActive) {
+            item.classList.add('active');
+        }
+    }
+</script>
+
+
 
 {% endblock content %}

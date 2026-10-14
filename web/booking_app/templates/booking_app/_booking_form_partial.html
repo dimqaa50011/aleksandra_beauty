@@ -7,8 +7,27 @@
     </div>
     
     <div class="form-group">
-        <label>Услуга *</label>
-        {{ form.service }}
+        <label>Добавить услугу</label>
+        <div style="display: flex; gap: 8px;">
+            {{ form.service }}
+            <button type="button" id="addServiceBtn" class="btn-add" title="Добавить услугу в запись">
+                + Добавить
+            </button>
+        </div>
+    </div>
+
+    <!-- Блок выбранных услуг (Корзина) -->
+    <div id="selectedServicesBlock" class="selected-services-block" style="display: none;">
+        <label class="cart-label">Выбранные услуги:</label>
+        <ul id="selectedServicesList" class="services-list"></ul>
+        
+        <div class="cart-totals">
+            <span>⏱ Итого время: <strong id="totalDuration">0</strong> мин</span>
+            <span>💰 Итого цена: <strong id="totalPrice">0</strong> ₽</span>
+        </div>
+        
+        <!-- Скрытое поле для отправки массива ID на сервер (через запятую) -->
+        <input type="hidden" name="services_ids" id="servicesIdsInput" value="{{ request.POST.services_ids|default:'' }}">
     </div>
 
     <div class="form-row">
@@ -19,7 +38,7 @@
         <div class="form-group" style="flex: 1;">
             <label>Время *</label>
             {{ form.appointment_time }}
-            <small id="timeHelp" style="color: #6b5f5a; display: none;">Выберите дату и услугу</small>
+            <small id="timeHelp" style="color: #6b5f5a; display: none;">Выберите услуги и дату</small>
         </div>
     </div>
 
@@ -40,14 +59,14 @@
     </div>
 
     {% if form.errors %}
-        <div class="form-errors" style="color: #c62828; background: #fce4ec; padding: 12px; border-radius: 8px; margin-bottom: 16px;">
+        <div class="form-errors">
             {% for field, errors in form.errors.items %}
                 {% for error in errors %}<p style="margin: 0;">{{ error }}</p>{% endfor %}
             {% endfor %}
         </div>
     {% endif %}
 
-    <button type="submit" class="btn btn-primary" id="submitBtn" style="width: 100%; margin-top: 24px; padding: 14px 32px; background: #f2a6b0; color: #fff; border: none; border-radius: 60px; font-size: 1rem; font-weight: 600; cursor: pointer; transition: all 0.3s; box-shadow: 0 4px 20px rgba(242, 166, 176, 0.35);">
+    <button type="submit" class="btn btn-primary" id="submitBtn">
         Записаться
     </button>
 </form>
@@ -56,18 +75,72 @@
     .form-group { margin-bottom: 20px; }
     .form-group label { display: block; font-weight: 600; margin-bottom: 8px; color: #2d2a28; }
     .form-row { display: flex; gap: 16px; }
-    .form-control { width: 100%; padding: 12px; border: 1px solid #e8e0dd; border-radius: 12px; font-size: 1rem; background: #fcf9f7; transition: border-color 0.2s; }
+    .form-control { width: 100%; padding: 12px; border: 1px solid #e8e0dd; border-radius: 12px; font-size: 1rem; background: #fcf9f7; transition: border-color 0.2s; box-sizing: border-box; }
     .form-control:focus { outline: none; border-color: #f2a6b0; background: #fff; }
-    .btn-primary { width: 100%; padding: 14px 32px; background: #f2a6b0; color: #fff; border: none; border-radius: 60px; font-size: 1rem; font-weight: 600; cursor: pointer; transition: all 0.3s; box-shadow: 0 4px 20px rgba(242, 166, 176, 0.35); margin-top: 24px; }
+    
+    .btn-add {
+        padding: 12px 20px;
+        background: #6b5f5a;
+        color: #fff;
+        border: none;
+        border-radius: 12px;
+        font-size: 0.95rem;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.2s;
+        white-space: nowrap;
+    }
+    .btn-add:hover { background: #5a504c; }
+
+    /* Стили для "корзины" услуг */
+    .selected-services-block {
+        background: #fcf9f7;
+        border: 1px solid #e8e0dd;
+        border-radius: 12px;
+        padding: 16px;
+        margin-bottom: 20px;
+        animation: fadeIn 0.3s ease;
+    }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
+
+    .cart-label { font-size: 0.9rem; font-weight: 600; color: #2d2a28; margin-bottom: 8px; display: block; }
+    
+    .services-list { list-style: none; padding: 0; margin: 0 0 12px 0; }
+    .service-item { 
+        display: flex; justify-content: space-between; align-items: center; 
+        padding: 8px 0; border-bottom: 1px dashed #e8e0dd; font-size: 0.9rem; color: #2d2a28;
+    }
+    .service-item:last-child { border-bottom: none; }
+    
+    .remove-service { 
+        background: none; border: none; color: #c62828; cursor: pointer; 
+        font-size: 1.2rem; padding: 0 4px; line-height: 1; transition: color 0.2s;
+    }
+    .remove-service:hover { color: #f44336; }
+
+    .cart-totals { 
+        display: flex; justify-content: space-between; font-weight: 700; color: #2d2a28; 
+        border-top: 2px solid #e8e0dd; padding-top: 12px; font-size: 0.95rem;
+    }
+
+    .btn-primary { 
+        width: 100%; padding: 14px 32px; background: #f2a6b0; color: #fff; border: none; 
+        border-radius: 60px; font-size: 1rem; font-weight: 600; cursor: pointer; 
+        transition: all 0.3s; box-shadow: 0 4px 20px rgba(242, 166, 176, 0.35); margin-top: 24px; 
+    }
     .btn-primary:hover { background: #e8919c; transform: translateY(-2px); box-shadow: 0 8px 30px rgba(242, 166, 176, 0.45); }
     .btn-primary:disabled { background: #ccc; cursor: not-allowed; transform: none; box-shadow: none; opacity: 0.6; }
-    @media (max-width: 600px) { .form-row { flex-direction: column; gap: 0; } }
+    
+    .form-errors { color: #c62828; background: #fce4ec; padding: 12px; border-radius: 8px; margin-bottom: 16px; }
+
+    @media (max-width: 600px) { 
+        .form-row { flex-direction: column; gap: 0; } 
+        .btn-add { width: 100%; margin-top: 8px; }
+    }
     @media (max-width: 768px) {
         .form-group { margin-bottom: 16px !important; }
         .form-group label { font-size: 0.9rem !important; margin-bottom: 6px !important; }
         .form-control { padding: 10px 12px !important; font-size: 0.95rem !important; }
-        .form-row { flex-direction: column !important; gap: 0 !important; }
-        .form-row .form-group { width: 100% !important; }
         .form-errors { font-size: 0.85rem !important; padding: 10px !important; }
     }
 </style>
@@ -82,6 +155,17 @@
         const timeHelp = document.getElementById('timeHelp');
         const bookingForm = document.getElementById('bookingForm');
         const submitBtn = document.getElementById('submitBtn');
+        
+        // Элементы "корзины"
+        const addServiceBtn = document.getElementById('addServiceBtn');
+        const selectedServicesBlock = document.getElementById('selectedServicesBlock');
+        const selectedServicesList = document.getElementById('selectedServicesList');
+        const totalDurationEl = document.getElementById('totalDuration');
+        const totalPriceEl = document.getElementById('totalPrice');
+        const servicesIdsInput = document.getElementById('servicesIdsInput');
+
+        // Хранилище: { id: {name, price, duration} }
+        let selectedServices = {};
 
         // ==========================================
         // 1. МАСКА ТЕЛЕФОНА (+7)
@@ -107,25 +191,22 @@
         }
 
         // ==========================================
-        // 2. VK АВТОЗАПОЛНЕНИЕ ИМЕНИ
+        // 2. VK АВТОЗАПОЛНЕНИЕ
         // ==========================================
         if (window.vkBridge) {
             window.vkBridge.send('VKWebAppInit');
             window.vkBridge.send('VKWebAppGetUserInfo').then(data => {
                 const nameInput = document.querySelector('input[name="client_name"]');
-                if (nameInput && !nameInput.value) {
-                    nameInput.value = `${data.first_name} ${data.last_name}`;
-                }
+                if (nameInput && !nameInput.value) nameInput.value = `${data.first_name} ${data.last_name}`;
             }).catch(() => {});
         }
 
         // ==========================================
-        // 3. ЗАВИСИМОСТЬ: КАТЕГОРИЯ -> УСЛУГИ
+        // 3. ЗАГРУЗКА УСЛУГ ПО КАТЕГОРИИ
         // ==========================================
         function updateServices() {
             const categoryId = categorySelect.value;
             serviceSelect.innerHTML = '<option value="">Загрузка...</option>';
-            if (timeSelect) timeSelect.innerHTML = '<option value="">Сначала выберите услугу</option>';
             if (!categoryId) { 
                 serviceSelect.innerHTML = '<option value="">Сначала выберите категорию</option>'; 
                 return; 
@@ -134,16 +215,16 @@
             fetch(`/api/services-by-category/?category_id=${categoryId}`)
                 .then(r => r.json())
                 .then(data => {
-                    serviceSelect.innerHTML = '<option value="">Выберите услугу</option>';
+                    serviceSelect.innerHTML = '<option value="">Выберите услугу для добавления</option>';
                     if (data.services && data.services.length > 0) {
                         data.services.forEach(s => {
                             const opt = document.createElement('option');
                             opt.value = s.id; 
                             opt.textContent = `${s.name} — ${s.price} ₽`;
+                            opt.dataset.price = s.price;
+                            opt.dataset.duration = s.duration || 60; 
                             serviceSelect.appendChild(opt);
                         });
-                    } else { 
-                        serviceSelect.innerHTML = '<option value="">Нет услуг</option>'; 
                     }
                 })
                 .catch(error => console.error('Ошибка загрузки услуг:', error));
@@ -155,14 +236,74 @@
         }
 
         // ==========================================
-        // 4. ЗАВИСИМОСТЬ: УСЛУГА + ДАТА -> ВРЕМЯ
+        // 4. ЛОГИКА "КОРЗИНЫ" УСЛУГ
+        // ==========================================
+        function updateCartUI() {
+            selectedServicesList.innerHTML = '';
+            let totalDur = 0;
+            let totalPri = 0;
+            const ids = [];
+
+            for (const [id, data] of Object.entries(selectedServices)) {
+                ids.push(id);
+                totalDur += parseInt(data.duration);
+                totalPri += parseInt(data.price);
+
+                const li = document.createElement('li');
+                li.className = 'service-item';
+                li.innerHTML = `
+                    <span>${data.name} (${data.duration} мин)</span>
+                    <div style="display:flex; align-items:center; gap:8px;">
+                        <span style="font-weight:600;">${data.price} ₽</span>
+                        <button type="button" class="remove-service" data-id="${id}" title="Удалить">×</button>
+                    </div>
+                `;
+                selectedServicesList.appendChild(li);
+            }
+
+            // Обработчики удаления
+            document.querySelectorAll('.remove-service').forEach(btn => {
+                btn.addEventListener('click', function() {
+                    delete selectedServices[this.dataset.id];
+                    updateCartUI();
+                    fetchAvailableTimes();
+                });
+            });
+
+            totalDurationEl.textContent = totalDur;
+            totalPriceEl.textContent = totalPri;
+            servicesIdsInput.value = ids.join(',');
+
+            selectedServicesBlock.style.display = Object.keys(selectedServices).length > 0 ? 'block' : 'none';
+        }
+
+        if (addServiceBtn) {
+            addServiceBtn.addEventListener('click', function() {
+                const id = serviceSelect.value;
+                if (!id) return;
+
+                const option = serviceSelect.options[serviceSelect.selectedIndex];
+                selectedServices[id] = {
+                    name: option.text.split(' — ')[0],
+                    price: option.dataset.price,
+                    duration: option.dataset.duration
+                };
+                
+                updateCartUI();
+                fetchAvailableTimes();
+                serviceSelect.value = "";
+            });
+        }
+
+        // ==========================================
+        // 5. ПРОВЕРКА ДОСТУПНОСТИ ВРЕМЕНИ
         // ==========================================
         function fetchAvailableTimes() {
             const date = dateInput ? dateInput.value : '';
-            const serviceId = serviceSelect.value;
+            const ids = servicesIdsInput.value;
             
-            if (!date || !serviceId) {
-                if (timeSelect) timeSelect.innerHTML = '<option value="">Сначала выберите дату и услугу</option>';
+            if (!date || !ids) {
+                if (timeSelect) timeSelect.innerHTML = '<option value="">Сначала выберите услуги и дату</option>';
                 if (timeHelp) timeHelp.style.display = 'block';
                 return;
             }
@@ -170,20 +311,19 @@
             if (timeHelp) timeHelp.style.display = 'none';
             if (timeSelect) timeSelect.innerHTML = '<option value="">Загрузка...</option>';
             
-            fetch(`/api/available-times/?date=${date}&service_id=${serviceId}`)
+            fetch(`/api/available-times/?date=${date}&services_ids=${ids}`)
                 .then(r => r.json())
                 .then(data => {
                     if (!timeSelect) return;
                     if (data.is_blocked) {
                         timeSelect.innerHTML = '<option value="" disabled>День заблокирован</option>';
                     } else if (data.times.length === 0) {
-                        timeSelect.innerHTML = '<option value="" disabled>Нет свободных окон</option>';
+                        timeSelect.innerHTML = '<option value="" disabled>Нет окон для выбранных услуг</option>';
                     } else {
                         timeSelect.innerHTML = '<option value="">Выберите время</option>';
                         data.times.forEach(t => {
                             const opt = document.createElement('option');
-                            opt.value = t; 
-                            opt.textContent = t;
+                            opt.value = t; opt.textContent = t;
                             timeSelect.appendChild(opt);
                         });
                     }
@@ -192,24 +332,71 @@
         }
 
         if (dateInput) dateInput.addEventListener('change', fetchAvailableTimes);
-        if (serviceSelect) serviceSelect.addEventListener('change', fetchAvailableTimes);
-        if (dateInput && serviceSelect && dateInput.value && serviceSelect.value) {
-            fetchAvailableTimes();
-        }
 
         // ==========================================
-        // 5. БЛОКИРОВКА КНОПКИ ПРИ ОТПРАВКЕ (защита от двойного клика)
+        // 6. ОТПРАВКА ФОРМЫ
         // ==========================================
         if (bookingForm) {
-            bookingForm.addEventListener('submit', function() {
+            bookingForm.addEventListener('submit', function(e) {
+                if (Object.keys(selectedServices).length === 0) {
+                    e.preventDefault();
+                    alert('Пожалуйста, добавьте хотя бы одну услугу.');
+                    return;
+                }
                 if (submitBtn) { 
                     submitBtn.disabled = true; 
                     submitBtn.textContent = 'Отправка...'; 
                     submitBtn.style.opacity = '0.6'; 
                     submitBtn.style.cursor = 'not-allowed'; 
                 }
-                // Форма отправляется стандартным способом Django сразу после этого
             });
         }
+
+        // ==========================================
+        // 7. АВТОМАТИЧЕСКАЯ ИНИЦИАЛИЗАЦИЯ ПРИ ЗАГРУЗКЕ
+        // ==========================================
+        function initializeForm() {
+            const savedCategory = categorySelect ? categorySelect.value : '';
+            const savedDate = dateInput ? dateInput.value : '';
+            const savedServicesIds = servicesIdsInput ? servicesIdsInput.value : '';
+            
+            // Если есть категория — загружаем услуги
+            if (savedCategory) {
+                updateServices();
+                
+                // Ждём загрузки услуг, затем восстанавливаем корзину и слоты
+                setTimeout(() => {
+                    if (savedServicesIds) {
+                        const ids = savedServicesIds.split(',');
+                        ids.forEach(id => {
+                            const option = serviceSelect ? serviceSelect.querySelector(`option[value="${id}"]`) : null;
+                            if (option) {
+                                selectedServices[id] = {
+                                    name: option.text.split(' — ')[0],
+                                    price: option.dataset.price || '0',
+                                    duration: option.dataset.duration || '60'
+                                };
+                            }
+                        });
+                        updateCartUI();
+                    }
+                    
+                    // Если есть дата и услуги — загружаем слоты
+                    if (savedDate && Object.keys(selectedServices).length > 0) {
+                        fetchAvailableTimes();
+                    }
+                }, 600);
+            }
+            // Если нет категории, но есть дата — показываем подсказку
+            else if (savedDate) {
+                if (timeHelp) {
+                    timeHelp.textContent = 'Сначала выберите категорию и услуги';
+                    timeHelp.style.display = 'block';
+                }
+            }
+        }
+        
+        // Запускаем инициализацию при загрузке страницы
+        initializeForm();
     });
 </script>

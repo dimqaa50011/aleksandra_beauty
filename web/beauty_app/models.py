@@ -262,3 +262,21 @@ class FooterLink(models.Model):
 
     def __str__(self):
         return self.title
+
+
+class FAQ(models.Model):
+    """Часто задаваемые вопросы"""
+    question = models.CharField('Вопрос', max_length=300)
+    answer = models.TextField('Ответ')
+    order = models.PositiveIntegerField('Порядок отображения', default=0, help_text="Меньшее число = выше в списке")
+    is_active = models.BooleanField('Активен', default=True)
+    created_at = models.DateTimeField('Создан', auto_now_add=True)
+    updated_at = models.DateTimeField('Обновлен', auto_now=True)
+
+    class Meta:
+        verbose_name = 'Часто задаваемый вопрос'
+        verbose_name_plural = 'Часто задаваемые вопросы'
+        ordering = ['order', 'created_at']
+
+    def __str__(self):
+        return self.question

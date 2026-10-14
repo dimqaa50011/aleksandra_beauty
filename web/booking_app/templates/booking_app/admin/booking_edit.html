@@ -8,14 +8,19 @@
 <div class="form-container">
     <div class="card">
         <div class="card-header">
-            <h3>Запись: {{ booking.client_name }} — {{ booking.service.name }}</h3>
+            <!-- ИЗМЕНЕНО: Выводим все услуги через запятую -->
+            <h3>Запись: {{ booking.client_name }} — 
+                {% for s in booking.services.all %}
+                    {{ s.name }}{% if not forloop.last %}, {% endif %}
+                {% endfor %}
+            </h3>
             <p style="color: #6b5f5a; margin-top: 8px;">
                 Текущее время: {{ booking.appointment_datetime|date:"d.m.Y H:i" }}
             </p>
         </div>
         
         <div class="card-body">
-            <form method="post" class="booking-form">
+            <form method="post" class="booking-form" id="editBookingForm">
                 {% csrf_token %}
                 
                 {% if form.non_field_errors %}
@@ -45,9 +50,27 @@
                     {{ form.category }}
                 </div>
 
+                <!-- ИЗМЕНЕНО: Блок "Корзина" услуг вместо одиночного select -->
                 <div class="form-group">
-                    <label>Услуга</label>
-                    {{ form.service }}
+                    <label>Добавить услугу</label>
+                    <div style="display: flex; gap: 8px;">
+                        {{ form.service }} <!-- Оставляем для выбора новой услуги -->
+                        <button type="button" id="addServiceBtn" class="btn-add" title="Добавить услугу">+ Добавить</button>
+                    </div>
+                </div>
+
+                <!-- Блок выбранных услуг (Корзина) -->
+                <div id="selectedServicesBlock" class="selected-services-block" style="display: none;">
+                    <label class="cart-label">Выбранные услуги:</label>
+                    <ul id="selectedServicesList" class="services-list"></ul>
+                    
+                    <div class="cart-totals">
+                        <span>⏱ Итого время: <strong id="totalDuration">0</strong> мин</span>
+                        <span>💰 Итого цена: <strong id="totalPrice">0</strong> ₽</span>
+                    </div>
+                    
+                    <!-- Скрытое поле с ID услуг, которое ждет view -->
+                    <input type="hidden" name="services_ids" id="servicesIdsInput" value="{% for s in booking.services.all %}{{ s.id }}{% if not forloop.last %},{% endif %}{% endfor %}">
                 </div>
 
                 <div class="form-row">
@@ -81,24 +104,130 @@
     .card-header h3 { margin: 0; font-size: 1.3rem; color: #2d2a28; }
     .form-group { margin-bottom: 20px; }
     .form-group label { display: block; font-weight: 600; margin-bottom: 8px; color: #2d2a28; }
-    .form-control { width: 100%; padding: 12px; border: 1px solid #e8e0dd; border-radius: 12px; font-size: 1rem; }
+    .form-control { width: 100%; padding: 12px; border: 1px solid #e8e0dd; border-radius: 12px; font-size: 1rem; box-sizing: border-box; }
     .form-control:focus { outline: none; border-color: #f2a6b0; }
     .form-row { display: flex; gap: 16px; }
     .form-row .form-group { flex: 1; }
     .form-actions { display: flex; gap: 16px; margin-top: 24px; }
-    .btn { padding: 12px 24px; border-radius: 60px; font-weight: 600; cursor: pointer; border: none; text-decoration: none; }
+    .btn { padding: 12px 24px; border-radius: 60px; font-weight: 600; cursor: pointer; border: none; text-decoration: none; text-align: center; }
     .btn-primary { background: #f2a6b0; color: #fff; }
     .btn-primary:hover { background: #e8919c; }
     .btn-secondary { background: #f0e8e5; color: #6b5f5a; }
     .alert-danger { background: #fce4ec; color: #c62828; padding: 12px; border-radius: 8px; margin-bottom: 16px; }
+
+    /* Стили для корзины услуг */
+    .btn-add { padding: 12px 20px; background: #6b5f5a; color: #fff; border: none; border-radius: 12px; font-size: 0.95rem; font-weight: 600; cursor: pointer; transition: all 0.2s; white-space: nowrap; }
+    .btn-add:hover { background: #5a504c; }
+    .selected-services-block { background: #fcf9f7; border: 1px solid #e8e0dd; border-radius: 12px; padding: 16px; margin-bottom: 20px; }
+    .cart-label { font-size: 0.9rem; font-weight: 600; color: #2d2a28; margin-bottom: 8px; display: block; }
+    .services-list { list-style: none; padding: 0; margin: 0 0 12px 0; }
+    .service-item { display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-bottom: 1px dashed #e8e0dd; font-size: 0.9rem; color: #2d2a28; }
+    .service-item:last-child { border-bottom: none; }
+    .remove-service { background: none; border: none; color: #c62828; cursor: pointer; font-size: 1.2rem; padding: 0 4px; line-height: 1; }
+    .remove-service:hover { color: #f44336; }
+    .cart-totals { display: flex; justify-content: space-between; font-weight: 700; color: #2d2a28; border-top: 2px solid #e8e0dd; padding-top: 12px; font-size: 0.95rem; }
+    
+    @media (max-width: 600px) { 
+        .form-row { flex-direction: column; gap: 0; } 
+        .btn-add { width: 100%; margin-top: 8px; }
+    }
 </style>
 
-<!-- Скрипт для фильтрации услуг по категории (тот же, что и в моменте 1) -->
 <script>
     document.addEventListener('DOMContentLoaded', function() {
         const categorySelect = document.querySelector('select[name="category"]');
         const serviceSelect = document.querySelector('select[name="service"]');
+        const dateInput = document.querySelector('input[name="appointment_date"]');
+        const timeSelect = document.querySelector('select[name="appointment_time"]');
+        
+        // Элементы корзины
+        const addServiceBtn = document.getElementById('addServiceBtn');
+        const selectedServicesBlock = document.getElementById('selectedServicesBlock');
+        const selectedServicesList = document.getElementById('selectedServicesList');
+        const totalDurationEl = document.getElementById('totalDuration');
+        const totalPriceEl = document.getElementById('totalPrice');
+        const servicesIdsInput = document.getElementById('servicesIdsInput');
 
+        let selectedServices = {};
+
+        // === 1. ИНИЦИАЛИЗАЦИЯ СУЩЕСТВУЮЩИХ УСЛУГ ===
+        // Забираем текущие услуги из Django-контекста
+        const initialServices = [
+            {% for s in booking.services.all %}
+            {
+                id: "{{ s.id }}",
+                name: "{{ s.name }}",
+                price: "{{ s.price }}",
+                duration: "{{ s.duration }}"
+            }{% if not forloop.last %},{% endif %}
+            {% endfor %}
+        ];
+
+        // Заполняем хранилище начальными данными
+        initialServices.forEach(s => {
+            selectedServices[s.id] = { name: s.name, price: s.price, duration: s.duration };
+        });
+
+        // === 2. ЛОГИКА КОРЗИНЫ ===
+        function updateCartUI() {
+            selectedServicesList.innerHTML = '';
+            let totalDur = 0;
+            let totalPri = 0;
+            const ids = [];
+
+            for (const [id, data] of Object.entries(selectedServices)) {
+                ids.push(id);
+                totalDur += parseInt(data.duration);
+                totalPri += parseInt(data.price);
+
+                const li = document.createElement('li');
+                li.className = 'service-item';
+                li.innerHTML = `
+                    <span>${data.name} (${data.duration} мин)</span>
+                    <div style="display:flex; align-items:center; gap:8px;">
+                        <span style="font-weight:600;">${data.price} ₽</span>
+                        <button type="button" class="remove-service" data-id="${id}" title="Удалить">×</button>
+                    </div>
+                `;
+                selectedServicesList.appendChild(li);
+            }
+
+            document.querySelectorAll('.remove-service').forEach(btn => {
+                btn.addEventListener('click', function() {
+                    delete selectedServices[this.dataset.id];
+                    updateCartUI();
+                });
+            });
+
+            totalDurationEl.textContent = totalDur;
+            totalPriceEl.textContent = totalPri;
+            servicesIdsInput.value = ids.join(',');
+
+            selectedServicesBlock.style.display = Object.keys(selectedServices).length > 0 ? 'block' : 'none';
+        }
+
+        // Вызываем сразу, чтобы отобразить текущие услуги
+        updateCartUI();
+
+        // === 3. ДОБАВЛЕНИЕ НОВОЙ УСЛУГИ ===
+        if (addServiceBtn && serviceSelect) {
+            addServiceBtn.addEventListener('click', function() {
+                const id = serviceSelect.value;
+                if (!id) return;
+
+                const option = serviceSelect.options[serviceSelect.selectedIndex];
+                selectedServices[id] = {
+                    name: option.text.split(' — ')[0],
+                    price: option.dataset.price || '0',
+                    duration: option.dataset.duration || '60'
+                };
+                
+                updateCartUI();
+                serviceSelect.value = ""; // Сброс селекта
+            });
+        }
+
+        // === 4. ЗАГРУЗКА УСЛУГ ПО КАТЕГОРИИ ===
         if (categorySelect && serviceSelect) {
             function updateServices() {
                 const categoryId = categorySelect.value;
@@ -112,12 +241,14 @@
                 fetch(`/api/services-by-category/?category_id=${categoryId}`)
                     .then(r => r.json())
                     .then(data => {
-                        serviceSelect.innerHTML = '<option value="">Выберите услугу</option>';
+                        serviceSelect.innerHTML = '<option value="">Выберите услугу для добавления</option>';
                         if (data.services && data.services.length > 0) {
                             data.services.forEach(service => {
                                 const option = document.createElement('option');
                                 option.value = service.id;
                                 option.textContent = `${service.name} — ${service.price} ₽`;
+                                option.dataset.price = service.price;
+                                option.dataset.duration = service.duration || 60;
                                 serviceSelect.appendChild(option);
                             });
                         } else {

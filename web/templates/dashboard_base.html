@@ -149,7 +149,7 @@
     {% block extra_js %}{% endblock %}
 <script>
   if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.register('/static/sw.js')
+    navigator.serviceWorker.register('/sw.js')
       .then(registration => {
         console.log('SW зарегистрирован:', registration);
         return Notification.requestPermission().then(permission => {
