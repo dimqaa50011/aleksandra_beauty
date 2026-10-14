@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>{% block title %}Админка — Glowora{% endblock %}</title>
+    <title>{% block title %}Админка — Sasha Sugar{% endblock %}</title>
 
     <!-- Критически важно для AJAX запросов в Django -->
     <meta name="csrf-token" content="{{ csrf_token }}">
@@ -22,7 +22,7 @@
         <div class="header-container">
             <div class="header-logo">
                 <a href="{% url 'beauty_app:dashboard' %}">
-                    Glow<span>ora</span>
+                    Sasha<span>Sugar</span>
                     <span class="admin-badge">Админка</span>
                 </a>
             </div>
@@ -38,7 +38,6 @@
                 {% endif %}
             </div>
 
-            <!-- БУРГЕР (только на мобилках) -->
             <button class="burger-btn" id="burgerBtn" aria-label="Меню">
                 <i class="fas fa-bars"></i>
             </button>
@@ -46,7 +45,6 @@
     </header>
 
     <div class="admin-wrapper">
-        <!-- БОКОВОЕ МЕНЮ -->
         <aside class="admin-sidebar" id="sidebar">
             <nav class="sidebar-nav">
                 <ul>
@@ -74,7 +72,6 @@
                             <span>Блокировка времени</span>
                         </a>
                     </li>
-                    <!-- Добавь ссылки на админку Django или другие разделы по необходимости -->
                     <li>
                         <a href="/admin/" target="_blank">
                             <i class="fas fa-cog"></i>
@@ -85,7 +82,6 @@
             </nav>
         </aside>
 
-        <!-- ОСНОВНОЙ КОНТЕНТ -->
         <main class="admin-content">
             <div class="content-header">
                 <h1>{% block page_title %}Панель управления{% endblock %}</h1>
@@ -147,74 +143,85 @@
 
     <!-- СКРИПТ WEB PUSH УВЕДОМЛЕНИЙ -->
     <script>
-  if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.register('/sw.js')
-      .then(registration => {
-        console.log('✅ SW зарегистрирован:', registration);
-        return Notification.requestPermission().then(permission => {
-          if (permission === 'granted') {
-            console.log('✅ Разрешение на пуши получено');
-            
-            // Берем ключ из Django (имя переменной должно совпадать с контекст-процессором)
-            const rawVapidKey = "{{ VAPID_PUBLIC_KEY|escapejs }}".trim();
-            console.log('🔑 Полученный VAPID ключ:', rawVapidKey);
-
-            if (!rawVapidKey || rawVapidKey === 'None' || rawVapidKey.length < 50) {
-                console.error("❌ ОШИБКА: VAPID_PUBLIC_KEY пустой или некорректный! Проверьте settings.py и context_processors.");
-                return;
-            }
-
-            return registration.pushManager.subscribe({
-              userVisibleOnly: true,
-              applicationServerKey: urlBase64ToUint8Array(rawVapidKey)
-            });
-          } else {
-            console.warn('⚠️ Пользователь запретил уведомления');
-          }
-        });
-      })
-      .then(subscription => {
-        if (subscription) {
-          console.log('📡 Отправка подписки на сервер...');
-          return fetch('/api/save-push-subscription/', {
-            method: 'POST',
-            credentials: 'same-origin', // КРИТИЧЕСКИ ВАЖНО для отправки куки авторизации
-            headers: {
-              'Content-Type': 'application/json',
-              'X-CSRFToken': document.querySelector('meta[name="csrf-token"]')?.content || 
-                             document.querySelector('[name=csrfmiddlewaretoken]')?.value || ''
-            },
-            body: JSON.stringify({ subscription: subscription.toJSON() })
-          });
-        }
-      })
-      .then(response => {
-        if (response) {
-            if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
-            return response.json();
-        }
-      })
-      .then(data => {
-        if (data && data.success) {
-          console.log('✅ Подписка на пуши успешно сохранена в базе!');
+        // 1. Безопасно получаем ключ из Django-контекста
+        const rawVapidKey = "{{ VAPID_PUBLIC_KEY|default:''|escapejs }}".trim();
+        
+        if (!rawVapidKey || rawVapidKey === 'None' || rawVapidKey.length < 50) {
+            console.warn("⚠️ VAPID_PUBLIC_KEY не найден или некорректен. Проверьте context_processors.py и settings.py");
         } else {
-          console.error('❌ Ошибка сохранения на сервере:', data);
+            console.log("✅ VAPID ключ загружен корректно");
+
+            if ('serviceWorker' in navigator && 'PushManager' in window) {
+                navigator.serviceWorker.register('/sw.js')
+                    .then(registration => {
+                        console.log('✅ SW зарегистрирован:', registration.scope);
+                        return Notification.requestPermission().then(permission => {
+                            if (permission === 'granted') {
+                                console.log('✅ Разрешение на пуши получено');
+                                return registration.pushManager.subscribe({
+                                    userVisibleOnly: true,
+                                    applicationServerKey: urlBase64ToUint8Array(rawVapidKey)
+                                });
+                            } else {
+                                console.warn('⚠️ Пользователь запретил уведомления');
+                                return null;
+                            }
+                        });
+                    })
+                    .then(subscription => {
+                        if (subscription) {
+                            console.log('📡 Отправка подписки на сервер...');
+                            
+                            // Получаем CSRF токен из meta-тега
+                            const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content || '';
+
+                            return fetch('/api/save-push-subscription/', {
+                                method: 'POST',
+                                credentials: 'same-origin', // <--- КРИТИЧЕСКИ ВАЖНО: отправляет куки сессии Django
+                                headers: {
+                                    'Content-Type': 'application/json',
+                                    'X-CSRFToken': csrfToken
+                                },
+                                body: JSON.stringify({ subscription: subscription.toJSON() })
+                            });
+                        }
+                        return null;
+                    })
+                    .then(response => {
+                        if (response) {
+                            if (!response.ok) {
+                                throw new Error(`HTTP error! status: ${response.status}`);
+                            }
+                            return response.json();
+                        }
+                        return null;
+                    })
+                    .then(data => {
+                        if (data && data.success) {
+                            console.log('✅ Подписка на пуши успешно сохранена в базе!');
+                        } else if (data) {
+                            console.error('❌ Ошибка сохранения на сервере:', data);
+                        }
+                    })
+                    .catch(err => {
+                        console.error('❌ Ошибка процесса push-подписки:', err);
+                    });
+            } else {
+                console.warn("⚠️ Push API или Service Workers не поддерживаются этим браузером");
+            }
         }
-      })
-      .catch(err => console.error('❌ Ошибка процесса push-подписки:', err));
-  }
-  
-  // Функция конвертации base64 в Uint8Array
-  function urlBase64ToUint8Array(base64String) {
-    const padding = '='.repeat((4 - base64String.length % 4) % 4);
-    const base64 = (base64String + padding).replace(/\-/g, '+').replace(/_/g, '/');
-    const rawData = window.atob(base64);
-    const outputArray = new Uint8Array(rawData.length);
-    for (let i = 0; i < rawData.length; ++i) {
-      outputArray[i] = rawData.charCodeAt(i);
-    }
-    return outputArray;
-  }
-</script>
+
+        // Функция конвертации base64 в Uint8Array
+        function urlBase64ToUint8Array(base64String) {
+            const padding = '='.repeat((4 - base64String.length % 4) % 4);
+            const base64 = (base64String + padding).replace(/\-/g, '+').replace(/_/g, '/');
+            const rawData = window.atob(base64);
+            const outputArray = new Uint8Array(rawData.length);
+            for (let i = 0; i < rawData.length; ++i) {
+                outputArray[i] = rawData.charCodeAt(i);
+            }
+            return outputArray;
+        }
+    </script>
 </body>
 </html>
