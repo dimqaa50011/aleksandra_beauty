@@ -169,3 +169,23 @@ class PushSubscription(models.Model):
 
     def __str__(self):
         return f"Push для {self.user.username}: {self.endpoint[:50]}..."
+    
+
+
+class DeviceFCMToken(models.Model):
+    """FCM-токены мобильных устройств админов"""
+    user = models.ForeignKey('auth.User', on_delete=models.CASCADE, related_name='fcm_tokens')
+    token = models.CharField(max_length=500, unique=True)
+    platform = models.CharField(max_length=20, blank=True)  # 'android' / 'ios'
+    device_name = models.CharField(max_length=100, blank=True)
+    is_active = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    last_used = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = 'FCM токен устройства'
+        verbose_name_plural = 'FCM токены устройств'
+        ordering = ['-last_used']
+
+    def __str__(self):
+        return f"{self.user.username}: {self.token[:40]}..."

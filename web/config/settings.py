@@ -46,6 +46,9 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     
+    'rest_framework',
+    'rest_framework.authtoken',
+    
     'django_q',
     'booking_app',
     'beauty_app',
