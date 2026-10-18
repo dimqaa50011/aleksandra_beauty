@@ -128,26 +128,25 @@ def send_push_notification(title, body, url=None):
 @api_view(['POST'])
 def app_login(request):
     """Вход по логину/паролю, возвращает токен"""
-    import logging
-    logger = logging.getLogger(__name__)
-    
     username = request.data.get('username', '').strip()
     password = request.data.get('password', '')
     
-    logger.info(f"🔐 Попытка входа: username='{username}', password_len={len(password)}")
+    print(f"🔐 Попытка входа: username='{username}', password_len={len(password)}")
     
     user = authenticate(username=username, password=password)
     
     if user is None:
-        logger.warning(f"❌ Аутентификация не удалась для '{username}'")
+        print(f"❌ Аутентификация не удалась для '{username}'")
         return JsonResponse({'error': 'Неверные данные'}, status=401)
     
+    print(f"✅ Аутентификация прошла, проверяем is_staff: {user.is_staff}")
+    
     if not user.is_staff:
-        logger.warning(f"❌ Пользователь '{username}' не является staff (is_staff={user.is_staff})")
+        print(f"❌ Пользователь '{username}' не является staff (is_staff={user.is_staff})")
         return JsonResponse({'error': 'Неверные данные'}, status=401)
     
     token, _ = Token.objects.get_or_create(user=user)
-    logger.info(f"✅ Успешный вход: {username}")
+    print(f"✅ Успешный вход: {username}, токен: {token.key[:20]}...")
     return JsonResponse({'token': token.key, 'username': user.username})
 
 @api_view(['POST'])
