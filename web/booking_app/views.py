@@ -18,7 +18,7 @@ from django.views.generic import ListView, TemplateView, FormView, View
 
 from rest_framework.authtoken.models import Token
 from rest_framework.decorators import api_view, permission_classes
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.permissions import IsAuthenticated, AllowAny
 
 import firebase_admin
 from firebase_admin import credentials, messaging
@@ -126,6 +126,7 @@ def send_push_notification(title, body, url=None):
 # ==========================================
 @csrf_exempt
 @api_view(['POST'])
+@permission_classes([AllowAny])
 def app_login(request):
     """Вход по логину/паролю, возвращает токен"""
     username = request.data.get('username', '').strip()
