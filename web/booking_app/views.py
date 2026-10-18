@@ -124,19 +124,31 @@ def send_push_notification(title, body, url=None):
 # ==========================================
 # API ДЛЯ МОБИЛЬНОГО ПРИЛОЖЕНИЯ
 # ==========================================
-
+@csrf_exempt
 @api_view(['POST'])
 def app_login(request):
-    username = request.data.get('username')
-    password = request.data.get('password')
+    """Вход по логину/паролю, возвращает токен"""
+    import logging
+    logger = logging.getLogger(__name__)
+    
+    username = request.data.get('username', '').strip()
+    password = request.data.get('password', '')
+    
+    logger.info(f"🔐 Попытка входа: username='{username}', password_len={len(password)}")
+    
     user = authenticate(username=username, password=password)
     
-    if not user or not user.is_staff:
+    if user is None:
+        logger.warning(f"❌ Аутентификация не удалась для '{username}'")
+        return JsonResponse({'error': 'Неверные данные'}, status=401)
+    
+    if not user.is_staff:
+        logger.warning(f"❌ Пользователь '{username}' не является staff (is_staff={user.is_staff})")
         return JsonResponse({'error': 'Неверные данные'}, status=401)
     
     token, _ = Token.objects.get_or_create(user=user)
+    logger.info(f"✅ Успешный вход: {username}")
     return JsonResponse({'token': token.key, 'username': user.username})
-
 
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
