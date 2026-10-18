@@ -2,19 +2,22 @@
 {% load static %}
 
 {% block title %}Sasha Sugar — Бьюти-студия в СПб | Косметология, брови, ресницы{% endblock %}
- {% block content %}
+
+{% block description %}Бьюти-студия Sasha Sugar в центре СПб: уход за кожей, аппаратная косметология, депиляция, брови и ресницы. Мастера с опытом от 5 лет, рейтинг 4.8★. Спасский пер., 7 — запись онлайн.{% endblock %}
+
+{% block content %}
 
     <!-- ГЕРОЙ -->
     <section class="hero" id="hero">
         <div class="container hero-grid">
             <div class="hero-content">
-                
+
                 <h1>Бьюти-студия Sasha Sugar в СПб:<br /><span>раскрой своё природное сияние</span></h1>
-                
+
                 <p class="sub">
                     Уход за кожей, аппаратная косметология, подбор домашнего ухода, депиляция, брови и ресницы — всё в одном месте.
                 </p>
-                <a href="{% url 'booking_app:booking_create' %}" class="btn" target="_blank" rel="noopener">Записаться сейчас</a>
+                <a href="{% url 'booking_app:booking_create' %}" class="btn" rel="noopener">Записаться сейчас</a>
                 <div class="hero-stats">
                     <div class="stat">
                         <span class="number">5K+</span>
@@ -28,39 +31,44 @@
             </div>
 
             {% if hero and hero.hero_image %}
-                <img src="{{ hero.hero_image.url }}" alt="{{ hero.title|default:'Интерьер бьюти-студии Sasha Sugar' }}" class="hero-image" />
+                <img src="{{ hero.hero_image.url }}"
+                     alt="{{ hero.title|default:'Интерьер бьюти-студии Sasha Sugar в Санкт-Петербурге' }}"
+                     class="hero-image"
+                     width="800" height="800"
+                     fetchpriority="high" />
             {% else %}
-                <img src="https://images.unsplash.com/photo-1595476108010-b4d1f102b1b1?w=800&auto=format&fit=crop" alt="Бьюти-мастер в студии Sasha Sugar" class="hero-image" />
+                <img src="https://images.unsplash.com/photo-1595476108010-b4d1f102b1b1?w=800&auto=format&fit=crop"
+                     alt="Бьюти-мастер в студии Sasha Sugar"
+                     class="hero-image"
+                     width="800" height="800"
+                     fetchpriority="high" />
             {% endif %}
         </div>
     </section>
 
     <!-- КАТЕГОРИИ (УСЛУГИ) -->
+    {% if categories %}
     <section class="section">
         <div class="container">
             <h2 class="section-title">Наши услуги</h2>
             <div class="categories-grid">
-                {% for category in categories %}    
-                    <!-- Оборачиваем в ссылку с ID категории -->
+                {% for category in categories %}
                     <a href="{% url 'beauty_app:category_services' category.id %}" class="category-card-link">
                         <div class="category-card">
-                            {% if  category.icon %}
-                                <span class="icon">{{ category.icon }}</span>
+                            {% if category.icon %}
+                                <span class="icon" aria-hidden="true">{{ category.icon }}</span>
                             {% endif %}
-                            <h4>{{ category.name }}</h4>
+                            <h3>{{ category.name }}</h3>
                             {% if category.description %}
                                 <p>{{ category.description }}</p>
                             {% endif %}
                         </div>
                     </a>
-                {% empty %}
-                    <p style="text-align:center; grid-column:1/-1; color:#6b5f5a; padding:40px 0;">
-                        Категории пока не добавлены.
-                    </p>
                 {% endfor %}
             </div>
         </div>
     </section>
+    {% endif %}
 
     <!-- О НАС -->
     <section class="section" id="about">
@@ -69,20 +77,18 @@
                 <div class="about-content">
                     <h2 class="section-title">Мы создаем красоту <br /><span>с любовью к деталям</span></h2>
                     <p class="about-text">
-                        Sasha Sugar — это пространство, где профессионализм встречается с уютом. 
-                        Мы используем только сертифицированные материалы и современное оборудование, 
-                        чтобы подчеркнуть вашу естественную красоту. Наша команда — это опытные мастера, 
+                        Sasha Sugar — это пространство, где профессионализм встречается с уютом.
+                        Мы используем только сертифицированные материалы и современное оборудование,
+                        чтобы подчеркнуть вашу естественную красоту. Наша команда — это опытные мастера,
                         которые постоянно повышают свою квалификацию и следят за мировыми трендами в бьюти-индустрии.
                     </p>
                     <ul class="about-features">
                         <li>✨ Сертифицированные мастера с опытом от 5 лет</li>
-                        <li> Гипоаллергенная и премиальная косметика</li>
+                        <li>Гипоаллергенная и премиальная косметика</li>
                         <li>☕ Уютная атмосфера и чайная церемония для каждого гостя</li>
                     </ul>
                 </div>
-                <div class="about-image">
-                </div>
-            </div>  
+            </div>
         </div>
     </section>
 
@@ -90,212 +96,131 @@
     <section class="section" id="contacts" style="background-color: #faf9f8;">
         <div class="container">
             <h2 class="section-title">Ждем вас в гости</h2>
-            
+
             <div class="contacts-grid">
                 <div class="contact-info">
                     <div class="contact-item">
-                        <span class="contact-icon">📍</span>
+                        <span class="contact-icon" aria-hidden="true">📍</span>
                         <div>
-                            <h4>Адрес</h4>
+                            <h3>Адрес</h3>
                             <p>г. Санкт-Петербург, Спасский переулок, д. 7</p>
                         </div>
                     </div>
                     <div class="contact-item">
-                        <span class="contact-icon"></span>
+                        <span class="contact-icon" aria-hidden="true">📞</span>
                         <div>
-                            <h4>Телефон</h4>
+                            <h3>Телефон</h3>
                             <p><a href="tel:+79052698654">+7 (905) 269-86-54</a></p>
                         </div>
                     </div>
                     <div class="contact-item">
-                        <span class="contact-icon"></span>
+                        <span class="contact-icon" aria-hidden="true">🕒</span>
                         <div>
-                            <h4>Режим работы</h4>
+                            <h3>Режим работы</h3>
                             <p>Ежедневно с 09:00 до 22:00</p>
                         </div>
                     </div>
                     <div class="contact-item">
-                        <span class="contact-icon">✉️</span>
+                        <span class="contact-icon" aria-hidden="true">✉️</span>
                         <div>
-                            <h4>Email</h4>
+                            <h3>Email</h3>
                             <p><a href="mailto:hello@sashasugar.ru">hello@sashasugar.ru</a></p>
                         </div>
                     </div>
-                    
-                    <a href="https://spb.moiprofi.ru/aleksandrasaharova/" class="btn" style="margin-top: 24px; display: inline-block; text-align: center;" target="_blank" rel="noopener">
+
+                    <a href="https://spb.moiprofi.ru/aleksandrasaharova/" class="btn" style="margin-top: 24px; display: inline-block; text-align: center;" target="_blank" rel="noopener nofollow">
                         Записаться онлайн
                     </a>
                 </div>
 
                 <div class="contact-map">
                     <div class="map-wrapper">
-                        <iframe src="https://yandex.ru/map-widget/v1/?um=constructor%3A7061c1ee1fa2d23b9bf1312525474d32e6e427449bf3a521d2ab3c5311042c92&amp;source=constructor" frameborder="0"></iframe>
+                        <iframe src="https://yandex.ru/map-widget/v1/?um=constructor%3A7061c1ee1fa2d23b9bf1312525474d32e6e427449bf3a521d2ab3c5311042c92&amp;source=constructor"
+                                title="Карта: Sasha Sugar, Спасский переулок, 7, Санкт-Петербург"
+                                loading="lazy"
+                                frameborder="0"></iframe>
                     </div>
                 </div>
             </div>
         </div>
     </section>
 
-
     <!-- ===== БЛОК FAQ ===== -->
-<section id="faq" class="faq-section">
-    <div class="container">
-        <h2 class="section-title">Часто задаваемые вопросы</h2>
-        <p class="section-subtitle">Не нашли ответ? Напишите нам в мессенджер!</p>
-        
-        <div class="faq-list">
-            {% for faq in faqs %}
-            <div class="faq-item">
-                <button class="faq-question" onclick="toggleFaq(this)">
-                    <span>{{ faq.question }}</span>
-                    <i class="faq-icon">+</i>
-                </button>
-                <div class="faq-answer">
-                    <p>{{ faq.answer|linebreaksbr }}</p>
-                </div>
+    {% if faqs %}
+    <section id="faq" class="faq-section">
+        <div class="container">
+            <h2 class="section-title">Часто задаваемые вопросы</h2>
+            <p class="section-subtitle">Не нашли ответ? Напишите нам в мессенджер!</p>
+
+            <div class="faq-list">
+                {% for faq in faqs %}
+                <details class="faq-item">
+                    <summary class="faq-question">
+                        <span>{{ faq.question }}</span>
+                        <i class="faq-icon" aria-hidden="true">+</i>
+                    </summary>
+                    <div class="faq-answer">
+                        <p>{{ faq.answer|linebreaksbr }}</p>
+                    </div>
+                </details>
+                {% endfor %}
             </div>
-            {% empty %}
-            <p style="text-align: center; color: #6b5f5a;">Пока нет вопросов. Добавьте их в админке.</p>
-            {% endfor %}
         </div>
-    </div>
-</section>
+    </section>
+    {% endif %}
 
-<style>
-    /* === Стили для блока FAQ === */
-    .faq-section {
-        padding: 80px 0;
-        background: #fef9f7;
+    <!-- ===== STRUCTURED DATA ===== -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "BeautySalon",
+      "name": "Sasha Sugar",
+      "url": "https://sasha-sugar.ru/",
+      "telephone": "+7-905-269-86-54",
+      "email": "hello@sashasugar.ru",
+      "priceRange": "₽₽",
+      "address": {
+        "@type": "PostalAddress",
+        "streetAddress": "Спасский переулок, д. 7",
+        "addressLocality": "Санкт-Петербург",
+        "addressCountry": "RU"
+      },
+      "geo": {
+        "@type": "GeoCoordinates",
+        "latitude": 59.9268,
+        "longitude": 30.3205
+      },
+      "openingHoursSpecification": [{
+        "@type": "OpeningHoursSpecification",
+        "dayOfWeek": ["Monday","Tuesday","Wednesday","Thursday","Friday","Saturday","Sunday"],
+        "opens": "09:00",
+        "closes": "22:00"
+      }],
+      "sameAs": [
+        "https://spb.moiprofi.ru/aleksandrasaharova/"
+      ]
     }
+    </script>
 
-    .faq-section .section-title {
-        text-align: center;
-        font-size: 2rem;
-        font-weight: 700;
-        color: #2d2a28;
-        margin-bottom: 12px;
+    {% if faqs %}
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "FAQPage",
+      "mainEntity": [
+        {% for faq in faqs %}
+        {
+          "@type": "Question",
+          "name": "{{ faq.question|escapejs }}",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "{{ faq.answer|escapejs }}"
+          }
+        }{% if not forloop.last %},{% endif %}
+        {% endfor %}
+      ]
     }
-
-    .faq-section .section-subtitle {
-        text-align: center;
-        font-size: 1rem;
-        color: #6b5f5a;
-        margin-bottom: 48px;
-    }
-
-    .faq-list {
-        max-width: 800px;
-        margin: 0 auto;
-    }
-
-    .faq-item {
-        background: #fff;
-        border-radius: 16px;
-        margin-bottom: 16px;
-        box-shadow: 0 2px 8px rgba(0,0,0,0.04);
-        overflow: hidden;
-        border: 1px solid #f0e8e5;
-        transition: all 0.3s;
-    }
-
-    .faq-item:hover {
-        box-shadow: 0 4px 16px rgba(0,0,0,0.08);
-    }
-
-    .faq-question {
-        width: 100%;
-        padding: 20px 24px;
-        background: none;
-        border: none;
-        text-align: left;
-        font-size: 1.05rem;
-        font-weight: 600;
-        color: #2d2a28;
-        cursor: pointer;
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        gap: 16px;
-        transition: all 0.3s;
-    }
-
-    .faq-question:hover {
-        color: #f2a6b0;
-    }
-
-    .faq-icon {
-        font-size: 1.5rem;
-        font-weight: 300;
-        color: #f2a6b0;
-        transition: transform 0.3s;
-        flex-shrink: 0;
-    }
-
-    .faq-item.active .faq-icon {
-        transform: rotate(45deg);
-    }
-
-    .faq-answer {
-        max-height: 0;
-        overflow: hidden;
-        transition: max-height 0.4s ease, padding 0.4s ease;
-        padding: 0 24px;
-    }
-
-    .faq-item.active .faq-answer {
-        max-height: 500px;
-        padding: 0 24px 20px 24px;
-    }
-
-    .faq-answer p {
-        color: #6b5f5a;
-        line-height: 1.6;
-        font-size: 0.95rem;
-        margin: 0;
-    }
-
-    /* Мобильный адаптив */
-    @media (max-width: 768px) {
-        .faq-section {
-            padding: 60px 0;
-        }
-
-        .faq-section .section-title {
-            font-size: 1.6rem;
-        }
-
-        .faq-question {
-            padding: 16px 20px;
-            font-size: 0.95rem;
-        }
-
-        .faq-answer {
-            padding: 0 20px;
-        }
-
-        .faq-item.active .faq-answer {
-            padding: 0 20px 16px 20px;
-        }
-    }
-</style>
-
-<script>
-    function toggleFaq(button) {
-        const item = button.parentElement;
-        const isActive = item.classList.contains('active');
-        
-        // Закрываем все остальные
-        document.querySelectorAll('.faq-item').forEach(faq => {
-            faq.classList.remove('active');
-        });
-        
-        // Открываем текущий, если он был закрыт
-        if (!isActive) {
-            item.classList.add('active');
-        }
-    }
-</script>
-
-
+    </script>
+    {% endif %}
 
 {% endblock content %}
