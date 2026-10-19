@@ -1,0 +1,21 @@
+User-agent: *
+Allow: /
+
+# --- Служебные и приватные разделы ---
+Disallow: /admin/
+Disallow: /admin-dashboard/
+Disallow: /login/
+Disallow: /logout/
+Disallow: /access-denied/
+
+Disallow: /booking/success/
+
+Disallow: /api/
+Disallow: /vk-app/
+Disallow: /telegram/
+Disallow: /max/
+
+Disallow: /*?*sort= 
+Disallow: /*?*page=
+
+Sitemap: https://sasha-sugar.ru/sitemap.xml
