@@ -13,7 +13,8 @@ urlpatterns = [
     path('<int:pk>/delete/', views.CertificateDeleteView.as_view(), name='delete'),
     path('<int:pk>/resend-email/', views.CertificateResendEmailView.as_view(), name='resend_email'),
     # path('api/app-certificates/', api.AdminCertificatesListAPIView.as_view(), name='api_app_certificates'),
-path('api/app-certificates/redeem/', api.AdminCertificateRedeemAPIView.as_view(), name='api_app_certificate_redeem'),
+    path('api/app-certificates/redeem/', api.AdminCertificateRedeemAPIView.as_view(), name='api_app_certificate_redeem'),
+    path('api/app-certificates/create/', api.AdminCertificateCreateAPIView.as_view(), name='api_app_certificate_create'),
     path('api/app-certificates/', api.AdminCertificatesAPIView.as_view(), name='api_app_certificates'),
     path('api/app-certificates/<int:pk>/use/', api.AdminCertificateUseAPIView.as_view(), name='api_app_certificate_use'),
 ]
