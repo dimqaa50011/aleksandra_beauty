@@ -132,7 +132,14 @@ class AdminClientsAPIView(APIView):
             })
 
         return Response({'clients': data}, status=status.HTTP_200_OK)
-    
+from datetime import datetime, timedelta, time as dt_time
+from django.utils import timezone
+from rest_framework.views import APIView
+from rest_framework.response import Response
+from rest_framework import status
+from rest_framework.permissions import IsAuthenticated
+from .models import Booking, BlockedSlot
+
 class AdminCalendarAPIView(APIView):
     """
     GET: Отдает сетку времени на день (или неделю) с статусами:
@@ -155,10 +162,10 @@ class AdminCalendarAPIView(APIView):
         days_count = 7 if period == 'week' else 1
         dates = [start_date + timedelta(days=i) for i in range(days_count)]
         
-        # Рабочие часы (например, с 9:00 до 22:00)
+        # Рабочие часы
         WORK_START = dt_time(9, 0)
         WORK_END = dt_time(22, 0)
-        SLOT_STEP = 60 # Шаг 1 час (для простоты отрисовки)
+        SLOT_STEP = 60 # Шаг 1 час
         
         result = {}
 
@@ -179,6 +186,11 @@ class AdminCalendarAPIView(APIView):
             # Генерируем слоты
             current_time = datetime.combine(current_date, WORK_START)
             end_time = datetime.combine(current_date, WORK_END)
+            
+            # Делаем время aware (с учетом часового пояса), чтобы сравнивать с базой
+            current_tz = timezone.get_current_timezone()
+            current_time = timezone.make_aware(current_time, current_tz)
+            end_time = timezone.make_aware(end_time, current_tz)
 
             while current_time < end_time:
                 time_str = current_time.strftime('%H:%M')
@@ -192,8 +204,8 @@ class AdminCalendarAPIView(APIView):
                     # 2. Проверяем частичные блокировки (по времени)
                     for b in blocked_slots:
                         if b.start_time and b.end_time:
-                            b_start = datetime.combine(current_date, b.start_time)
-                            b_end = datetime.combine(current_date, b.end_time)
+                            b_start = timezone.make_aware(datetime.combine(current_date, b.start_time), current_tz)
+                            b_end = timezone.make_aware(datetime.combine(current_date, b.end_time), current_tz)
                             if b_start <= current_time < b_end:
                                 slot_status = 'blocked'
                                 break
@@ -202,10 +214,15 @@ class AdminCalendarAPIView(APIView):
                     if slot_status == 'free':
                         for booking in bookings:
                             booking_start = booking.appointment_datetime
-                            # Считаем длительность
+                            
+                            # Защита от нулевой длительности
                             duration = sum(s.duration for s in booking.services.all() if s.duration)
+                            if not duration or duration <= 0:
+                                duration = 30
+                                
                             booking_end = booking_start + timedelta(minutes=duration)
                             
+                            # Если текущий слот попадает в интервал записи
                             if booking_start <= current_time < booking_end:
                                 slot_status = 'booked'
                                 booking_data = {
