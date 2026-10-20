@@ -1,5 +1,5 @@
 from django.urls import path
-from . import views
+from . import views, api
 from .apps import GenPostsAppConfig
 
 app_name = GenPostsAppConfig.name
@@ -16,4 +16,5 @@ urlpatterns = [
     
     path('articles/', views.articles_list, name='articles_list'),
     path('articles/<slug:slug>/', views.article_detail, name='article_detail'),
+    path('api/app-blog/', api.AdminBlogArticlesAPIView.as_view(), name='api_app_blog'),
 ]
