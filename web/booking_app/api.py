@@ -11,7 +11,7 @@ from rest_framework.permissions import IsAuthenticated, AllowAny
 from .models import Booking, BlockedSlot
 from .serializers import BookingSerializer, BlockDaySerializer
 
-from beauty_app.models import Service
+from beauty_app.models import Service, ServiceCategory
 from .models import BlockedSlot
 from .serializers import BlockDaySerializer # он у нас уже есть
 
@@ -301,12 +301,24 @@ class ServiceListAPIView(APIView):
             data.append({
                 'id': s.id,
                 'name': s.name,
-                'price': s.price,
-                'category_name': s.category.name if s.category else 'Без категории'
+                'price': int(s.price),  # <-- ОБЯЗАТЕЛЬНО оборачиваем в int()
+                'category_name': s.category.name if s.category else 'Без категории',
+                'category_id': s.category.id if s.category else 0 # <-- Добавим ID категории
             })
             
         return Response({'services': data}, status=status.HTTP_200_OK)
+class AdminCategoriesAPIView(APIView):
+    """
+    GET: Список всех категорий
+    """
+    permission_classes = [IsAuthenticated]
 
+    def get(self, request):
+        categories = ServiceCategory.objects.filter(is_active=True).order_by('order')
+        data = [{'id': c.id, 'name': c.display_name} for c in categories]
+        return Response({'categories': data})
+    
+    
 class AdminBookingsListAPIView(APIView):
     """
     GET: Получить список записей на выбранную дату (по умолчанию — на сегодня)

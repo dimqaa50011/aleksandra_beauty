@@ -65,4 +65,5 @@ urlpatterns = [
     path('api/app-calendar/', api.AdminCalendarAPIView.as_view(), name='api_app_calendar'),
     path('api/app-clients/', api.AdminClientsAPIView.as_view(), name='api_app_clients'),
     path('api/admin-available-times/', api.get_admin_available_times, name='admin_available_times'),
+    path('api/app-categories/', api.AdminCategoriesAPIView.as_view(), name='api_app_categories'),
 ]
