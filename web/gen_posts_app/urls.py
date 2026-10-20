@@ -17,4 +17,6 @@ urlpatterns = [
     path('articles/', views.articles_list, name='articles_list'),
     path('articles/<slug:slug>/', views.article_detail, name='article_detail'),
     path('api/app-blog/', api.AdminBlogArticlesAPIView.as_view(), name='api_app_blog'),
+    path('api/app-ideas/', api.AdminPostIdeasAPIView.as_view(), name='api_app_ideas'),
+    path('api/app-ideas/<int:idea_id>/generate/', api.AdminGeneratePostAPIView.as_view(), name='api_app_generate'),
 ]
