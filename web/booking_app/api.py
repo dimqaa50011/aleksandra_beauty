@@ -203,8 +203,8 @@ class AdminCalendarAPIView(APIView):
         
         # Рабочие часы
         WORK_START = dt_time(9, 0)
-        WORK_END = dt_time(22, 0)
-        SLOT_STEP = 60 # Шаг 1 час
+        WORK_END = dt_time(23, 30)
+        SLOT_STEP = 30 # Шаг 1 час
         
         result = {}
 
@@ -269,7 +269,7 @@ class AdminCalendarAPIView(APIView):
                                     'client_name': booking.client_name,
                                     'phone': booking.phone,
                                     'status': booking.status,
-                                    'services': [s.name for s in booking.services.all()],
+                                    'services': [{'id': s.id, 'name': s.name} for s in booking.services.all()],
                                     'time': booking_start.strftime('%H:%M')
                                 }
                                 break
