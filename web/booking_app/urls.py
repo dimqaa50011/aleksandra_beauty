@@ -1,5 +1,6 @@
 from django.urls import path
 from . import views
+from . import api
 
 app_name = 'booking_app'
 
@@ -49,4 +50,18 @@ urlpatterns = [
     path('admin-dashboard/blocked-slots/', views.BlockedSlotListView.as_view(), name='blocked_slots_list'),
     path('admin-dashboard/blocked-slots/add/', views.BlockedSlotAddView.as_view(), name='blocked_slot_add'),
     path('admin-dashboard/blocked-slots/<int:pk>/delete/', views.BlockedSlotDeleteView.as_view(), name='blocked_slot_delete'),
+    
+    
+    
+    
+    
+    
+    path('api/app-bookings/', api.AdminBookingsListAPIView.as_view(), name='api_app_bookings'),
+    path('api/app-bookings/<int:pk>/status/', api.AdminBookingStatusAPIView.as_view(), name='api_app_booking_status'),
+    path('api/app-block-day/', api.AdminBlockDayAPIView.as_view(), name='api_app_block_day'),
+    path('api/app-services/', api.ServiceListAPIView.as_view(), name='api_app_services'),
+    path('api/app-blocked-slots/', api.AdminBlockedSlotsAPIView.as_view(), name='api_app_blocked_slots'),
+    path('api/app-blocked-slots/<int:pk>/', api.AdminBlockedSlotDeleteAPIView.as_view(), name='api_app_blocked_slot_delete'),
+    path('api/app-calendar/', api.AdminCalendarAPIView.as_view(), name='api_app_calendar'),
+    path('api/app-clients/', api.AdminClientsAPIView.as_view(), name='api_app_clients'),
 ]

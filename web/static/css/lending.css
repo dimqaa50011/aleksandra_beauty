@@ -1219,3 +1219,803 @@ body.menu-open {
   .faq-question { padding: 16px 20px; font-size: .95rem; }
   .faq-answer { padding: 0 20px 16px; }
 }
+
+
+/* =========================================
+   БЛОК КАТЕГОРИЙ (УСЛУГИ)
+   ========================================= */
+
+/* Сетка: делаем адаптивной (4 в ряд на десктопе) */
+.categories-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    gap: 24px;
+    margin-top: 40px;
+}
+
+/* Ссылка-обертка */
+.category-card-link {
+    text-decoration: none;
+    color: inherit;
+    display: block;
+    height: 100%;
+}
+
+/* Сама карточка */
+.category-card {
+    background: #ffffff;
+    border-radius: 20px;
+    padding: 32px 24px;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start; /* Выравниваем по левому краю */
+    justify-content: flex-start;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.03);
+    border: 1px solid #f0e8e5;
+    transition: transform 0.3s ease, box-shadow 0.3s ease, border-color 0.3s ease;
+}
+
+/* Эффект наведения */
+.category-card-link:hover .category-card {
+    transform: translateY(-4px);
+    box-shadow: 0 12px 30px rgba(0, 0, 0, 0.08);
+    border-color: #f2a6b0; /* Ваш розовый акцент */
+}
+
+/* Иконка (эмодзи) */
+.category-card .icon {
+    font-size: 32px;
+    line-height: 1;
+    margin-bottom: 16px;
+    display: inline-block;
+}
+
+/* Заголовок категории (h3) */
+.category-card h3 {
+    font-size: 1.15rem;
+    font-weight: 600;
+    color: #2d2a28;
+    margin: 0 0 8px 0;
+    line-height: 1.3;
+}
+
+/* Описание категории (если есть) */
+.category-card p {
+    font-size: 0.9rem;
+    color: #6b5f5a;
+    margin: 0;
+    line-height: 1.5;
+}
+
+/* Мобильная адаптация */
+@media (max-width: 768px) {
+    .categories-grid {
+        grid-template-columns: repeat(2, 1fr); /* 2 в ряд на телефоне */
+        gap: 16px;
+    }
+    
+    .category-card {
+        padding: 20px 16px;
+    }
+    
+    .category-card .icon {
+        font-size: 24px;
+        margin-bottom: 12px;
+    }
+    
+    .category-card h3 {
+        font-size: 1rem;
+    }
+}
+
+
+/* =========================================
+   ПОЛНОШИРИННЫЙ СПИСОК УСЛУГ
+   ========================================= */
+
+.services-list-full {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    margin-top: 40px;
+}
+
+.service-row-link {
+    text-decoration: none;
+    display: block;
+    border-radius: 20px;
+    overflow: hidden;
+}
+
+.service-row {
+    position: relative;
+    /* Уменьшили высоту, чтобы блоки не были такими огромными */
+    min-height: 120px; 
+    display: flex;
+    align-items: center;
+    padding: 24px 40px;
+    /* Красивый фон по умолчанию, если картинки не загрузятся */
+    background-color: #faf9f8; 
+    border: 1px solid #f0e8e5;
+    transition: transform 0.4s ease, box-shadow 0.4s ease, border-color 0.4s ease;
+}
+
+.service-row-link:hover .service-row {
+    transform: translateY(-2px);
+    box-shadow: 0 12px 24px rgba(0,0,0,0.06);
+    border-color: #f2a6b0;
+}
+
+/* Фон-картинка */
+.service-row-bg {
+    position: absolute;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background-size: cover;
+    background-position: center;
+    transition: transform 0.8s ease;
+    z-index: 1;
+}
+
+.service-row-link:hover .service-row-bg {
+    transform: scale(1.03);
+}
+
+/* Затемнение (делаем его мягче, чтобы текст читался поверх любой картинки) */
+.service-row-overlay {
+    position: absolute;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: linear-gradient(90deg, rgba(255, 255, 255, 0.9) 0%, rgba(255, 255, 255, 0.4) 60%, transparent 100%);
+    z-index: 2;
+}
+
+/* Если картинки нет, фон остается светлым, поэтому текст делаем темным */
+.service-row-content {
+    position: relative;
+    z-index: 3;
+    width: 100%;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    /* Темный цвет текста для светлого фона */
+    color: #2d2a28; 
+}
+
+.service-row-content h3 {
+    font-size: 1.4rem;
+    font-weight: 600;
+    margin: 0;
+    line-height: 1.2;
+}
+
+.service-row-content p {
+    font-size: 0.95rem;
+    color: #6b5f5a;
+    margin: 4px 0 0 0;
+    max-width: 500px;
+}
+
+.service-row-arrow {
+    font-size: 1.5rem;
+    color: #2d2a28;
+    opacity: 0.5;
+    transition: transform 0.3s ease, opacity 0.3s ease;
+    flex-shrink: 0;
+    margin-left: 20px;
+}
+
+.service-row-link:hover .service-row-arrow {
+    transform: translateX(8px);
+    opacity: 1;
+    color: #f2a6b0;
+}
+
+/* Мобильная версия */
+@media (max-width: 768px) {
+    .service-row {
+        min-height: 100px;
+        padding: 20px 24px;
+    }
+    .service-row-content h3 {
+        font-size: 1.2rem;
+    }
+    .service-row-content p {
+        display: none; /* На телефоне скрываем описание, чтобы не перегружать */
+    }
+}
+
+.service-row {
+    position: relative;
+    min-height: 120px; 
+    display: flex;
+    align-items: center;
+    padding: 24px 40px;
+    background-color: #ffffff; /* Чистый белый фон */
+    border-radius: 20px;
+    border: 1px solid #f0e8e5; /* Очень нежная базовая рамка */
+    /* Плавный переход для всех эффектов */
+    transition: transform 0.3s ease, box-shadow 0.3s ease, border-color 0.3s ease;
+}
+
+/* Мягкий ховер: подъем и тень, БЕЗ резкой розовой рамки */
+.service-row-link:hover .service-row {
+    transform: translateY(-4px); /* Карточка мягко всплывает */
+    box-shadow: 0 12px 30px rgba(0, 0, 0, 0.06); /* Мягкая серая тень */
+    border-color: #e8deda; /* Рамка лишь чуть темнеет, без кричащего розового */
+}
+
+/* Убираем градиент-заглушку, если нет картинок */
+.service-row-overlay {
+    display: none; /* Если картинки не загружаются, градиент только мешает */
+}
+
+/* =========================================
+   СЕКЦИЯ "О НАС"
+   ========================================= */
+.about-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 64px;
+    align-items: center;
+}
+
+.about-text {
+    font-size: 1.05rem;
+    color: #6b5f5a;
+    line-height: 1.7;
+    margin-bottom: 16px;
+}
+
+/* Красивый список преимуществ */
+.about-features-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.about-features-list li {
+    display: flex;
+    align-items: flex-start;
+    gap: 16px;
+    background: #ffffff;
+    padding: 16px 20px;
+    border-radius: 16px;
+    border: 1px solid #f0e8e5;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.02);
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.about-features-list li:hover {
+    transform: translateX(4px);
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.04);
+    border-color: #e8deda;
+}
+
+.feature-icon {
+    font-size: 1.4rem;
+    line-height: 1;
+    flex-shrink: 0;
+}
+
+.feature-text {
+    font-size: 1rem;
+    color: #2d2a28;
+    font-weight: 500;
+    line-height: 1.4;
+    margin-top: 2px;
+}
+
+/* Фотография */
+.about-image-wrapper {
+    position: relative;
+    border-radius: 24px;
+    overflow: hidden;
+    aspect-ratio: 4/5; /* Вертикальное фото для баланса */
+    box-shadow: 0 16px 40px rgba(0, 0, 0, 0.08);
+}
+
+.about-image {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+    transition: transform 0.6s ease;
+}
+
+.about-image-wrapper:hover .about-image {
+    transform: scale(1.03);
+}
+
+/* Мобильная версия */
+@media (max-width: 900px) {
+    .about-grid {
+        grid-template-columns: 1fr;
+        gap: 40px;
+    }
+    
+    /* На телефоне фото ставим первым (или можно убрать) */
+    .about-image-wrapper {
+        order: -1; 
+        aspect-ratio: 16/9; /* Горизонтальное фото для мобилки */
+    }
+}
+
+
+.about-features-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.about-features-list li {
+    font-size: 1.05rem;
+    color: #2d2a28;
+    font-weight: 500;
+    background: #ffffff;
+    padding: 16px 20px;
+    border-radius: 16px;
+    border: 1px solid #f0e8e5;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.02);
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.about-features-list li:hover {
+    transform: translateX(4px);
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.04);
+    border-color: #e8deda;
+}
+
+/* =========================================
+   БЛОК МАСТЕРА
+   ========================================= */
+.master-block {
+    display: grid;
+    grid-template-columns: 4fr 5fr; /* Фото чуть уже, чем текст */
+    gap: 64px;
+    align-items: center;
+    background: #fcf9f7; /* Нежный фон, чтобы выделить блок */
+    border-radius: 32px;
+    padding: 48px;
+    border: 1px solid #f0e8e5;
+}
+
+.master-image-wrapper {
+    border-radius: 24px;
+    overflow: hidden;
+    aspect-ratio: 3/4; /* Портретный формат */
+    box-shadow: 0 12px 32px rgba(0, 0, 0, 0.08);
+}
+
+.master-img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+}
+
+.master-img-placeholder {
+    width: 100%;
+    height: 100%;
+    background: #e8deda;
+}
+
+.master-content {
+    display: flex;
+    flex-direction: column;
+}
+
+.master-content .section-title {
+    font-size: 1rem;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: #9b8f8a;
+    margin-bottom: 8px;
+}
+
+.master-name {
+    font-size: 2.2rem;
+    font-weight: 700;
+    color: #2d2a28;
+    margin: 0 0 4px 0;
+}
+
+.master-title {
+    font-size: 1rem;
+    color: #f2a6b0; /* Фирменный розовый */
+    font-weight: 600;
+    margin-bottom: 24px;
+}
+
+.master-text {
+    font-size: 1.05rem;
+    color: #6b5f5a;
+    line-height: 1.7;
+    margin-bottom: 40px; /* Добавили отступ, чтобы кнопка не прилипала к тексту */
+}
+
+.master-actions {
+    display: flex;
+    gap: 16px;
+    align-items: center;
+    margin-top: 8px; /* Дополнительный отступ сверху для кнопок */
+}
+
+/* На всякий случай убедимся, что у кнопки правильные отступы внутри */
+.master-actions .btn-primary-large {
+    padding: 16px 36px; 
+    display: inline-flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.btn-master-social {
+    color: #6b5f5a;
+    text-decoration: none;
+    font-weight: 600;
+    font-size: 0.95rem;
+    padding: 14px 24px;
+    border-radius: 60px;
+    border: 1px solid #e8deda;
+    background: transparent;
+    transition: all 0.2s;
+}
+
+.btn-master-social:hover {
+    background: #ffffff;
+    color: #2d2a28;
+}
+
+/* Адаптив */
+@media (max-width: 900px) {
+    .master-block {
+        grid-template-columns: 1fr;
+        padding: 32px 24px;
+        gap: 32px;
+    }
+    .master-image-wrapper {
+        aspect-ratio: 1/1; /* Квадратное фото на телефоне */
+        max-width: 300px;
+        margin: 0 auto;
+    }
+    .master-actions {
+        flex-direction: column;
+        align-items: stretch;
+    }
+    .master-actions .btn-primary-large,
+    .btn-master-social {
+        text-align: center;
+    }
+}   
+
+
+.master-block .btn-primary-large {
+    width: auto;
+    align-self: flex-start; /* Прижимаем кнопку к левому краю */
+    margin-top: 0;
+}
+
+
+/* =========================================
+   БЛОК ОТЗЫВОВ
+   ========================================= */
+.reviews-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 24px;
+    margin-top: 40px;
+}
+
+.review-card {
+    background: #ffffff;
+    border: 1px solid #f0e8e5;
+    border-radius: 20px;
+    padding: 32px;
+    display: flex;
+    flex-direction: column;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.02);
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.review-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 12px 30px rgba(0, 0, 0, 0.06);
+    border-color: #e8deda;
+}
+
+.review-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 16px;
+}
+
+.review-stars {
+    color: #f5b342; /* Золотой цвет звезд */
+    font-size: 1.2rem;
+    letter-spacing: 2px;
+}
+
+.review-date {
+    font-size: 0.85rem;
+    color: #9b8f8a;
+}
+
+.review-text {
+    font-size: 1rem;
+    color: #4a3f3a;
+    line-height: 1.6;
+    margin-bottom: 24px;
+    flex-grow: 1; /* Растягивает текст, чтобы футер был всегда внизу */
+    font-style: italic;
+}
+
+.review-footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+    border-top: 1px solid #f0e8e5;
+    padding-top: 16px;
+}
+
+.review-author {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.author-name {
+    font-weight: 700;
+    color: #2d2a28;
+}
+
+.author-service {
+    font-size: 0.85rem;
+    color: #6b5f5a;
+}
+
+.review-source {
+    font-size: 0.8rem;
+    color: #f2a6b0;
+    text-decoration: none;
+    font-weight: 600;
+}
+
+.review-source:hover {
+    color: #e8919c;
+}
+
+.text-center {
+    text-align: center;
+}
+
+.section-subtitle {
+    color: #6b5f5a;
+    margin-top: -8px;
+    margin-bottom: 0;
+}   
+
+
+/* =========================================
+   ПЛАВАЮЩАЯ КНОПКА ДЛЯ МОБИЛЬНЫХ
+   ========================================= */
+.mobile-sticky-cta {
+    display: none; /* По умолчанию скрыта (на десктопе) */
+}
+
+@media (max-width: 768px) {
+    .mobile-sticky-cta {
+        display: block;
+        position: fixed;
+        bottom: 0;
+        left: 0;
+        width: 100%;
+        background: #ffffff;
+        padding: 12px 16px;
+        box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.08);
+        z-index: 999; /* Поверх всего контента */
+        /* Учитываем безопасную зону на iPhone (чтобы не перекрывала полоску) */
+        padding-bottom: calc(12px + env(safe-area-inset-bottom));
+    }
+
+    .sticky-btn {
+        display: block;
+        width: 100%;
+        background: #f2a6b0; /* Ваш розовый цвет */
+        color: #ffffff;
+        text-align: center;
+        padding: 16px;
+        border-radius: 60px;
+        font-weight: 600;
+        font-size: 1.05rem;
+        text-decoration: none;
+        box-shadow: 0 4px 12px rgba(242, 166, 176, 0.4);
+        transition: background 0.2s ease, transform 0.2s ease;
+    }
+
+    .sticky-btn:active {
+        background: #e8919c;
+        transform: scale(0.98); /* Эффект нажатия */
+    }
+
+    /* Чтобы кнопка не перекрывала подвал сайта */
+    body {
+        padding-bottom: 80px; 
+    }
+}
+
+
+/* =========================================
+   ГЛАВНЫЙ ЭКРАН (HERO) - БАННЕР
+   ========================================= */
+.hero {
+    position: relative;
+    min-height: 85vh; /* Занимает почти весь экран */
+    display: flex;
+    align-items: center;
+    overflow: hidden;
+    padding: 0;
+    background: #2d2a28; /* Темный фон на случай, если картинка не загрузится */
+}
+
+/* Фоновое изображение */
+.hero-bg {
+    position: absolute;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background-size: cover;
+    background-position: center;
+    z-index: 1;
+    /* Легкий эффект параллакса при прокрутке можно добавить позже */
+}
+
+/* Затемнение поверх фото */
+.hero-overlay {
+    position: absolute;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: linear-gradient(135deg, rgba(45, 42, 40, 0.85) 0%, rgba(45, 42, 40, 0.4) 100%);
+    z-index: 2;
+}
+
+/* Контейнер с контентом */
+.hero-content-wrapper {
+    position: relative;
+    z-index: 3;
+    width: 100%;
+    padding-top: 100px; /* Отступ от шапки */
+    padding-bottom: 60px;
+}
+
+.hero-content {
+    max-width: 650px; /* Текст не растягивается на весь экран */
+    color: #ffffff;
+}
+
+.hero-content h1 {
+    font-size: 3.2rem;
+    font-weight: 700;
+    line-height: 1.15;
+    margin-bottom: 24px;
+    letter-spacing: -1px;
+}
+
+.hero-content h1 span {
+    color: #f2a6b0; /* Розовый акцент в заголовке */
+}
+
+.hero-content .sub {
+    font-size: 1.2rem;
+    color: rgba(255, 255, 255, 0.85);
+    line-height: 1.6;
+    margin-bottom: 40px;
+}
+.hero-content h1 {
+    font-size: 3.5rem;
+    line-height: 1.1;
+    letter-spacing: -1.5px; /* Текст выглядит более сжатым и стильным */
+    margin-bottom: 20px;
+    text-shadow: 0 2px 10px rgba(0,0,0,0.2); /* Легкая тень для читаемости */
+}
+
+.hero-content .sub {
+    font-size: 1.2rem;
+    color: rgba(255, 255, 255, 0.9);
+    margin-bottom: 32px;
+    text-shadow: 0 1px 5px rgba(0,0,0,0.2);
+}
+/* Кнопка */
+.hero-content .btn-primary-large {
+    display: inline-block;
+    background: #f2a6b0;
+    color: #ffffff;
+    padding: 18px 48px;
+    border-radius: 60px;
+    font-weight: 600;
+    font-size: 1.1rem;
+    text-decoration: none;
+    transition: all 0.3s ease;
+    box-shadow: 0 8px 24px rgba(242, 166, 176, 0.4);
+    margin-bottom: 48px;
+}
+
+.hero-content .btn-primary-large:hover {
+    background: #e8919c;
+    transform: translateY(-4px);
+    box-shadow: 0 12px 32px rgba(242, 166, 176, 0.6);
+}
+
+/* Статистика */
+/* Статистика */
+.hero-stats {
+    display: flex;
+    gap: 48px;
+    border-top: 1px solid rgba(255, 255, 255, 0.2);
+    padding-top: 32px;
+    margin-top: 48px;
+}
+
+.hero-stats .stat {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+/* Принудительно делаем текст белым */
+.hero-stats .number {
+    font-size: 2rem;
+    font-weight: 700;
+    color: #ffffff !important; /* Добавляем !important, чтобы перебить старые стили */
+}
+
+.hero-stats .label {
+    font-size: 0.9rem;
+    color: rgba(255, 255, 255, 0.8) !important;
+}
+/* Мобильная версия */
+@media (max-width: 768px) {
+    .hero {
+        min-height: 100vh;
+    }
+    .hero-content h1 {
+        font-size: 2.2rem;
+    }
+    .hero-content .sub {
+        font-size: 1rem;
+    }
+    .hero-content .btn-primary-large {
+        width: 100%;
+        text-align: center;
+        padding: 16px 24px;
+    }
+    .hero-stats {
+        gap: 24px;
+        flex-wrap: wrap;
+    }
+    .hero-stats .number {
+        font-size: 1.6rem;
+    }
+}
+
+/* Слайдер */
+.hero-slider {
+    position: absolute;
+    top: 0; left: 0; right: 0; bottom: 0;
+    z-index: 1;
+}
+
+.hero-slide {
+    position: absolute;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background-size: cover;
+    background-position: center;
+    opacity: 0;
+    transition: opacity 1.5s ease-in-out; /* Плавное затухание */
+}
+
+.hero-slide.active {
+    opacity: 1;
+}

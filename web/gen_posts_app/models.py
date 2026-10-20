@@ -1,5 +1,50 @@
 from django.db import models
+from django.utils.text import slugify
+from django.urls import reverse
 
+class BlogArticle(models.Model):
+    """Модель для полноценных статей в блоге на сайте"""
+    
+    title = models.CharField('Заголовок', max_length=200)
+    
+    # Слаг для красивого URL (например: /blog/kak-uhazhivat-za-kozhey/)
+    slug = models.SlugField('URL-адрес (слаг)', max_length=200, unique=True, blank=True, 
+                            help_text="Оставьте пустым для автозаполнения из заголовка")
+    
+    # SEO
+    seo_description = models.TextField('SEO-описание', blank=True, 
+                                       help_text="Для поисковиков (до 160 символов)")
+    
+    # Контент
+    image = models.ImageField('Обложка статьи', upload_to='blog/', blank=True, null=True)
+    excerpt = models.TextField('Краткое описание (анонс)', max_length=300, blank=True, 
+                               help_text="Показывается в списке статей")
+    content = models.TextField('Текст статьи', help_text="Можно использовать HTML или Markdown")
+    
+    # Метаданные
+    created_at = models.DateTimeField('Дата публикации', auto_now_add=True)
+    updated_at = models.DateTimeField('Обновлено', auto_now=True)
+    is_published = models.BooleanField('Опубликовано', default=True)
+    
+    # Просмотры (чтобы показывать "популярные статьи")
+    views_count = models.PositiveIntegerField('Просмотры', default=0)
+
+    class Meta:
+        verbose_name = 'Статья блога'
+        verbose_name_plural = 'Статьи блога'
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return self.title
+
+    def save(self, *args, **kwargs):
+        # Автоматически генерируем слаг, если он не заполнен
+        if not self.slug:
+            self.slug = slugify(self.title, allow_unicode=True)
+        super().save(*args, **kwargs)
+
+    def get_absolute_url(self):
+        return reverse('blog_app:blog_article_detail', kwargs={'slug': self.slug})
 
 class PostIdea(models.Model):
     """Таблица идей для постов"""

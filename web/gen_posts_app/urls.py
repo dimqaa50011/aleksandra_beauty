@@ -13,4 +13,7 @@ urlpatterns = [
     path('<int:idea_id>/<int:post_id>/status/', 
          views.UpdatePostStatusView.as_view(), 
          name='update_post_status'),
+    
+    path('articles/', views.articles_list, name='articles_list'),
+    path('articles/<slug:slug>/', views.article_detail, name='article_detail'),
 ]

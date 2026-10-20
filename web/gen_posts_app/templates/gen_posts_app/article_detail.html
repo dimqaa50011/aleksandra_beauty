@@ -1,0 +1,208 @@
+{% extends 'lending_base.html' %}
+{% load static %}
+
+{% block title %}{{ article.title }} — Sasha Sugar{% endblock %}
+{% block description %}{{ article.seo_description|default:article.excerpt }}{% endblock %}
+{% block og_title %}{{ article.title }} — Sasha Sugar{% endblock %}
+{% block og_description %}{{ article.seo_description|default:article.excerpt }}{% endblock %}
+{% block og_image %}{% if article.image %}https://sasha-sugar.ru{{ article.image.url }}{% else %}https://sasha-sugar.ru{% static 'images/og-cover.jpg' %}{% endif %}{% endblock %}
+
+{% block content %}
+<article class="article-page">
+    
+    <!-- Обложка на всю ширину -->
+    {% if article.image %}
+    <div class="article-hero">
+        <img src="{{ article.image.url }}" alt="{{ article.title }}">
+    </div>
+    {% endif %}
+
+    <div class="container article-body-container">
+        <div class="article-header">
+            <div class="article-meta">
+                <span>{{ article.created_at|date:"d E Y" }}</span>
+                <span class="sep">•</span>
+                <span>Автор: Александра Сахарова</span>
+            </div>
+            <h1 class="article-main-title">{{ article.title }}</h1>
+        </div>
+
+        <!-- Текст статьи (safe позволяет выводить HTML из админки) -->
+        <div class="article-text">
+            {{ article.content|safe }}
+        </div>
+
+        <!-- Блок записи в конце статьи -->
+        <div class="article-cta">
+            <h3>Хотите доверить свою красоту профессионалу?</h3>
+            <p>Запишитесь на консультацию или процедуру в нашей студии.</p>
+            <a href="{% url 'booking_app:booking_create' %}" class="btn btn-primary-large">Записаться к мастеру</a>
+        </div>
+
+        <div class="article-back">
+            <a href="{% url 'gen_posts_app:articles_list' %}">← Все статьи</a>
+        </div>
+    </div>
+</article>
+
+<style>
+    .article-page {
+        padding-top: 100px;
+        padding-bottom: 80px;
+    }
+
+    /* Широкая обложка */
+    .article-hero {
+        width: 100%;
+        height: 400px;
+        margin-bottom: 48px;
+        overflow: hidden;
+        border-radius: 32px;
+        max-width: 1200px;
+        margin-left: auto;
+        margin-right: auto;
+    }
+
+    .article-hero img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        display: block;
+    }
+
+    .article-body-container {
+        max-width: 760px; /* Узкий столбец для чтения */
+    }
+
+    .article-header {
+        margin-bottom: 32px;
+        text-align: center;
+    }
+
+    .article-meta {
+        font-size: 0.9rem;
+        color: #9b8f8a;
+        margin-bottom: 16px;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        gap: 8px;
+    }
+
+    .article-meta .sep {
+        color: #e8deda;
+    }
+
+    .article-main-title {
+        font-size: 2.6rem;
+        font-weight: 700;
+        color: #2d2a28;
+        line-height: 1.2;
+        letter-spacing: -0.5px;
+        margin: 0;
+    }
+
+    /* Типографика текста */
+    .article-text {
+        font-size: 1.1rem;
+        color: #4a3f3a;
+        line-height: 1.8;
+    }
+
+    .article-text p {
+        margin-bottom: 24px;
+    }
+
+    .article-text h2 {
+        font-size: 1.6rem;
+        color: #2d2a28;
+        margin: 40px 0 20px 0;
+        font-weight: 700;
+    }
+
+    .article-text h3 {
+        font-size: 1.3rem;
+        color: #2d2a28;
+        margin: 32px 0 16px 0;
+        font-weight: 600;
+    }
+
+    .article-text ul, .article-text ol {
+        margin-bottom: 24px;
+        padding-left: 24px;
+    }
+
+    .article-text li {
+        margin-bottom: 8px;
+    }
+
+    .article-text img {
+        max-width: 100%;
+        height: auto;
+        border-radius: 16px;
+        margin: 32px 0;
+    }
+
+    .article-text blockquote {
+        border-left: 4px solid #f2a6b0;
+        padding-left: 20px;
+        margin: 32px 0;
+        font-style: italic;
+        color: #6b5f5a;
+    }
+
+    /* Блок с призывом (CTA) */
+    .article-cta {
+        background: #fcf9f7;
+        border: 1px solid #f0e8e5;
+        border-radius: 24px;
+        padding: 40px;
+        text-align: center;
+        margin-top: 64px;
+    }
+
+    .article-cta h3 {
+        font-size: 1.4rem;
+        color: #2d2a28;
+        margin: 0 0 12px 0;
+    }
+
+    .article-cta p {
+        color: #6b5f5a;
+        margin-bottom: 24px;
+    }
+
+    .article-cta .btn-primary-large {
+        display: inline-block;
+        width: auto;
+    }
+
+    .article-back {
+        margin-top: 40px;
+        text-align: center;
+    }
+
+    .article-back a {
+        color: #9b8f8a;
+        text-decoration: none;
+        font-weight: 600;
+        transition: color 0.2s;
+    }
+
+    .article-back a:hover {
+        color: #f2a6b0;
+    }
+
+    @media (max-width: 768px) {
+        .article-page { padding-top: 80px; }
+        .article-hero {
+            height: 250px;
+            border-radius: 0;
+            margin-bottom: 32px;
+        }
+        .article-main-title { font-size: 1.8rem; }
+        .article-text { font-size: 1rem; }
+        .article-cta { padding: 24px; }
+    }
+</style>
+{% endblock content %}

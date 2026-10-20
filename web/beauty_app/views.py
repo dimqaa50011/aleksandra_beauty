@@ -5,6 +5,9 @@ from django.urls import reverse_lazy
 from django.shortcuts import render, get_object_or_404
 
 from .models import (
+    AboutBlock,
+    HeroSlide,
+    MasterBlock,
     SiteSettings,
     HeroBlock,
     ServiceCategory,
@@ -57,6 +60,10 @@ class LandingView(TemplateView):
         context['reviews'] = Review.objects.filter(is_active=True)
         context['menu_items'] = MenuItem.objects.filter(is_active=True)
         context['footer_links'] = FooterLink.objects.filter(is_active=True)
+        context['about'] = AboutBlock.objects.filter(is_active=True).first()
+        context['master'] = MasterBlock.objects.filter(is_active=True).first()
+        context['reviews'] = Review.objects.filter(is_active=True).order_by('-created_at')[:6]
+        context['hero_slides'] = HeroSlide.objects.filter(is_active=True)
         return context
 
 

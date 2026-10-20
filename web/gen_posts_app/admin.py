@@ -1,3 +1,9 @@
 from django.contrib import admin
+from .import models
 
-# Register your models here.
+@admin.register(models.BlogArticle)
+class BlogArticleAdmin(admin.ModelAdmin):
+    list_display = ('title', 'is_published', 'views_count', 'created_at')
+    prepopulated_fields = {'slug': ('title',)}
+    list_filter = ('is_published', 'created_at')
+    search_fields = ('title', 'content')

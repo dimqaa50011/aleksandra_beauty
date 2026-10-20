@@ -115,3 +115,20 @@ class UpdatePostStatusView(AdminRequiredMixin, View):
             messages.success(request, f'Пост возвращён в черновики')
         
         return redirect('gen_posts_app:idea_posts', idea_id=idea_id)
+
+from .models import BlogArticle  # Импортируем новую модель
+
+def articles_list(request):
+    """Страница со списком статей блога (для сайта)"""
+    articles = BlogArticle.objects.filter(is_published=True)
+    return render(request, 'gen_posts_app/articles_list.html', {'articles': articles})
+
+def article_detail(request, slug):
+    """Страница конкретной статьи"""
+    article = get_object_or_404(BlogArticle, slug=slug, is_published=True)
+    
+    # Увеличиваем счетчик просмотров
+    article.views_count += 1
+    article.save(update_fields=['views_count'])
+    
+    return render(request, 'gen_posts_app/article_detail.html', {'article': article})

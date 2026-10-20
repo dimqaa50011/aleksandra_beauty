@@ -2,6 +2,18 @@ from django.contrib import admin
 from . import models
 
 
+@admin.register(models.MasterBlock)
+class MasterBlockAdmin(admin.ModelAdmin):
+    pass
+
+@admin.register(models.HeroSlide)
+class HeroSlideAdmin(admin.ModelAdmin):
+    pass
+
+@admin.register(models.AboutBlock)
+class AboutBlockAdmin(admin.ModelAdmin):
+    pass
+
 @admin.register(models.FAQ)
 class FAQAdmin(admin.ModelAdmin):
     list_display = ('question', 'order', 'is_active', 'created_at')
@@ -64,9 +76,7 @@ class TrustBlockAdmin(admin.ModelAdmin):
 
 @admin.register(models.Review)
 class ReviewAdmin(admin.ModelAdmin):
-    list_display = ('client_name', 'rating', 'is_active', 'created_at')
-    list_editable = ('rating', 'is_active')
-    search_fields = ('client_name', 'text')
+    pass
 
 
 @admin.register(models.MenuItem)

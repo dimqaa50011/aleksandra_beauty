@@ -39,6 +39,7 @@ urlpatterns = [
     path('admin/', admin.site.urls),
     path('', include('booking_app.urls')),
     path('', include("beauty_app.urls")),
+    path('privacy/', TemplateView.as_view(template_name='privacy_policy.html'), name='privacy_policy'),
     path('posts/', include("gen_posts_app.urls")),
     # Сертификаты (встраиваются в админку, доступ только у админов)
     path('admin-dashboard/certificates/', include('cert_app.urls')),

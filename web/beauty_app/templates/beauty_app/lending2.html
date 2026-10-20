@@ -7,90 +7,205 @@
 
 {% block content %}
 
-    <!-- ГЕРОЙ -->
+        <!-- ГЕРОЙ -->
     <section class="hero" id="hero">
-        <div class="container hero-grid">
+        <!-- Слайдер фонов -->
+        <div class="hero-slider">
+            {% if hero_slides %}
+                {% for slide in hero_slides %}
+                    <div class="hero-slide {% if forloop.first %}active{% endif %}" style="background-image: url('{{ slide.image.url }}');"></div>
+                {% endfor %}
+            {% elif hero and hero.hero_image %}
+                <div class="hero-slide active" style="background-image: url('{{ hero.hero_image.url }}');"></div>
+            {% else %}
+                <!-- Заглушка -->
+                <div class="hero-slide active" style="background-image: url('https://images.unsplash.com/photo-1600948836101-f9ffda59d250?q=80&w=1920&auto=format&fit=crop');"></div>
+            {% endif %}
+        </div>
+        
+        <!-- Затемнение для читаемости текста -->
+        <div class="hero-overlay"></div>
+
+        <div class="container hero-content-wrapper">
             <div class="hero-content">
-
-                <h1>Бьюти-студия Sasha Sugar в СПб:<br /><span>раскрой своё природное сияние</span></h1>
-
+                <h1>{{ hero.title|default:"Бьюти-студия Sasha Sugar в СПб" }}</h1>
+                
                 <p class="sub">
-                    Уход за кожей, аппаратная косметология, подбор домашнего ухода, депиляция, брови и ресницы — всё в одном месте.
+                    {{ hero.subtitle|default:"Уход за кожей, аппаратная косметология, подбор домашнего ухода, депиляция, брови и ресницы — всё в одном месте." }}
                 </p>
-                <a href="{% url 'booking_app:booking_create' %}" class="btn" rel="noopener">Записаться сейчас</a>
+                
+                <a href="{% url 'booking_app:booking_create' %}" class="btn btn-primary-large">
+                    {{ hero.button_text|default:"Записаться сейчас" }}
+                </a>
+                
+                <!-- Статистика -->
                 <div class="hero-stats">
                     <div class="stat">
-                        <span class="number">5K+</span>
-                        <span class="label">Довольных клиентов</span>
+                        <span class="number">{{ hero.stat_1_number|default:"5K+" }}</span>
+                        <span class="label">{{ hero.stat_1_label|default:"Довольных клиентов" }}</span>
                     </div>
                     <div class="stat">
-                        <span class="number">4.8</span>
-                        <span class="label">★ Средний рейтинг</span>
+                        <span class="number">{{ hero.stat_2_number|default:"4.8" }}</span>
+                        <span class="label">{{ hero.stat_2_label|default:"★ Средний рейтинг" }}</span>
                     </div>
                 </div>
             </div>
-
-            {% if hero and hero.hero_image %}
-                <img src="{{ hero.hero_image.url }}"
-                     alt="{{ hero.title|default:'Интерьер бьюти-студии Sasha Sugar в Санкт-Петербурге' }}"
-                     class="hero-image"
-                     width="800" height="800"
-                     fetchpriority="high" />
-            {% else %}
-                <img src="https://images.unsplash.com/photo-1595476108010-b4d1f102b1b1?w=800&auto=format&fit=crop"
-                     alt="Бьюти-мастер в студии Sasha Sugar"
-                     class="hero-image"
-                     width="800" height="800"
-                     fetchpriority="high" />
-            {% endif %}
         </div>
     </section>
 
-    <!-- КАТЕГОРИИ (УСЛУГИ) -->
+        <!-- КАТЕГОРИИ (УСЛУГИ) -->
     {% if categories %}
     <section class="section">
         <div class="container">
             <h2 class="section-title">Наши услуги</h2>
-            <div class="categories-grid">
+            
+            <div class="services-list-full">
                 {% for category in categories %}
-                    <a href="{% url 'beauty_app:category_services' category.id %}" class="category-card-link">
-                        <div class="category-card">
-                            {% if category.icon %}
-                                <span class="icon" aria-hidden="true">{{ category.icon }}</span>
-                            {% endif %}
-                            <h3>{{ category.name }}</h3>
-                            {% if category.description %}
-                                <p>{{ category.description }}</p>
-                            {% endif %}
+                    <a href="{% url 'beauty_app:category_services' category.id %}" class="service-row-link">
+                        <div class="service-row">
+                            
+                            <!-- Если появятся свои фото, их можно вывести здесь как <img> -->
+                            
+                            <div class="service-row-content">
+                                <div class="service-text">
+                                    <h3>{{ category.display_name }}</h3>
+                                    {% if category.description %}
+                                        <p>{{ category.description }}</p>
+                                    {% endif %}
+                                </div>
+                                <span class="service-row-arrow" aria-hidden="true">→</span>
+                            </div>
+                            
                         </div>
                     </a>
                 {% endfor %}
+            </div>
+            
+        </div>
+    </section>
+    {% endif %}
+    
+    
+        <!-- О НАС -->
+    {% if about %}
+    <section class="section" id="about">
+        <div class="container">
+            <div class="about-grid">
+                
+                <div class="about-content">
+                    <h2 class="section-title">{{ about.title }}</h2>
+                    
+                    <p class="about-text">{{ about.text|linebreaks }}</p>
+
+                    <ul class="about-features-list">
+                        {% if about.feature_1 %}
+                        <li>{{ about.feature_1 }}</li>
+                        {% endif %}
+                        {% if about.feature_2 %}
+                        <li>{{ about.feature_2 }}</li>
+                        {% endif %}
+                        {% if about.feature_3 %}
+                        <li>{{ about.feature_3 }}</li>
+                        {% endif %}
+                    </ul>
+                </div>
+
+                <div class="about-image-wrapper">
+                    {% if about.image %}
+                        <img src="{{ about.image.url }}" alt="Интерьер бьюти-студии Sasha Sugar" class="about-image" loading="lazy">
+                    {% else %}
+                        <img src="https://images.unsplash.com/photo-1600948836101-f9ffda59d250?q=80&w=800&auto=format&fit=crop" alt="Интерьер бьюти-студии Sasha Sugar" class="about-image" loading="lazy">
+                    {% endif %}
+                </div>
+
+            </div>
+        </div>
+    </section>
+    {% endif %} 
+
+
+    <!-- МАСТЕР -->
+    {% if master %}
+    <section class="section" id="master">
+        <div class="container">
+            <div class="master-block">
+                
+                <!-- Фото мастера -->
+                <div class="master-image-wrapper">
+                    {% if master.image %}
+                        <img src="{{ master.image.url }}" alt="{{ master.name }}" class="master-img" loading="lazy">
+                    {% else %}
+                        <!-- Заглушка, пока нет фото -->
+                        <div class="master-img-placeholder"></div>
+                    {% endif %}
+                </div>
+
+                <!-- Текст о мастере -->
+                <div class="master-content">
+                    <h2 class="section-title">Мастер, которому доверяют</h2>
+                    <h3 class="master-name">{{ master.name }}</h3>
+                    <p class="master-title">{{ master.title }}</p>
+                    
+                    <p class="master-text">{{ master.text|linebreaks }}</p>
+
+                    <!-- Кнопки связи -->
+                    <div class="master-actions">
+                        <a href="{% url 'booking_app:booking_create' %}" class="btn btn-primary-large">Записаться к мастеру</a>
+                        
+                        {% if master.link_telegram %}
+                            <a href="{{ master.link_telegram }}" class="btn-master-social" target="_blank" rel="noopener">Написать в Telegram</a>
+                        {% endif %}
+                    </div>
+                </div>
+
             </div>
         </div>
     </section>
     {% endif %}
 
-    <!-- О НАС -->
-    <section class="section" id="about">
+
+        <!-- ОТЗЫВЫ -->
+    {% if reviews %}
+    <section class="section" id="reviews">
         <div class="container">
-            <div class="about-grid">
-                <div class="about-content">
-                    <h2 class="section-title">Мы создаем красоту <br /><span>с любовью к деталям</span></h2>
-                    <p class="about-text">
-                        Sasha Sugar — это пространство, где профессионализм встречается с уютом.
-                        Мы используем только сертифицированные материалы и современное оборудование,
-                        чтобы подчеркнуть вашу естественную красоту. Наша команда — это опытные мастера,
-                        которые постоянно повышают свою квалификацию и следят за мировыми трендами в бьюти-индустрии.
-                    </p>
-                    <ul class="about-features">
-                        <li>✨ Сертифицированные мастера с опытом от 5 лет</li>
-                        <li>Гипоаллергенная и премиальная косметика</li>
-                        <li>☕ Уютная атмосфера и чайная церемония для каждого гостя</li>
-                    </ul>
+            <h2 class="section-title text-center">Что о нас говорят</h2>
+            <p class="section-subtitle text-center">Реальные отзывы наших клиентов</p>
+
+            <div class="reviews-grid">
+                {% for review in reviews %}
+                <div class="review-card">
+                    <div class="review-header">
+                        <div class="review-stars">
+                            {% for i in "12345"|make_list %}
+                                {% if forloop.counter <= review.rating %}
+                                    ★
+                                {% else %}
+                                    ☆
+                                {% endif %}
+                            {% endfor %}
+                        </div>
+                        <span class="review-date">{{ review.created_at|date:"d M Y" }}</span>
+                    </div>
+                    
+                    <p class="review-text">«{{ review.text }}»</p>
+                    
+                    <div class="review-footer">
+                        <div class="review-author">
+                            <span class="author-name">{{ review.author_name }}</span>
+                            {% if review.service_name %}
+                                <span class="author-service">{{ review.service_name }}</span>
+                            {% endif %}
+                        </div>
+                        {% if review.source_url %}
+                            <a href="{{ review.source_url }}" class="review-source" target="_blank" rel="noopener nofollow">Источник</a>
+                        {% endif %}
+                    </div>
                 </div>
+                {% endfor %}
             </div>
         </div>
     </section>
+    {% endif %}
 
     <!-- КОНТАКТЫ -->
     <section class="section" id="contacts" style="background-color: #faf9f8;">
@@ -128,11 +243,11 @@
                         </div>
                     </div>
 
-                    <a href="https://spb.moiprofi.ru/aleksandrasaharova/" class="btn" style="margin-top: 24px; display: inline-block; text-align: center;" target="_blank" rel="noopener nofollow">
+                    <a href="{% url 'booking_app:booking_create' %}" class="btn" style="margin-top: 24px; display: inline-block; text-align: center;" target="_blank" rel="noopener nofollow">
                         Записаться онлайн
                     </a>
                 </div>
-
+                
                 <div class="contact-map">
                     <div class="map-wrapper">
                         <iframe src="https://yandex.ru/map-widget/v1/?um=constructor%3A7061c1ee1fa2d23b9bf1312525474d32e6e427449bf3a521d2ab3c5311042c92&amp;source=constructor"
@@ -197,7 +312,7 @@
         "closes": "22:00"
       }],
       "sameAs": [
-        "https://spb.moiprofi.ru/aleksandrasaharova/"
+        "{% url 'booking_app:booking_create' %}"
       ]
     }
     </script>
@@ -222,5 +337,22 @@
     }
     </script>
     {% endif %}
-
+    <script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const slides = document.querySelectorAll('.hero-slide');
+        if (slides.length > 1) {
+            let currentIndex = 0;
+            setInterval(() => {
+                slides[currentIndex].classList.remove('active');
+                currentIndex = (currentIndex + 1) % slides.length;
+                slides[currentIndex].classList.add('active');
+            }, 5000); // 5000 мс = 5 секунд
+        }
+    });
+</script>
+<div class="mobile-sticky-cta">
+    <a href="{% url 'booking_app:booking_create' %}" class="sticky-btn">
+        Записаться онлайн
+    </a>
+</div>
 {% endblock content %}
