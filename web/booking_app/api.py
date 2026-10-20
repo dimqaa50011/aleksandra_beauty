@@ -228,10 +228,11 @@ class AdminCalendarAPIView(APIView):
 
         return Response({'calendar': result}, status=200)
 
+
 class AdminBlockedSlotsAPIView(APIView):
     """
-    GET: Список всех активных блокировок (начиная с сегодняшнего дня)
-    POST: Создать новую блокировку
+    GET: Список блокировок
+    POST: Создать блокировку (на весь день или на конкретные часы)
     """
     permission_classes = [IsAuthenticated]
 
@@ -255,7 +256,9 @@ class AdminBlockedSlotsAPIView(APIView):
     def post(self, request):
         date_str = request.data.get('date')
         is_full_day = request.data.get('is_full_day', True)
-        reason = request.data.get('reason', 'Выходной')
+        start_time_str = request.data.get('start_time')
+        end_time_str = request.data.get('end_time')
+        reason = request.data.get('reason', 'Личные дела')
         
         if not date_str:
             return Response({'error': 'Не указана дата'}, status=status.HTTP_400_BAD_REQUEST)
@@ -265,15 +268,55 @@ class AdminBlockedSlotsAPIView(APIView):
         except ValueError:
             return Response({'error': 'Неверный формат даты'}, status=status.HTTP_400_BAD_REQUEST)
 
+        start_time = None
+        end_time = None
+        current_tz = timezone.get_current_timezone()
+
+        if not is_full_day:
+            if not start_time_str or not end_time_str:
+                return Response({'error': 'Укажите время начала и конца'}, status=400)
+                
+            try:
+                start_time = datetime.strptime(start_time_str, '%H:%M').time()
+                end_time = datetime.strptime(end_time_str, '%H:%M').time()
+                if start_time >= end_time:
+                    return Response({'error': 'Время начала должно быть раньше конца'}, status=400)
+            except ValueError:
+                return Response({'error': 'Неверный формат времени'}, status=400)
+
+            # ПРОВЕРКА КОНФЛИКТОВ С ЗАПИСЯМИ
+            block_start_dt = timezone.make_aware(datetime.combine(target_date, start_time), current_tz)
+            block_end_dt = timezone.make_aware(datetime.combine(target_date, end_time), current_tz)
+
+            bookings = Booking.objects.filter(
+                appointment_datetime__date=target_date,
+                status__in=['pending', 'confirmed']
+            ).prefetch_related('services')
+
+            for b in bookings:
+                b_duration = sum(s.duration for s in b.services.all() if s.duration)
+                b_start = b.appointment_datetime
+                b_end = b_start + timedelta(minutes=b_duration)
+
+                # Если запись пересекается с блокировкой
+                if b_start < block_end_dt and b_end > block_start_dt:
+                    return Response({
+                        'error': f'Нельзя заблокировать это время. У вас запись на {b_start.strftime("%H:%M")} ({b.client_name})'
+                    }, status=status.HTTP_409_CONFLICT)
+
+        # Создаем блокировку
         slot = BlockedSlot.objects.create(
             date=target_date,
             is_full_day=is_full_day,
+            start_time=start_time,
+            end_time=end_time,
             reason=reason,
-            slot_type='day_off'
+            slot_type='day_off' if is_full_day else 'personal'
         )
         
         return Response({'success': True, 'id': slot.id}, status=status.HTTP_201_CREATED)
-
+    
+    
 
 class AdminBlockedSlotDeleteAPIView(APIView):
     """
