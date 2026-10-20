@@ -5,6 +5,8 @@ from rest_framework.permissions import IsAuthenticated
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
 from datetime import datetime
+from rest_framework.decorators import api_view, permission_classes
+from rest_framework.permissions import IsAuthenticated, AllowAny
 
 from .models import Booking, BlockedSlot
 from .serializers import BookingSerializer, BlockDaySerializer
@@ -22,6 +24,86 @@ from .models import Booking, BlockedSlot
 
 
 from .models import Client
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def get_admin_available_times(request):
+    """Возвращает свободные слоты для админской формы записи"""
+    date_str = request.GET.get('date')
+    services_ids_str = request.GET.get('services_ids')
+    
+    if not date_str:
+        return Response({'error': 'Не указана дата'}, status=400)
+    
+    try:
+        date = datetime.strptime(date_str, '%Y-%m-%d').date()
+    except ValueError:
+        return Response({'error': 'Неверный формат даты'}, status=400)
+
+    # Если услуги не выбраны, берем стандартную длительность (например, 60 минут)
+    duration_minutes = 60
+    if services_ids_str:
+        try:
+            services_ids = [int(id) for id in services_ids_str.split(',') if id]
+            services = Service.objects.filter(id__in=services_ids, is_active=True)
+            if services.exists():
+                duration_minutes = sum(s.duration for s in services if s.duration)
+        except ValueError:
+            pass
+    
+    # Добавляем буфер 10 минут, как на клиенте
+    total_duration = duration_minutes + 10
+
+    WORK_START, WORK_END, SLOT_STEP = dt_time(9, 0), dt_time(22, 0), 30
+    current_tz = timezone.get_current_timezone()
+    
+    # Проверяем, не заблокирован ли день полностью
+    if BlockedSlot.objects.filter(date=date, is_full_day=True).exists():
+        return Response({'times': [], 'is_blocked': True})
+
+    blocked_slots = BlockedSlot.objects.filter(date=date)
+    existing_bookings = Booking.objects.filter(
+        appointment_datetime__date=date, status__in=['pending', 'confirmed']
+    ).prefetch_related('services')
+
+    available_times = []
+    current_time = WORK_START
+
+    while current_time < WORK_END:
+        slot_start = timezone.make_aware(datetime.combine(date, current_time), current_tz)
+        slot_end = slot_start + timedelta(minutes=total_duration)
+        
+        # Если запись выходит за конец рабочего дня — пропускаем
+        if slot_end.time() > WORK_END:
+            break
+
+        is_free = True
+
+        # Проверка блокировок по времени
+        for blocked in blocked_slots:
+            if blocked.start_time and blocked.end_time:
+                b_start = timezone.make_aware(datetime.combine(date, blocked.start_time), current_tz)
+                b_end = timezone.make_aware(datetime.combine(date, blocked.end_time), current_tz)
+                if slot_start < b_end and slot_end > b_start:
+                    is_free = False
+                    break
+        
+        # Проверка существующих записей
+        if is_free:
+            for booking in existing_bookings:
+                b_duration = sum(s.duration for s in booking.services.all() if s.duration)
+                b_start = booking.appointment_datetime
+                b_end = b_start + timedelta(minutes=b_duration)
+                if slot_start < b_end and slot_end > b_start:
+                    is_free = False
+                    break
+
+        if is_free:
+            available_times.append(current_time.strftime('%H:%M'))
+
+        current_time = (datetime.combine(date, current_time) + timedelta(minutes=SLOT_STEP)).time()
+
+    return Response({'times': available_times, 'is_blocked': False})
 
 class AdminClientsAPIView(APIView):
     """
