@@ -1,6 +1,10 @@
 from django.contrib import admin
-from .models import APIToken, Client, EmailVerificationCode, Booking, DayOff, BlockedSlot, PushSubscription
+from .models import APIToken, Client, EmailVerificationCode, Booking, DayOff, BlockedSlot, PushSubscription, SMSTemplate
 
+
+@admin.register(SMSTemplate)
+class SMSTemplateAdmin(admin.ModelAdmin):
+    pass
 
 
 @admin.register(PushSubscription)
