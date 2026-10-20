@@ -149,13 +149,18 @@ def app_login(request):
     token, _ = Token.objects.get_or_create(user=user)
     print(f"✅ Успешный вход: {username}, токен: {token.key[:20]}...")
     return JsonResponse({'token': token.key, 'username': user.username})
-
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def app_register_fcm_token(request):
+    print(f"📡 Получен запрос на регистрацию FCM!")
+    print(f"🔑 Заголовки: {request.headers}")
+    print(f"👤 Пользователь: {request.user}")
+    
     token = request.data.get('token', '').strip()
     platform = request.data.get('platform', '').strip()
     device_name = request.data.get('device_name', '').strip()
+    
+    print(f"📱 Токен из запроса: {token[:20]}...")
     
     if not token:
         return JsonResponse({'error': 'Token is required'}, status=400)
@@ -164,10 +169,8 @@ def app_register_fcm_token(request):
         token=token,
         defaults={'user': request.user, 'platform': platform, 'device_name': device_name, 'is_active': True}
     )
-    action = 'создан' if created else 'обновлён'
-    print(f"✅ FCM токен {action}: {request.user.username} ({platform})")
+    print(f"✅ FCM токен сохранен в БД! ID: {obj.id}")
     return JsonResponse({'success': True, 'created': created})
-
 
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
