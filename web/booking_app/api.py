@@ -4,32 +4,21 @@ from rest_framework import status
 from rest_framework.permissions import IsAuthenticated
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
-from datetime import datetime
-from rest_framework.decorators import api_view, permission_classes
-from rest_framework.permissions import IsAuthenticated, AllowAny
-
-from .models import Booking, BlockedSlot
-from .serializers import BookingSerializer, BlockDaySerializer
-
-from beauty_app.models import Service, ServiceCategory
-from .models import BlockedSlot
-from .serializers import BlockDaySerializer # он у нас уже есть
-
 from datetime import datetime, timedelta, time as dt_time
-from django.utils import timezone
-from rest_framework.views import APIView
-from rest_framework.response import Response
-from rest_framework.permissions import IsAuthenticated
-from .models import Booking, BlockedSlot
+from rest_framework.decorators import api_view, permission_classes
 
+# Импорты для очереди и задач
+from django_q.tasks import async_task
+from .tasks import schedule_reminders
 
-from .models import Client
-from datetime import datetime
-from django.utils import timezone
+from .models import Booking, BlockedSlot, Client
+from .serializers import BookingSerializer, BlockDaySerializer
+from beauty_app.models import Service, ServiceCategory
+
 
 class AdminBookingUpdateAPIView(APIView):
     """
-    PUT: Обновить запись (время, услуги)
+    PUT: Обновить запись (время, услуги) из мобильного приложения
     """
     permission_classes = [IsAuthenticated]
 
@@ -59,10 +48,20 @@ class AdminBookingUpdateAPIView(APIView):
             booking.save()
             booking.services.set(services)
             
+            # === СБРАСЫВАЕМ ФЛАГИ И ОТПРАВЛЯЕМ SMS ===
+            booking.reminded_24h = False
+            booking.reminded_2h = False
+            booking.reminded_15m = False
+            booking.save()
+            
+            async_task('booking_app.tasks.send_event_sms_task', booking.id, 'edit')
+            schedule_reminders(booking.id, booking.appointment_datetime)
+            
             return Response({'success': True, 'message': 'Запись обновлена'})
             
         except Exception as e:
             return Response({'error': str(e)}, status=500)
+
 
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
@@ -144,6 +143,7 @@ def get_admin_available_times(request):
 
     return Response({'times': available_times, 'is_blocked': False})
 
+
 class AdminClientsAPIView(APIView):
     """
     GET: Список клиентов (CRM) с поиском
@@ -171,13 +171,7 @@ class AdminClientsAPIView(APIView):
             })
 
         return Response({'clients': data}, status=status.HTTP_200_OK)
-from datetime import datetime, timedelta, time as dt_time
-from django.utils import timezone
-from rest_framework.views import APIView
-from rest_framework.response import Response
-from rest_framework import status
-from rest_framework.permissions import IsAuthenticated
-from .models import Booking, BlockedSlot
+
 
 class AdminCalendarAPIView(APIView):
     """
@@ -204,7 +198,7 @@ class AdminCalendarAPIView(APIView):
         # Рабочие часы
         WORK_START = dt_time(9, 0)
         WORK_END = dt_time(23, 30)
-        SLOT_STEP = 30 # Шаг 1 час
+        SLOT_STEP = 30 # Шаг 30 минут
         
         result = {}
 
@@ -371,8 +365,7 @@ class AdminBlockedSlotsAPIView(APIView):
         )
         
         return Response({'success': True, 'id': slot.id}, status=status.HTTP_201_CREATED)
-    
-    
+
 
 class AdminBlockedSlotDeleteAPIView(APIView):
     """
@@ -385,6 +378,7 @@ class AdminBlockedSlotDeleteAPIView(APIView):
         slot.delete()
         return Response({'success': True}, status=status.HTTP_200_OK)
 
+
 class ServiceListAPIView(APIView):
     """
     GET: Возвращает список всех активных услуг для выбора в мобильном приложении
@@ -394,20 +388,19 @@ class ServiceListAPIView(APIView):
     def get(self, request):
         services = Service.objects.filter(is_active=True).order_by('category', 'name')
         
-        # Формируем список для JSON
         data = []
         for s in services:
             data.append({
                 'id': s.id,
                 'name': s.name,
-                'price': int(s.price),  # <-- ОБЯЗАТЕЛЬНО оборачиваем в int()
+                'price': int(s.price),
                 'category_name': s.category.name if s.category else 'Без категории',
-                'category_id': s.category.id if s.category else 0 # <-- Добавим ID категории
+                'category_id': s.category.id if s.category else 0
             })
             
         return Response({'services': data}, status=status.HTTP_200_OK)
-    
-    
+
+
 class AdminCategoriesAPIView(APIView):
     """
     GET: Список всех категорий
@@ -418,8 +411,8 @@ class AdminCategoriesAPIView(APIView):
         categories = ServiceCategory.objects.filter(is_active=True).order_by('order')
         data = [{'id': c.id, 'name': c.display_name} for c in categories]
         return Response({'categories': data})
-    
-    
+
+
 class AdminBookingsListAPIView(APIView):
     """
     GET: Получить список записей на выбранную дату (по умолчанию — на сегодня)
@@ -452,7 +445,7 @@ class AdminBookingsListAPIView(APIView):
 
 class AdminBookingStatusAPIView(APIView):
     """
-    POST: Подтвердить или отменить запись
+    POST: Подтвердить или отменить запись из мобильного приложения
     """
     permission_classes = [IsAuthenticated]
 
@@ -468,6 +461,10 @@ class AdminBookingStatusAPIView(APIView):
             
         booking.status = new_status
         booking.save()
+        
+        # === ОТПРАВЛЯЕМ SMS ПРИ ОТМЕНЕ ===
+        if new_status == 'cancelled':
+            async_task('booking_app.tasks.send_event_sms_task', booking.id, 'cancel')
         
         return Response({
             'success': True, 

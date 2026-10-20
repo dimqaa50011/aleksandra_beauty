@@ -16,6 +16,9 @@ from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_POST
 from django.views.generic import ListView, TemplateView, FormView, View
 
+# Импорты для очереди задач
+from django_q.tasks import async_task
+
 from rest_framework.authtoken.models import Token
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated, AllowAny
@@ -26,6 +29,9 @@ from firebase_admin import credentials, messaging
 from .models import Booking, BlockedSlot, DayOff, DeviceFCMToken, EmailVerificationCode, Client, PushSubscription
 from .forms import BookingForm, AdminBookingForm, BlockedSlotForm
 from beauty_app.models import Service, ServiceCategory
+
+# Импорт функции планирования напоминаний
+from .tasks import schedule_reminders
 
 logger = logging.getLogger(__name__)
 
@@ -149,11 +155,12 @@ def app_login(request):
     token, _ = Token.objects.get_or_create(user=user)
     print(f"✅ Успешный вход: {username}, токен: {token.key[:20]}...")
     return JsonResponse({'token': token.key, 'username': user.username})
+
+
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def app_register_fcm_token(request):
     print(f"📡 Получен запрос на регистрацию FCM!")
-    print(f"🔑 Заголовки: {request.headers}")
     print(f"👤 Пользователь: {request.user}")
     
     token = request.data.get('token', '').strip()
@@ -171,6 +178,7 @@ def app_register_fcm_token(request):
     )
     print(f"✅ FCM токен сохранен в БД! ID: {obj.id}")
     return JsonResponse({'success': True, 'created': created})
+
 
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
@@ -242,9 +250,13 @@ def booking_create(request):
                 booking.services.set(services)
                 services_names = ", ".join([s.name for s in services])
             
-            # ОТПРАВКА УВЕДОМЛЕНИЙ
+            # ОТПРАВКА УВЕДОМЛЕНИЙ АДМИНУ
             send_push_notification('🔔 Новая запись!', f'{client_name} записался на {services_names}', '/admin-dashboard/bookings/')
             send_fcm_notification(f'🔔 Новая запись: {client_name}', f'{services_names}\n{aware_dt.strftime("%d.%m %H:%M")}', f'/admin-dashboard/bookings/{booking.pk}/edit/')
+            
+            # ОТПРАВКА SMS КЛИЕНТУ И ПЛАНИРОВАНИЕ НАПОМИНАНИЙ
+            async_task('booking_app.tasks.send_event_sms_task', booking.id, 'creation')
+            schedule_reminders(booking.id, booking.appointment_datetime)
             
             return redirect('booking_app:booking_success')
     else:
@@ -275,8 +287,11 @@ def vk_booking_view(request):
                 booking.services.set(services)
                 services_names = ", ".join([s.name for s in services])
             
-            # ОТПРАВКА УВЕДОМЛЕНИЙ
             send_fcm_notification(f'🔔 Новая запись (VK): {booking.client_name}', f'{services_names}\n{aware_dt.strftime("%d.%m %H:%M")}', f'/admin-dashboard/bookings/{booking.pk}/edit/')
+
+            # ОТПРАВКА SMS КЛИЕНТУ И ПЛАНИРОВАНИЕ НАПОМИНАНИЙ
+            async_task('booking_app.tasks.send_event_sms_task', booking.id, 'creation')
+            schedule_reminders(booking.id, booking.appointment_datetime)
 
             if email:
                 client, created = Client.objects.get_or_create(email=email)
@@ -318,8 +333,11 @@ def telegram_booking_view(request):
                 booking.services.set(services)
                 services_names = ", ".join([s.name for s in services])
             
-            # ОТПРАВКА УВЕДОМЛЕНИЙ
             send_fcm_notification(f'🔔 Новая запись (Telegram): {booking.client_name}', f'{services_names}\n{aware_dt.strftime("%d.%m %H:%M")}', f'/admin-dashboard/bookings/{booking.pk}/edit/')
+
+            # ОТПРАВКА SMS КЛИЕНТУ И ПЛАНИРОВАНИЕ НАПОМИНАНИЙ
+            async_task('booking_app.tasks.send_event_sms_task', booking.id, 'creation')
+            schedule_reminders(booking.id, booking.appointment_datetime)
 
             if email:
                 client, created = Client.objects.get_or_create(email=email)
@@ -361,8 +379,11 @@ def max_booking_view(request):
                 booking.services.set(services)
                 services_names = ", ".join([s.name for s in services])
             
-            # ОТПРАВКА УВЕДОМЛЕНИЙ
             send_fcm_notification(f'🔔 Новая запись (MAX): {booking.client_name}', f'{services_names}\n{aware_dt.strftime("%d.%m %H:%M")}', f'/admin-dashboard/bookings/{booking.pk}/edit/')
+
+            # ОТПРАВКА SMS КЛИЕНТУ И ПЛАНИРОВАНИЕ НАПОМИНАНИЙ
+            async_task('booking_app.tasks.send_event_sms_task', booking.id, 'creation')
+            schedule_reminders(booking.id, booking.appointment_datetime)
 
             if email:
                 client, created = Client.objects.get_or_create(email=email)
@@ -427,8 +448,11 @@ def api_create_booking(request):
 
     services_names = ", ".join([s.name for s in services])
     
-    # ОТПРАВКА УВЕДОМЛЕНИЙ
     send_fcm_notification(f'🔔 Новая запись (API): {client_name}', f'{services_names}\n{appointment_datetime.strftime("%d.%m %H:%M")}', f'/admin-dashboard/bookings/{booking.id}/edit/')
+
+    # ОТПРАВКА SMS КЛИЕНТУ И ПЛАНИРОВАНИЕ НАПОМИНАНИЙ
+    async_task('booking_app.tasks.send_event_sms_task', booking.id, 'creation')
+    schedule_reminders(booking.id, booking.appointment_datetime)
 
     if email:
         client, created = Client.objects.get_or_create(email=email)
@@ -770,6 +794,15 @@ def booking_edit(request, pk):
             except Exception as e:
                 print(f"Ошибка обновления Google Calendar: {e}")
             
+            # СБРОС ФЛАГОВ И ОТПРАВКА SMS ОБ ИЗМЕНЕНИИ
+            booking.reminded_24h = False
+            booking.reminded_2h = False
+            booking.reminded_15m = False
+            booking.save()
+            
+            async_task('booking_app.tasks.send_event_sms_task', booking.id, 'edit')
+            schedule_reminders(booking.id, booking.appointment_datetime)
+            
             messages.success(request, f'Запись для {booking.client_name} обновлена')
             return redirect('booking_app:bookings_list')
     else:
@@ -884,8 +917,12 @@ class AdminBookingCreateView(AdminRequiredMixin, FormView):
                 booking.services.set(services)
                 
                 services_names = ", ".join([s.name for s in services])
-                # ОТПРАВКА УВЕДОМЛЕНИЙ
+                # ОТПРАВКА УВЕДОМЛЕНИЙ АДМИНУ
                 send_fcm_notification(f'🔔 Новая запись (Админ): {booking.client_name}', f'{services_names}\n{aware_dt.strftime("%d.%m %H:%M")}', f'/admin-dashboard/bookings/{booking.pk}/edit/')
+                
+                # ОТПРАВКА SMS КЛИЕНТУ И ПЛАНИРОВАНИЕ НАПОМИНАНИЙ
+                async_task('booking_app.tasks.send_event_sms_task', booking.id, 'creation')
+                schedule_reminders(booking.id, booking.appointment_datetime)
                 
                 messages.success(self.request, f'Запись для {booking.client_name} создана')
                 return redirect('booking_app:bookings_list')
@@ -909,6 +946,10 @@ class BookingCancelView(AdminRequiredMixin, View):
         booking = get_object_or_404(Booking, pk=pk)
         booking.status = 'cancelled'
         booking.save()
+        
+        # ОТПРАВКА SMS ОБ ОТМЕНЕ
+        async_task('booking_app.tasks.send_event_sms_task', booking.id, 'cancel')
+        
         messages.success(request, f'Запись для {booking.client_name} отменена')
         return redirect('booking_app:bookings_list')
     

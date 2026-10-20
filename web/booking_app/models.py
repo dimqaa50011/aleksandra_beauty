@@ -189,3 +189,23 @@ class DeviceFCMToken(models.Model):
 
     def __str__(self):
         return f"{self.user.username}: {self.token[:40]}..."
+
+
+class SMSTemplate(models.Model):
+    """Шаблоны SMS-сообщений"""
+    key = models.CharField(
+        max_length=50, 
+        unique=True, 
+        help_text="Уникальный код: creation, edit, cancel, reminder_24h, reminder_2h, reminder_15m"
+    )
+    description = models.CharField(max_length=150, blank=True, help_text="Описание для админа")
+    text = models.TextField(
+        help_text="Доступные переменные: {name}, {date}, {time}, {address}"
+    )
+
+    class Meta:
+        verbose_name = 'Шаблон SMS'
+        verbose_name_plural = 'Шаблоны SMS'
+
+    def __str__(self):
+        return f"{self.description or self.key}"
