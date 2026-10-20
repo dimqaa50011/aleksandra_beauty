@@ -64,5 +64,5 @@ urlpatterns = [
     path('api/app-blocked-slots/<int:pk>/', api.AdminBlockedSlotDeleteAPIView.as_view(), name='api_app_blocked_slot_delete'),
     path('api/app-calendar/', api.AdminCalendarAPIView.as_view(), name='api_app_calendar'),
     path('api/app-clients/', api.AdminClientsAPIView.as_view(), name='api_app_clients'),
-    path('api/admin-available-times/', views.get_admin_available_times, name='admin_available_times'),
+    path('api/admin-available-times/', api.get_admin_available_times, name='admin_available_times'),
 ]
