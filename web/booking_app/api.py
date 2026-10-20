@@ -24,6 +24,45 @@ from .models import Booking, BlockedSlot
 
 
 from .models import Client
+from datetime import datetime
+from django.utils import timezone
+
+class AdminBookingUpdateAPIView(APIView):
+    """
+    PUT: Обновить запись (время, услуги)
+    """
+    permission_classes = [IsAuthenticated]
+
+    def put(self, request, pk):
+        booking = get_object_or_404(Booking, pk=pk)
+        
+        date_str = request.data.get('date')
+        time_str = request.data.get('time')
+        services_ids = request.data.get('services_ids') # список ID или строка "1,2"
+
+        if not date_str or not time_str or not services_ids:
+            return Response({'error': 'Не все данные переданы'}, status=400)
+
+        try:
+            # Обновляем время
+            naive_dt = datetime.strptime(f"{date_str} {time_str}", "%Y-%m-%d %H:%M")
+            aware_dt = timezone.make_aware(naive_dt, timezone.get_current_timezone())
+            
+            # Обновляем услуги
+            if isinstance(services_ids, str):
+                services_ids = [int(i) for i in services_ids.split(',') if i]
+                
+            services = Service.objects.filter(id__in=services_ids, is_active=True)
+            
+            # Сохраняем
+            booking.appointment_datetime = aware_dt
+            booking.save()
+            booking.services.set(services)
+            
+            return Response({'success': True, 'message': 'Запись обновлена'})
+            
+        except Exception as e:
+            return Response({'error': str(e)}, status=500)
 
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
