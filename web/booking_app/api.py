@@ -350,6 +350,8 @@ class ServiceListAPIView(APIView):
             })
             
         return Response({'services': data}, status=status.HTTP_200_OK)
+    
+    
 class AdminCategoriesAPIView(APIView):
     """
     GET: Список всех категорий
