@@ -9,10 +9,10 @@
     <!-- Заголовок и описание категории -->
     <div class="category-header">
         <h1 class="section-title">{{ category.display_name }}</h1>
-        {% if category.description %}
+        {% if category.seo_description %}
+            <p class="category-desc">{{ category.seo_description|linebreaks }}</p>
+        {% elif category.description %}
             <p class="category-desc">{{ category.description }}</p>
-        {% else %}
-            <p class="category-desc">Профессиональный уход и внимание к деталям. Выберите подходящую услугу и запишитесь онлайн.</p>
         {% endif %}
     </div>
 
