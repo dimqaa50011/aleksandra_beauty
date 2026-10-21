@@ -2019,3 +2019,199 @@ body.menu-open {
 .hero-slide.active {
     opacity: 1;
 }
+
+
+/* =========================================
+   ФИНАЛЬНЫЙ МОБИЛЬНЫЙ АДАПТИВ (ИСПРАВЛЕНИЕ ВСЕХ БАГОВ)
+   ========================================= */
+@media (max-width: 768px) {
+    /* 1. ШАПКА */
+    .navbar .container {
+        display: flex !important;
+        flex-wrap: nowrap !important;
+        justify-content: space-between !important;
+        align-items: center !important;
+        padding: 10px 16px !important;
+    }
+    .nav-links, .nav-actions .btn {
+        display: none !important; /* Скрываем текстовые ссылки и кнопку */
+    }
+    .logo img {
+        height: 35px !important;
+    }
+    .menu-toggle {
+        display: flex !important;
+        flex-direction: column !important;
+        gap: 5px !important;
+        background: none !important;
+        border: none !important;
+    }
+    .menu-toggle span {
+        display: block !important;
+        width: 25px !important;
+        height: 3px !important;
+        background-color: #2d2a28 !important;
+        border-radius: 2px !important;
+    }
+
+    /* 2. ГЕРОЙ (Главный экран) */
+    .hero {
+        min-height: auto !important;
+        padding-top: 90px !important;
+        padding-bottom: 40px !important;
+    }
+    .hero-content-wrapper {
+        padding-top: 0 !important;
+        padding-bottom: 0 !important;
+        text-align: left !important;
+    }
+    .hero-content h1 {
+        font-size: 2.2rem !important;
+        line-height: 1.2 !important;
+        margin-bottom: 16px !important;
+    }
+    .hero-content .sub {
+        font-size: 1rem !important;
+        margin-bottom: 24px !important;
+    }
+    .hero-content .btn-primary-large {
+        width: 100% !important;
+        display: block !important;
+        padding: 16px 24px !important;
+        margin-bottom: 32px !important;
+    }
+    .hero-stats {
+        display: flex !important;
+        flex-wrap: wrap !important;
+        gap: 24px !important;
+        border-top: 1px solid rgba(255, 255, 255, 0.2) !important;
+        padding-top: 24px !important;
+        margin-top: 0 !important;
+    }
+
+    /* 3. УСЛУГИ */
+    .services-list-full {
+        display: flex !important;
+        flex-direction: column !important;
+        gap: 12px !important;
+        margin-top: 24px !important;
+    }
+    .service-row {
+        display: flex !important;
+        flex-direction: row !important;
+        align-items: center !important;
+        min-height: 80px !important;
+        padding: 16px 20px !important;
+        background: #ffffff !important;
+        border: 1px solid #f0e8e5 !important;
+        border-radius: 16px !important;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.02) !important;
+    }
+    .service-row-content {
+        display: flex !important;
+        flex-direction: row !important;
+        justify-content: space-between !important;
+        align-items: center !important;
+        width: 100% !important;
+    }
+    .service-text {
+        display: flex !important;
+        flex-direction: column !important;
+        gap: 4px !important;
+    }
+    .service-text h3 {
+        font-size: 1.1rem !important;
+        margin: 0 !important;
+    }
+    .service-text p {
+        font-size: 0.85rem !important;
+        color: #6b5f5a !important;
+        margin: 0 !important;
+        display: block !important; /* Возвращаем описание */
+    }
+    .service-row-arrow {
+        font-size: 1.5rem !important;
+        color: #f2a6b0 !important;
+        margin-left: 16px !important;
+        opacity: 1 !important;
+    }
+
+    /* 4. О НАС */
+    .about-grid {
+        display: flex !important;
+        flex-direction: column !important;
+        gap: 32px !important;
+    }
+    .about-image-wrapper {
+        order: -1 !important; /* Фото наверх */
+        width: 100% !important;
+        aspect-ratio: 4/3 !important;
+        border-radius: 20px !important;
+    }
+    .about-content {
+        padding: 0 !important;
+    }
+    .about-text {
+        font-size: 0.95rem !important;
+        line-height: 1.6 !important;
+    }
+    .about-features-list {
+        margin-top: 16px !important;
+        gap: 12px !important;
+    }
+    .about-features-list li {
+        padding: 16px !important;
+        font-size: 0.95rem !important;
+    }
+
+    /* 5. МАСТЕР */
+    .master-block {
+        display: flex !important;
+        flex-direction: column !important;
+        padding: 24px !important;
+        gap: 24px !important;
+        border-radius: 24px !important;
+    }
+    .master-image-wrapper {
+        aspect-ratio: 1/1 !important;
+        max-width: 100% !important;
+        border-radius: 16px !important;
+    }
+    .master-actions {
+        display: flex !important;
+        flex-direction: column !important;
+        gap: 12px !important;
+    }
+    .master-actions .btn-primary-large,
+    .btn-master-social {
+        width: 100% !important;
+        text-align: center !important;
+    }
+
+    /* 6. КОНТАКТЫ И КАРТА */
+    .contacts-grid {
+        display: flex !important;
+        flex-direction: column !important;
+        gap: 32px !important;
+    }
+    .map-wrapper {
+        width: 100% !important;
+        height: 250px !important;
+        margin-top: 0 !important;
+    }
+    .contact-info .btn {
+        width: 100% !important;
+        display: block !important;
+        text-align: center !important;
+        margin-top: 16px !important;
+    }
+
+    /* 7. FAQ */
+    .faq-section {
+        padding: 40px 0 !important;
+    }
+    .faq-question {
+        font-size: 0.95rem !important;
+        padding: 16px 20px !important;
+    }
+}
