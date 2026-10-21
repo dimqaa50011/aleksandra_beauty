@@ -57,6 +57,7 @@ urlpatterns = [
     
     
     path('api/app-bookings/', api.AdminBookingsListAPIView.as_view(), name='api_app_bookings'),
+    path('api/app-bookings/<int:pk>/detail/', api.AdminBookingDetailAPIView.as_view(), name='api_app_booking_detail'),
     path('api/app-bookings/<int:pk>/status/', api.AdminBookingStatusAPIView.as_view(), name='api_app_booking_status'),
     path('api/app-block-day/', api.AdminBlockDayAPIView.as_view(), name='api_app_block_day'),
     # path('api/app-services/', api.ServiceListAPIView.as_view(), name='api_app_services'),

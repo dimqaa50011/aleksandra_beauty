@@ -531,3 +531,26 @@ class AdminClientUpdateNotesAPIView(APIView):
             return Response({'success': True, 'message': 'Заметки сохранены'})
             
         return Response({'error': 'Нет данных для обновления'}, status=400)
+
+class AdminBookingDetailAPIView(APIView):
+    """GET: Получить данные одной записи по ID"""
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request, pk):
+        booking = get_object_or_404(Booking, pk=pk)
+        
+        # Формируем JSON в формате, который ждет Flutter (BookingInfo)
+        services_data = [{'id': s.id, 'name': s.name} for s in booking.services.all()]
+        
+        data = {
+            'id': booking.id,
+            'client_id': booking.client.id if booking.client else 0,
+            'client_name': booking.client_name,
+            'phone': booking.phone,
+            'status': booking.status,
+            'services': services_data,
+            'time': booking.appointment_datetime.strftime('%H:%M'),
+            'date': booking.appointment_datetime.strftime('%Y-%m-%d'), # Нам нужна дата для календаря
+            'is_start': True
+        }
+        return Response(data, status=status.HTTP_200_OK)

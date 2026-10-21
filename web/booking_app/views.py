@@ -46,7 +46,7 @@ if not firebase_admin._apps:
         print(f"⚠️ Файл {cred_path} не найден. FCM работать не будет.")
 
 
-def send_fcm_notification(title, body, url=None):
+def send_fcm_notification(title, body, url=None, booking_id=None):
     tokens = DeviceFCMToken.objects.filter(is_active=True).values_list('token', flat=True)
     if not tokens:
         print("ℹ️ Нет зарегистрированных FCM-токенов")
@@ -54,9 +54,12 @@ def send_fcm_notification(title, body, url=None):
     
     for token in tokens:
         try:
+            data = {'url': url} if url else {}
+            if booking_id:
+                data['booking_id'] = str(booking_id)
             message = messaging.Message(
                 notification=messaging.Notification(title=title, body=body),
-                data={'url': url} if url else {},
+                data=data,
                 token=token,
                 android=messaging.AndroidConfig(
                     priority='high',
@@ -220,7 +223,7 @@ def booking_create(request):
                 services_names = ", ".join([s.name for s in services])
             
             send_push_notification('🔔 Новая запись!', f'{client_name} записался на {services_names}', '/admin-dashboard/bookings/')
-            send_fcm_notification(f'🔔 Новая запись: {client_name}', f'{services_names}\n{aware_dt.strftime("%d.%m %H:%M")}', f'/admin-dashboard/bookings/{booking.pk}/edit/')
+            send_fcm_notification(f'🔔 Новая запись: {client_name}', f'{services_names}\n{aware_dt.strftime("%d.%m %H:%M")}', f'/admin-dashboard/bookings/{booking.pk}/edit/', booking.id)
             
             async_task('booking_app.tasks.send_event_sms_task', booking.id, 'creation')
             schedule_reminders(booking.id, booking.appointment_datetime)
@@ -259,7 +262,7 @@ def vk_booking_view(request):
                 booking.services.set(services)
                 services_names = ", ".join([s.name for s in services])
             
-            send_fcm_notification(f'🔔 Новая запись (VK): {booking.client_name}', f'{services_names}\n{aware_dt.strftime("%d.%m %H:%M")}', f'/admin-dashboard/bookings/{booking.pk}/edit/')
+            send_fcm_notification(f'🔔 Новая запись (VK): {booking.client_name}', f'{services_names}\n{aware_dt.strftime("%d.%m %H:%M")}', f'/admin-dashboard/bookings/{booking.pk}/edit/', booking.id)
             async_task('booking_app.tasks.send_event_sms_task', booking.id, 'creation')
             schedule_reminders(booking.id, booking.appointment_datetime)
 
@@ -305,7 +308,7 @@ def telegram_booking_view(request):
                 booking.services.set(services)
                 services_names = ", ".join([s.name for s in services])
             
-            send_fcm_notification(f'🔔 Новая запись (Telegram): {booking.client_name}', f'{services_names}\n{aware_dt.strftime("%d.%m %H:%M")}', f'/admin-dashboard/bookings/{booking.pk}/edit/')
+            send_fcm_notification(f'🔔 Новая запись (Telegram): {booking.client_name}', f'{services_names}\n{aware_dt.strftime("%d.%m %H:%M")}', f'/admin-dashboard/bookings/{booking.pk}/edit/', booking.id)
             async_task('booking_app.tasks.send_event_sms_task', booking.id, 'creation')
             schedule_reminders(booking.id, booking.appointment_datetime)
 
@@ -350,7 +353,7 @@ def max_booking_view(request):
                 booking.services.set(services)
                 services_names = ", ".join([s.name for s in services])
             
-            send_fcm_notification(f'🔔 Новая запись (MAX): {booking.client_name}', f'{services_names}\n{aware_dt.strftime("%d.%m %H:%M")}', f'/admin-dashboard/bookings/{booking.pk}/edit/')
+            send_fcm_notification(f'🔔 Новая запись (MAX): {booking.client_name}', f'{services_names}\n{aware_dt.strftime("%d.%m %H:%M")}', f'/admin-dashboard/bookings/{booking.pk}/edit/', booking.id)
             async_task('booking_app.tasks.send_event_sms_task', booking.id, 'creation')
             schedule_reminders(booking.id, booking.appointment_datetime)
 
@@ -417,7 +420,7 @@ def api_create_booking(request):
 
     services_names = ", ".join([s.name for s in services])
     
-    send_fcm_notification(f'🔔 Новая запись (API): {client_name}', f'{services_names}\n{appointment_datetime.strftime("%d.%m %H:%M")}', f'/admin-dashboard/bookings/{booking.id}/edit/')
+    send_fcm_notification(f'🔔 Новая запись (API): {client_name}', f'{services_names}\n{appointment_datetime.strftime("%d.%m %H:%M")}', f'/admin-dashboard/bookings/{booking.id}/edit/', booking.id)
     async_task('booking_app.tasks.send_event_sms_task', booking.id, 'creation')
     schedule_reminders(booking.id, booking.appointment_datetime)
 
@@ -908,7 +911,7 @@ class AdminBookingCreateView(AdminRequiredMixin, FormView):
                 booking.services.set(services)
                 
                 services_names = ", ".join([s.name for s in services])
-                send_fcm_notification(f'🔔 Новая запись (Админ): {booking.client_name}', f'{services_names}\n{aware_dt.strftime("%d.%m %H:%M")}', f'/admin-dashboard/bookings/{booking.pk}/edit/')
+                send_fcm_notification(f'🔔 Новая запись (Админ): {booking.client_name}', f'{services_names}\n{aware_dt.strftime("%d.%m %H:%M")}', f'/admin-dashboard/bookings/{booking.pk}/edit/', booking.id)
                 async_task('booking_app.tasks.send_event_sms_task', booking.id, 'creation')
                 schedule_reminders(booking.id, booking.appointment_datetime)
                 
