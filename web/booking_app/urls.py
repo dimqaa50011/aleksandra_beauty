@@ -34,6 +34,8 @@ urlpatterns = [
     path('telegram/', views.telegram_booking_view, name='telegram_booking'),
     path('max/', views.max_booking_view, name='max_booking'),
     
+    path('review/<uuid:token>/', views.review_form_view, name='review_form'),
+    
     # ==========================================
     # АДМИНКА: УПРАВЛЕНИЕ ЗАПИСЯМИ
     # ==========================================
@@ -70,4 +72,6 @@ urlpatterns = [
     path('api/app-bookings/<int:pk>/update/', api.AdminBookingUpdateAPIView.as_view(), name='api_app_booking_update'),
     path('api/app-clients/<int:pk>/', api.AdminClientDetailAPIView.as_view(), name='api_app_client_detail'),
     path('api/app-clients/<int:pk>/update-notes/', api.AdminClientUpdateNotesAPIView.as_view(), name='api_app_client_update_notes'),
+    path('api/app-reviews/', api.AdminReviewsAPIView.as_view(), name='api_app_reviews'),
+    path('api/app-reviews/<int:pk>/', api.AdminReviewActionAPIView.as_view(), name='api_app_review_action'),
 ]

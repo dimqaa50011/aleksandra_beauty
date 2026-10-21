@@ -2,7 +2,7 @@ from django.views.generic import TemplateView
 from django.contrib.auth.views import LoginView as AuthLoginView, LogoutView as AuthLogoutView
 from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin
 from django.urls import reverse_lazy
-from django.shortcuts import render, get_object_or_404
+from django.shortcuts import render, get_object_or_404, redirect
 
 from .models import (
     AboutBlock,

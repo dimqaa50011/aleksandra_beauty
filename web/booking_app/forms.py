@@ -1,7 +1,19 @@
 from django import forms
 from .models import Booking, BlockedSlot
-from beauty_app.models import Service, ServiceCategory
+from beauty_app.models import Service, ServiceCategory, Review
 
+class ReviewForm(forms.ModelForm):
+    class Meta:
+        model = Review
+        fields = ['rating', 'text']
+        widgets = {
+            'rating': forms.RadioSelect(choices=[(i, f"{i} ★") for i in range(5, 0, -1)]),
+            'text': forms.Textarea(attrs={
+                'rows': 4, 
+                'placeholder': 'Поделитесь своими впечатлениями о визите...',
+                'class': 'form-control'
+            }),
+        }
 
 class BookingForm(forms.ModelForm):
     """Форма записи клиента"""

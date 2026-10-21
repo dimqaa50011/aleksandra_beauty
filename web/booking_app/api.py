@@ -14,6 +14,50 @@ from .tasks import schedule_reminders
 from .models import Booking, BlockedSlot, Client
 from .serializers import BookingSerializer, BlockDaySerializer
 from beauty_app.models import Service, ServiceCategory
+from .models import Review # Добавьте импорт в начале файла
+
+class AdminReviewsAPIView(APIView):
+    """GET: Список всех отзывов"""
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        reviews = Review.objects.all().order_by('-created_at')
+        
+        data = []
+        for r in reviews:
+            data.append({
+                'id': r.id,
+                'author_name': r.author_name,
+                'text': r.text,
+                'rating': r.rating,
+                'service_name': r.service_name,
+                'created_at': r.created_at.strftime('%d.%m.%Y %H:%M'),
+                'is_active': r.is_active,
+            })
+            
+        return Response({'reviews': data}, status=status.HTTP_200_OK)
+
+
+class AdminReviewActionAPIView(APIView):
+    """PATCH: Опубликовать/скрыть, DELETE: Удалить отзыв"""
+    permission_classes = [IsAuthenticated]
+
+    def patch(self, request, pk):
+        review = get_object_or_404(Review, pk=pk)
+        is_active = request.data.get('is_active')
+        
+        if is_active is not None:
+            review.is_active = is_active
+            review.save()
+            action = "опубликован" if is_active else "скрыт"
+            return Response({'success': True, 'message': f'Отзыв {action}'})
+            
+        return Response({'error': 'Нет данных для обновления'}, status=400)
+
+    def delete(self, request, pk):
+        review = get_object_or_404(Review, pk=pk)
+        review.delete()
+        return Response({'success': True, 'message': 'Отзыв удален'}, status=status.HTTP_204_NO_CONTENT)
 
 
 class AdminBookingUpdateAPIView(APIView):
@@ -402,18 +446,15 @@ class AdminBookingsListAPIView(APIView):
         }, status=status.HTTP_200_OK)
 
 
-        
+  
 class AdminBookingStatusAPIView(APIView):
-    """
-    POST: Подтвердить, отменить, завершить или отметить неявку
-    """
+    """POST: Подтвердить, отменить, завершить или отметить неявку"""
     permission_classes = [IsAuthenticated]
 
     def post(self, request, pk):
         booking = get_object_or_404(Booking, pk=pk)
         new_status = request.data.get('status')
         
-        # Разрешаем все 4 статуса
         if new_status not in ['confirmed', 'cancelled', 'completed', 'no_show']:
             return Response(
                 {'error': 'Неверный статус. Допустимо: confirmed, cancelled, completed, no_show'}, 
@@ -423,7 +464,7 @@ class AdminBookingStatusAPIView(APIView):
         old_status = booking.status
         booking.status = new_status
         
-        # Если пришли услуги (например, при завершении приема админ менял состав услуг)
+        # Если пришли услуги (админ менял состав при завершении)
         services_ids = request.data.get('services_ids')
         if services_ids:
             if isinstance(services_ids, str):
@@ -437,7 +478,7 @@ class AdminBookingStatusAPIView(APIView):
         if new_status == 'completed' and old_status != 'completed' and booking.client:
             client = booking.client
             client.total_bookings += 1
-            client.total_spent += booking.total_price # Считаем по актуальным услугам
+            client.total_spent += booking.total_price
             client.last_visit = booking.appointment_datetime
             client.save()
             
@@ -445,15 +486,16 @@ class AdminBookingStatusAPIView(APIView):
         if new_status == 'cancelled':
             async_task('booking_app.tasks.send_event_sms_task', booking.id, 'cancel')
         elif new_status == 'completed':
-            # Отправка с просьбой об отзыве (если шаблон добавлен)
-            async_task('booking_app.tasks.send_event_sms_task', booking.id, 'review_request')
+            # Отправка СМС с просьбой об отзыве (вызываем НАШУ НОВУЮ задачу)
+            async_task('booking_app.tasks.send_review_request_task', booking.id)
         
         return Response({
             'success': True, 
             'status': booking.status,
             'message': f'Статус записи изменен на {booking.get_status_display()}'
         }, status=status.HTTP_200_OK)
-
+        
+        
 
 class AdminBlockDayAPIView(APIView):
     permission_classes = [IsAuthenticated]

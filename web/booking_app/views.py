@@ -26,9 +26,12 @@ from firebase_admin import credentials, messaging
 
 from .models import Booking, BlockedSlot, DayOff, DeviceFCMToken, EmailVerificationCode, Client, PushSubscription
 from .forms import BookingForm, AdminBookingForm, BlockedSlotForm
-from beauty_app.models import Service, ServiceCategory
+from beauty_app.models import Service, Review
 from .tasks import schedule_reminders
 from .utils import get_or_create_client # <-- ИМПОРТ УТИЛИТЫ
+
+from .forms import ReviewForm
+from .models import Booking
 
 logger = logging.getLogger(__name__)
 
@@ -46,7 +49,7 @@ if not firebase_admin._apps:
         print(f"⚠️ Файл {cred_path} не найден. FCM работать не будет.")
 
 
-def send_fcm_notification(title, body, url=None, booking_id=None):
+def send_fcm_notification(title, body, url=None, booking_id=None, data_type=None):
     tokens = DeviceFCMToken.objects.filter(is_active=True).values_list('token', flat=True)
     if not tokens:
         print("ℹ️ Нет зарегистрированных FCM-токенов")
@@ -57,6 +60,8 @@ def send_fcm_notification(title, body, url=None, booking_id=None):
             data = {'url': url} if url else {}
             if booking_id:
                 data['booking_id'] = str(booking_id)
+            if data_type:
+                data["type"] = data_type
             message = messaging.Message(
                 notification=messaging.Notification(title=title, body=body),
                 data=data,
@@ -112,6 +117,43 @@ def send_push_notification(title, body, url=None):
             if e.response and e.response.status_code in [404, 410]:
                 sub.delete()
 
+
+
+# ... другие импорты ...
+
+def review_form_view(request, token):
+    """Страница, на которую клиент попадает по ссылке из СМС"""
+    booking = get_object_or_404(Booking, review_token=token)
+    
+    # Если отзыв уже оставлен, показываем страницу "Спасибо"
+    if hasattr(booking, 'review') and booking.review is not None:
+        return render(request, 'booking_app/review_success.html')
+        
+    if request.method == 'POST':
+        form = ReviewForm(request.POST)
+        if form.is_valid():
+            review = form.save(commit=False)
+            review.booking = booking
+            review.author_name = booking.client_name
+            # Записываем названия услуг, на которые была запись
+            review.service_name = ", ".join([s.name for s in booking.services.all()])
+            
+            # По умолчанию is_active=False (на модерации)
+            review.is_active = False 
+            review.save()
+            
+            # ОТПРАВЛЯЕМ ПУШ АДМИНУ
+            send_fcm_notification(
+                title='⭐ Новый отзыв!',
+                body=f'{booking.client_name} оценил(а) визит на {review.rating}/5',
+                url=f'/admin-dashboard/reviews/' # Ссылка, которую откроет приложение
+            )
+            
+            return render(request, 'booking_app/review_success.html')
+    else:
+        form = ReviewForm()
+        
+    return render(request, 'booking_app/review_form.html', {'form': form})
 
 # ==========================================
 # API ДЛЯ МОБИЛЬНОГО ПРИЛОЖЕНИЯ

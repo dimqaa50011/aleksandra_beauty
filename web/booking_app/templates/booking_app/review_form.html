@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Оставить отзыв — Sasha Sugar</title>
+    <style>
+        body { font-family: 'Inter', sans-serif; background: #fef9f7; color: #2d2a28; padding: 20px; display: flex; justify-content: center; align-items: center; min-height: 100vh; margin: 0; }
+        .container { background: #fff; border-radius: 24px; padding: 32px; max-width: 400px; width: 100%; box-shadow: 0 8px 32px rgba(242, 166, 176, 0.15); }
+        h1 { font-size: 1.5rem; text-align: center; margin-bottom: 8px; }
+        p.sub { text-align: center; color: #6b5f5a; margin-bottom: 24px; font-size: 0.9rem; }
+        
+        /* Красивые звездочки */
+        .rating-group { display: flex; flex-direction: row-reverse; justify-content: center; gap: 8px; margin-bottom: 24px; }
+        .rating-group input { display: none; }
+        .rating-group label { font-size: 2.5rem; color: #e0e0e0; cursor: pointer; transition: color 0.2s; }
+        .rating-group input:checked ~ label, 
+        .rating-group label:hover, 
+        .rating-group label:hover ~ label { color: #f5b342; }
+        
+        .form-control { width: 100%; padding: 12px; border: 1px solid #e8e0dd; border-radius: 12px; font-family: inherit; resize: none; margin-bottom: 20px; background: #fef9f7; box-sizing: border-box;}
+        .form-control:focus { outline: none; border-color: #f2a6b0; }
+        
+        .btn { width: 100%; padding: 16px; background: #f2a6b0; color: #fff; border: none; border-radius: 60px; font-size: 1rem; font-weight: 600; cursor: pointer; transition: 0.3s; }
+        .btn:hover { background: #e8919c; transform: translateY(-2px); }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Спасибо, что были у нас!</h1>
+        <p class="sub">Поделитесь впечатлениями о вашем визите. Нам важно ваше мнение.</p>
+        
+        <form method="post">
+            {% csrf_token %}
+            
+            <div class="rating-group">
+                {% for radio in form.rating %}
+                    {{ radio.tag }}
+                    <label for="{{ radio.id_for_label }}">★</label>
+                {% endfor %}
+            </div>
+            
+            {{ form.text }}
+            
+            <button type="submit" class="btn">Отправить отзыв</button>
+        </form>
+    </div>
+</body>
+</html>

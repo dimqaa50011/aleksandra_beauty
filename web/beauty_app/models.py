@@ -229,26 +229,37 @@ class MasterBlock(models.Model):
         verbose_name = "Блок Мастера"
         verbose_name_plural = "Блок Мастера"
 
-
 class Review(models.Model):
     """Отзывы клиентов"""
-    author_name = models.CharField(max_length=100, help_text="Имя клиента (например, Екатерина)")
+    # Связь с записью (один отзыв на одну запись)
+    booking = models.OneToOneField(
+        "booking_app.Booking", 
+        on_delete=models.SET_NULL, 
+        null=True, 
+        blank=True, 
+        related_name='review',
+        verbose_name='Запись'
+    )
+
+    author_name = models.CharField(max_length=100, help_text="Имя клиента")
     text = models.TextField(help_text="Текст отзыва")
-    service_name = models.CharField(max_length=100, blank=True, help_text="На какую услугу отзыв (необязательно)")
+    service_name = models.CharField(max_length=100, blank=True, help_text="На какую услугу отзыв")
     
     # Оценка (звезды)
     rating = models.PositiveSmallIntegerField(default=5, choices=[(i, str(i)) for i in range(1, 6)], help_text="Оценка от 1 до 5")
     
-    # Дата (заполняется автоматически)
+    # Дата
     created_at = models.DateTimeField(auto_now_add=True, help_text="Дата отзыва")
     
-    # Ссылка на отзыв на Яндекс.Картах или другом сайте (для доверия)
-    source_url = models.URLField(blank=True, null=True, help_text="Ссылка на оригинал отзыва (если есть)")
+    # Ссылка на оригинал (если админ копирует отзыв с Яндекса)
+    source_url = models.URLField(blank=True, null=True, help_text="Ссылка на оригинал (если есть)")
 
-    is_active = models.BooleanField(default=True, help_text="Показывать на сайте")
+    # Модерация: по умолчанию False (скрыт), админ включит в приложении
+    is_active = models.BooleanField(default=False, help_text="Опубликован на сайте")
 
     def __str__(self):
-        return f"{self.author_name} — {self.rating}★"
+        status = "Опубликован" if self.is_active else "На модерации"
+        return f"{self.author_name} — {self.rating}★ ({status})"
 
     class Meta:
         verbose_name = "Отзыв"

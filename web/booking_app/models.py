@@ -110,6 +110,7 @@ class Booking(models.Model):
     reminded_24h = models.BooleanField('Напоминание 24ч отправлено', default=False)
     reminded_2h = models.BooleanField('Напоминание 2ч отправлено', default=False)
     reminded_15m = models.BooleanField('Напоминание 15м отправлено', default=False)
+    review_token = models.UUIDField(null=True, blank=True, unique=True, db_index=True)
 
     class Meta:
         verbose_name = 'Запись клиента'

@@ -1,5 +1,6 @@
 import logging
 from datetime import timedelta
+import uuid
 from django.utils import timezone
 from django_q.tasks import async_task
 
@@ -136,3 +137,24 @@ def schedule_reminders(booking_id, appointment_datetime):
             booking_id, '15m', 
             schedule=time_15m
         )
+
+
+
+def send_review_request_task(booking_id):
+    """Генерирует ссылку и отправляет SMS с просьбой оставить отзыв"""
+    try:
+        booking = Booking.objects.get(id=booking_id)
+    except Booking.DoesNotExist:
+        return
+
+    # Генерируем уникальный токен, если его еще нет
+    if not booking.review_token:
+        booking.review_token = uuid.uuid4()
+        booking.save()
+
+    # Формируем ссылку
+    url = f"https://sasha-sugar.ru/review/{booking.review_token}/"
+    
+    text = f"Здравствуйте, {booking.client_name}! Спасибо, что посетили Sasha Sugar. Будем рады, если вы поделитесь впечатлениями: {url}"
+    
+    send_sms(booking.phone, text)
