@@ -31,10 +31,7 @@ class APITokenAdmin(admin.ModelAdmin):
 # =============================================
 @admin.register(Client)
 class ClientAdmin(admin.ModelAdmin):
-    list_display = ('email', 'is_verified', 'total_bookings', 'first_visit', 'last_visit')
-    list_filter = ('is_verified',)
-    search_fields = ('email',)
-    readonly_fields = ('first_visit', 'last_visit')
+    pass
 
 
 # =============================================

@@ -27,19 +27,29 @@ class APIToken(models.Model):
 
 
 class Client(models.Model):
-    """Мини-CRM: история клиентов по email для умной верификации"""
-    email = models.EmailField('Email клиента', unique=True, db_index=True)
-    is_verified = models.BooleanField('Email подтвержден', default=False)
-    total_bookings = models.PositiveIntegerField('Всего записей', default=0)
+    """Профиль клиента (CRM)"""
+    # Телефон - главный идентификатор
+    phone = models.CharField('Телефон', max_length=20, unique=True, db_index=True)
+    name = models.CharField('Имя', max_length=100, blank=True)
+    # Почта необязательна (так как на сайте она опциональна)
+    email = models.EmailField('Email', blank=True, null=True, db_index=True) 
+    
+    # Статистика (заполняется при завершении приемов)
+    total_bookings = models.PositiveIntegerField('Всего визитов', default=0)
+    total_spent = models.DecimalField('Всего потрачено', max_digits=10, decimal_places=2, default=0)
     first_visit = models.DateTimeField('Первый визит', auto_now_add=True)
     last_visit = models.DateTimeField('Последний визит', auto_now=True)
+    
+    # Заметки администратора (аллергии, предпочтения)
+    notes = models.TextField('Заметки', blank=True)
 
     class Meta:
         verbose_name = 'Клиент (CRM)'
         verbose_name_plural = 'Клиенты (CRM)'
+        ordering = ['-last_visit']
 
     def __str__(self):
-        return self.email
+        return f"{self.name} ({self.phone})" if self.name else self.phone
 
 
 class EmailVerificationCode(models.Model):
@@ -69,43 +79,53 @@ class Booking(models.Model):
     STATUS_CHOICES = [
         ('pending', '⏳ Ожидает подтверждения'),
         ('confirmed', '✅ Подтверждено'),
+        ('completed', '🎉 Выполнено (Прием прошел)'), # НОВЫЙ СТАТУС
+        ('no_show', '👻 Не пришел'),                 # НОВЫЙ СТАТУС
         ('cancelled', '❌ Отменено'),
     ]
 
-    client_name = models.CharField('Имя клиента', max_length=100)
-    phone = models.CharField('Телефон', max_length=20)
-    email = models.EmailField('Электронная почта', blank=True, null=True)
-    
-    # === ИЗМЕНЕНО: Теперь поддерживаем несколько услуг ===
-    services = models.ManyToManyField(
-        'beauty_app.Service', 
-        verbose_name='Услуги',
-        related_name='bookings'
+    # СВЯЗЬ С КЛИЕНТОМ
+    client = models.ForeignKey(
+        Client, 
+        on_delete=models.SET_NULL, 
+        null=True, 
+        blank=True, 
+        related_name='bookings',
+        verbose_name='Клиент'
     )
+
+    client_name = models.CharField('Имя (в записи)', max_length=100)
+    phone = models.CharField('Телефон (в записи)', max_length=20)
+    email = models.EmailField('Email (в записи)', blank=True, null=True)
     
+    services = models.ManyToManyField('beauty_app.Service', verbose_name='Услуги', related_name='bookings')
     appointment_datetime = models.DateTimeField('Дата и время записи')
     status = models.CharField('Статус', max_length=20, choices=STATUS_CHOICES, default='confirmed')
-    google_event_id = models.CharField('ID события в Google', max_length=255, blank=True, null=True, editable=False)
     
+    google_event_id = models.CharField('ID события в Google', max_length=255, blank=True, null=True, editable=False)
     created_at = models.DateTimeField('Создано', auto_now_add=True)
     updated_at = models.DateTimeField('Обновлено', auto_now=True)
+
+    # Флаги напоминаний
+    reminded_24h = models.BooleanField('Напоминание 24ч отправлено', default=False)
+    reminded_2h = models.BooleanField('Напоминание 2ч отправлено', default=False)
+    reminded_15m = models.BooleanField('Напоминание 15м отправлено', default=False)
 
     class Meta:
         verbose_name = 'Запись клиента'
         verbose_name_plural = 'Записи клиентов'
         ordering = ['-appointment_datetime']
-        db_table = 'beauty_app_booking' # <-- ТРЮК: используем старую таблицу в БД
 
     def __str__(self):
-        # === ИЗМЕНЕНО: Собираем названия всех услуг через запятую ===
-        services_names = ", ".join([s.name for s in self.services.all()])
-        return f"{self.client_name} — {services_names} ({self.appointment_datetime.strftime('%d.%m.%Y %H:%M')})"
-    
+        return f"{self.client_name} — {self.appointment_datetime.strftime('%d.%m.%Y %H:%M')}"
+
     @property
     def total_duration(self):
-        """Возвращает общую длительность всех услуг в записи"""
         return sum(s.duration for s in self.services.all() if s.duration)
-
+        
+    @property
+    def total_price(self):
+        return sum(s.price for s in self.services.all() if s.price)
 
 class DayOff(models.Model):
     """Даты, когда студия не работает"""

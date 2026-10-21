@@ -99,11 +99,16 @@
         <button class="btn-close" onclick="closeApp()">Отлично</button>
     </div>
 
-    <script>
+        <script>
         if (window.Telegram && window.Telegram.WebApp) {
             window.Telegram.WebApp.ready();
             
-            // Виброотклик
+            // 1. СКРЫВАЕМ КНОПКУ "НАЗАД" (чтобы не вернуться на форму)
+            if (window.Telegram.WebApp.BackButton) {
+                window.Telegram.WebApp.BackButton.hide();
+            }
+
+            // 2. Виброотклик при успешной записи
             if (window.Telegram.WebApp.HapticFeedback) {
                 window.Telegram.WebApp.HapticFeedback.notificationOccurred('success');
             }

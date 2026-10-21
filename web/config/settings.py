@@ -47,6 +47,7 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'django.contrib.sitemaps',
     
+    'corsheaders',
     'rest_framework',
     'rest_framework.authtoken',
     
@@ -61,6 +62,7 @@ INSTALLED_APPS = [
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
+    'corsheaders.middleware.CorsMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
@@ -68,6 +70,21 @@ MIDDLEWARE = [
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
     'booking_app.middleware.APITokenMiddleware',
 ]
+
+
+CORS_ALLOWED_ORIGINS = [
+    "https://sasha-sugar.ru",
+    "https://www.sasha-sugar.ru",
+    "https://web.telegram.org",   # Для тестов в веб-версии Telegram
+]
+
+CSRF_TRUSTED_ORIGINS = [
+    "https://sasha-sugar.ru",
+    "https://www.sasha-sugar.ru",
+    "https://web.telegram.org",
+]
+
+CORS_ALLOW_CREDENTIALS = True
 
 ROOT_URLCONF = 'config.urls'
 

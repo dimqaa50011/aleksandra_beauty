@@ -67,4 +67,6 @@ urlpatterns = [
     path('api/admin-available-times/', api.get_admin_available_times, name='admin_available_times'),
     path('api/app-categories/', api.AdminCategoriesAPIView.as_view(), name='api_app_categories'),
     path('api/app-bookings/<int:pk>/update/', api.AdminBookingUpdateAPIView.as_view(), name='api_app_booking_update'),
+    path('api/app-clients/<int:pk>/', api.AdminClientDetailAPIView.as_view(), name='api_app_client_detail'),
+    path('api/app-clients/<int:pk>/update-notes/', api.AdminClientUpdateNotesAPIView.as_view(), name='api_app_client_update_notes'),
 ]

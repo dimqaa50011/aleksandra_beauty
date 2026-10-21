@@ -15,8 +15,6 @@ from django.utils import timezone
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_POST
 from django.views.generic import ListView, TemplateView, FormView, View
-
-# Импорты для очереди задач
 from django_q.tasks import async_task
 
 from rest_framework.authtoken.models import Token
@@ -29,9 +27,8 @@ from firebase_admin import credentials, messaging
 from .models import Booking, BlockedSlot, DayOff, DeviceFCMToken, EmailVerificationCode, Client, PushSubscription
 from .forms import BookingForm, AdminBookingForm, BlockedSlotForm
 from beauty_app.models import Service, ServiceCategory
-
-# Импорт функции планирования напоминаний
 from .tasks import schedule_reminders
+from .utils import get_or_create_client # <-- ИМПОРТ УТИЛИТЫ
 
 logger = logging.getLogger(__name__)
 
@@ -50,9 +47,7 @@ if not firebase_admin._apps:
 
 
 def send_fcm_notification(title, body, url=None):
-    """Отправляет push-уведомление всем зарегистрированным мобильным устройствам через FCM"""
     tokens = DeviceFCMToken.objects.filter(is_active=True).values_list('token', flat=True)
-    
     if not tokens:
         print("ℹ️ Нет зарегистрированных FCM-токенов")
         return
@@ -71,14 +66,11 @@ def send_fcm_notification(title, body, url=None):
                     payload=messaging.APNSPayload(aps=messaging.Aps(sound='default', badge=1)),
                 ),
             )
-            response = messaging.send(message)
-            print(f"✅ FCM push отправлен: {response}")
-            
+            messaging.send(message)
         except messaging.UnregisteredError:
             DeviceFCMToken.objects.filter(token=token).update(is_active=False)
-            print(f"🗑️ Токен недействителен: {token[:40]}...")
         except Exception as e:
-            print(f"❌ Ошибка FCM для токена {token[:40]}...: {e}")
+            print(f"❌ Ошибка FCM: {e}")
 
 
 try:
@@ -89,21 +81,17 @@ except ImportError:
 
 
 def send_push_notification(title, body, url=None):
-    """Отправляет пуш всем админам через Web Push (для браузера/PWA)"""
     if not HAS_WEBPUSH:
-        logger.warning("⚠️ pywebpush не установлен, отправка пушей пропущена")
         return
     
     subscriptions = PushSubscription.objects.all()
     if not subscriptions.exists():
-        logger.info("ℹ️ Нет активных подписок на пуши в базе")
         return
     
     vapid_private_key = getattr(settings, 'VAPID_PRIVATE_KEY', '')
     vapid_admin_email = getattr(settings, 'VAPID_ADMIN_EMAIL', 'admin@example.com')
     
     if not vapid_private_key or vapid_private_key == 'None':
-        logger.error("❌ VAPID_PRIVATE_KEY пустой или равен 'None'. Проверь .env.prod")
         return
 
     vapid_claims = {'sub': f'mailto:{vapid_admin_email}'}
@@ -117,14 +105,9 @@ def send_push_notification(title, body, url=None):
                 vapid_private_key=vapid_private_key,
                 vapid_claims=vapid_claims,
             )
-            logger.info(f"✅ WebPush успешно отправлен пользователю {sub.user.username}")
         except WebPushException as e:
-            logger.error(f"❌ Ошибка WebPush для {sub.user.username}: {e}")
             if e.response and e.response.status_code in [404, 410]:
                 sub.delete()
-                logger.info(f"🗑️ Удалена невалидная подписка {sub.user.username}")
-        except Exception as e:
-            logger.error(f"❌ Критическая ошибка при отправке пуша {sub.user.username}: {e}", exc_info=True)
 
 
 # ==========================================
@@ -134,50 +117,32 @@ def send_push_notification(title, body, url=None):
 @api_view(['POST'])
 @permission_classes([AllowAny])
 def app_login(request):
-    """Вход по логину/паролю, возвращает токен"""
     username = request.data.get('username', '').strip()
     password = request.data.get('password', '')
-    
-    print(f"🔐 Попытка входа: username='{username}', password_len={len(password)}")
-    
     user = authenticate(username=username, password=password)
     
-    if user is None:
-        print(f"❌ Аутентификация не удалась для '{username}'")
-        return JsonResponse({'error': 'Неверные данные'}, status=401)
-    
-    print(f"✅ Аутентификация прошла, проверяем is_staff: {user.is_staff}")
-    
-    if not user.is_staff:
-        print(f"❌ Пользователь '{username}' не является staff (is_staff={user.is_staff})")
+    if user is None or not user.is_staff:
         return JsonResponse({'error': 'Неверные данные'}, status=401)
     
     token, _ = Token.objects.get_or_create(user=user)
-    print(f"✅ Успешный вход: {username}, токен: {token.key[:20]}...")
     return JsonResponse({'token': token.key, 'username': user.username})
 
 
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def app_register_fcm_token(request):
-    print(f"📡 Получен запрос на регистрацию FCM!")
-    print(f"👤 Пользователь: {request.user}")
-    
     token = request.data.get('token', '').strip()
     platform = request.data.get('platform', '').strip()
     device_name = request.data.get('device_name', '').strip()
     
-    print(f"📱 Токен из запроса: {token[:20]}...")
-    
     if not token:
         return JsonResponse({'error': 'Token is required'}, status=400)
     
-    obj, created = DeviceFCMToken.objects.update_or_create(
+    DeviceFCMToken.objects.update_or_create(
         token=token,
         defaults={'user': request.user, 'platform': platform, 'device_name': device_name, 'is_active': True}
     )
-    print(f"✅ FCM токен сохранен в БД! ID: {obj.id}")
-    return JsonResponse({'success': True, 'created': created})
+    return JsonResponse({'success': True})
 
 
 @api_view(['GET'])
@@ -185,8 +150,7 @@ def app_register_fcm_token(request):
 def app_notifications(request):
     since_id = int(request.GET.get('since', 0))
     bookings = Booking.objects.filter(
-        id__gt=since_id,
-        created_at__gte=timezone.now() - timedelta(hours=48),
+        id__gt=since_id, created_at__gte=timezone.now() - timedelta(hours=48)
     ).order_by('id')[:20]
     
     result = []
@@ -239,7 +203,12 @@ def booking_create(request):
             naive_dt = datetime.strptime(f"{date_str} {time_str}", "%Y-%m-%d %H:%M")
             aware_dt = timezone.make_aware(naive_dt, timezone.get_current_timezone())
             
+            # 1. Ищем или создаем клиента
+            client = get_or_create_client(phone, client_name, email)
+            
+            # 2. Создаем запись
             booking = Booking.objects.create(
+                client=client, # <-- Привязка
                 client_name=client_name, phone=phone, email=email,
                 appointment_datetime=aware_dt, status='confirmed'
             )
@@ -250,11 +219,9 @@ def booking_create(request):
                 booking.services.set(services)
                 services_names = ", ".join([s.name for s in services])
             
-            # ОТПРАВКА УВЕДОМЛЕНИЙ АДМИНУ
             send_push_notification('🔔 Новая запись!', f'{client_name} записался на {services_names}', '/admin-dashboard/bookings/')
             send_fcm_notification(f'🔔 Новая запись: {client_name}', f'{services_names}\n{aware_dt.strftime("%d.%m %H:%M")}', f'/admin-dashboard/bookings/{booking.pk}/edit/')
             
-            # ОТПРАВКА SMS КЛИЕНТУ И ПЛАНИРОВАНИЕ НАПОМИНАНИЙ
             async_task('booking_app.tasks.send_event_sms_task', booking.id, 'creation')
             schedule_reminders(booking.id, booking.appointment_datetime)
             
@@ -268,14 +235,19 @@ def vk_booking_view(request):
     if request.method == 'POST':
         form = BookingForm(request.POST)
         if form.is_valid():
+            client_name = form.cleaned_data['client_name']
+            phone = form.cleaned_data['phone']
+            email = form.cleaned_data.get('email')
             date_str = form.cleaned_data['appointment_date']
             time_str = form.cleaned_data['appointment_time']
-            email = form.cleaned_data['email']
             
             naive_dt = datetime.strptime(f"{date_str} {time_str}", "%Y-%m-%d %H:%M")
             aware_dt = timezone.make_aware(naive_dt, timezone.get_current_timezone())
             
+            client = get_or_create_client(phone, client_name, email)
+            
             booking = form.save(commit=False)
+            booking.client = client
             booking.appointment_datetime = aware_dt
             booking.save()
             
@@ -288,16 +260,11 @@ def vk_booking_view(request):
                 services_names = ", ".join([s.name for s in services])
             
             send_fcm_notification(f'🔔 Новая запись (VK): {booking.client_name}', f'{services_names}\n{aware_dt.strftime("%d.%m %H:%M")}', f'/admin-dashboard/bookings/{booking.pk}/edit/')
-
-            # ОТПРАВКА SMS КЛИЕНТУ И ПЛАНИРОВАНИЕ НАПОМИНАНИЙ
             async_task('booking_app.tasks.send_event_sms_task', booking.id, 'creation')
             schedule_reminders(booking.id, booking.appointment_datetime)
 
+            # Отправка email (оставляем, если email был указан)
             if email:
-                client, created = Client.objects.get_or_create(email=email)
-                client.total_bookings += 1
-                client.is_verified = True
-                client.save()
                 try:
                     send_mail('🌸 Ваша запись в Sasha Sugar подтверждена!',
                               f"Здравствуйте, {booking.client_name}!\n\nВаша запись на {date_str} в {time_str} ({services_names}) успешно оформлена.\n\nЖдем вас по адресу: Спасский переулок, 7",
@@ -314,14 +281,19 @@ def telegram_booking_view(request):
     if request.method == 'POST':
         form = BookingForm(request.POST)
         if form.is_valid():
+            client_name = form.cleaned_data['client_name']
+            phone = form.cleaned_data['phone']
+            email = form.cleaned_data.get('email')
             date_str = form.cleaned_data['appointment_date']
             time_str = form.cleaned_data['appointment_time']
-            email = form.cleaned_data['email']
             
             naive_dt = datetime.strptime(f"{date_str} {time_str}", "%Y-%m-%d %H:%M")
             aware_dt = timezone.make_aware(naive_dt, timezone.get_current_timezone())
             
+            client = get_or_create_client(phone, client_name, email)
+            
             booking = form.save(commit=False)
+            booking.client = client
             booking.appointment_datetime = aware_dt
             booking.save()
             
@@ -334,16 +306,10 @@ def telegram_booking_view(request):
                 services_names = ", ".join([s.name for s in services])
             
             send_fcm_notification(f'🔔 Новая запись (Telegram): {booking.client_name}', f'{services_names}\n{aware_dt.strftime("%d.%m %H:%M")}', f'/admin-dashboard/bookings/{booking.pk}/edit/')
-
-            # ОТПРАВКА SMS КЛИЕНТУ И ПЛАНИРОВАНИЕ НАПОМИНАНИЙ
             async_task('booking_app.tasks.send_event_sms_task', booking.id, 'creation')
             schedule_reminders(booking.id, booking.appointment_datetime)
 
             if email:
-                client, created = Client.objects.get_or_create(email=email)
-                client.total_bookings += 1
-                client.is_verified = True
-                client.save()
                 try:
                     send_mail('🌸 Ваша запись в Sasha Sugar подтверждена!',
                               f"Здравствуйте, {booking.client_name}!\n\nВаша запись на {date_str} в {time_str} ({services_names}) успешно оформлена.\n\nЖдем вас по адресу: Спасский переулок, 7",
@@ -360,14 +326,19 @@ def max_booking_view(request):
     if request.method == 'POST':
         form = BookingForm(request.POST)
         if form.is_valid():
+            client_name = form.cleaned_data['client_name']
+            phone = form.cleaned_data['phone']
+            email = form.cleaned_data.get('email')
             date_str = form.cleaned_data['appointment_date']
             time_str = form.cleaned_data['appointment_time']
-            email = form.cleaned_data['email']
             
             naive_dt = datetime.strptime(f"{date_str} {time_str}", "%Y-%m-%d %H:%M")
             aware_dt = timezone.make_aware(naive_dt, timezone.get_current_timezone())
             
+            client = get_or_create_client(phone, client_name, email)
+            
             booking = form.save(commit=False)
+            booking.client = client
             booking.appointment_datetime = aware_dt
             booking.save()
             
@@ -380,16 +351,10 @@ def max_booking_view(request):
                 services_names = ", ".join([s.name for s in services])
             
             send_fcm_notification(f'🔔 Новая запись (MAX): {booking.client_name}', f'{services_names}\n{aware_dt.strftime("%d.%m %H:%M")}', f'/admin-dashboard/bookings/{booking.pk}/edit/')
-
-            # ОТПРАВКА SMS КЛИЕНТУ И ПЛАНИРОВАНИЕ НАПОМИНАНИЙ
             async_task('booking_app.tasks.send_event_sms_task', booking.id, 'creation')
             schedule_reminders(booking.id, booking.appointment_datetime)
 
             if email:
-                client, created = Client.objects.get_or_create(email=email)
-                client.total_bookings += 1
-                client.is_verified = True
-                client.save()
                 try:
                     send_mail('🌸 Ваша запись в Sasha Sugar подтверждена!',
                               f"Здравствуйте, {booking.client_name}!\n\nВаша запись на {date_str} в {time_str} ({services_names}) успешно оформлена.\n\nЖдем вас по адресу: Спасский переулок, 7",
@@ -440,7 +405,11 @@ def api_create_booking(request):
     if not is_time_slot_available(appointment_datetime, services=services, duration=total_duration):
         return JsonResponse({'error': 'Это время уже занято или заблокировано'}, status=409)
 
+    # Ищем или создаем клиента
+    client = get_or_create_client(phone, client_name, email)
+
     booking = Booking.objects.create(
+        client=client, # <-- Привязка
         client_name=client_name, phone=phone, email=email if email else None,
         appointment_datetime=appointment_datetime, status='confirmed'
     )
@@ -449,16 +418,11 @@ def api_create_booking(request):
     services_names = ", ".join([s.name for s in services])
     
     send_fcm_notification(f'🔔 Новая запись (API): {client_name}', f'{services_names}\n{appointment_datetime.strftime("%d.%m %H:%M")}', f'/admin-dashboard/bookings/{booking.id}/edit/')
-
-    # ОТПРАВКА SMS КЛИЕНТУ И ПЛАНИРОВАНИЕ НАПОМИНАНИЙ
     async_task('booking_app.tasks.send_event_sms_task', booking.id, 'creation')
     schedule_reminders(booking.id, booking.appointment_datetime)
 
+    # Отправка email
     if email:
-        client, created = Client.objects.get_or_create(email=email)
-        client.total_bookings += 1
-        client.is_verified = True
-        client.save()
         try:
             send_mail('🌸 Ваша запись в Sasha Sugar подтверждена!',
                       f"Здравствуйте, {client_name}!\n\nВаша запись успешно оформлена.\n\n📅 Дата: {date_str}\n⏰ Время: {time_str}\n💅 Услуги: {services_names}\n📍 Адрес: Санкт-Петербург, Спасский переулок, 7",
@@ -685,8 +649,32 @@ def get_available_times(request):
     buffer_minutes = 10
     total_duration = duration_minutes + buffer_minutes
 
+    # === НОВАЯ ЛОГИКА ВРЕМЕНИ ===
+    now = timezone.localtime(timezone.now())
+    current_date = now.date()
+    
+    start_time_calc = datetime.combine(date, WORK_START)
+    
+    if date == current_date:
+        min_lead_time = now + timedelta(hours=3)
+        if min_lead_time.minute > 0:
+            if min_lead_time.minute <= 30:
+                min_lead_time = min_lead_time.replace(minute=30, second=0, microsecond=0)
+            else:
+                min_lead_time = (min_lead_time + timedelta(hours=1)).replace(minute=0, second=0, microsecond=0)
+        start_time_calc = min_lead_time
+        
+    if start_time_calc.time() >= WORK_END:
+        return JsonResponse({'is_blocked': False, 'times': [], 'total_duration': total_duration})
+
+    if start_time_calc.time() < WORK_START:
+        start_time_calc = datetime.combine(date, WORK_START)
+        
+    start_time = start_time_calc.time()
+
     all_times = []
-    current_time = WORK_START
+    current_time = start_time
+    
     while current_time < WORK_END:
         slot_end_time = (datetime.combine(date, current_time) + timedelta(minutes=total_duration)).time()
         if slot_end_time <= WORK_END:
@@ -737,7 +725,6 @@ def get_available_times(request):
         'is_blocked': False, 'times': available_times, 'blocked_count': blocked_slots.count(),
         'total_duration': total_duration, 'services_count': len(services)
     })
-
 
 def booking_success(request):
     return render(request, 'booking_app/booking_success.html')
@@ -794,7 +781,6 @@ def booking_edit(request, pk):
             except Exception as e:
                 print(f"Ошибка обновления Google Calendar: {e}")
             
-            # СБРОС ФЛАГОВ И ОТПРАВКА SMS ОБ ИЗМЕНЕНИИ
             booking.reminded_24h = False
             booking.reminded_2h = False
             booking.reminded_15m = False
@@ -913,14 +899,16 @@ class AdminBookingCreateView(AdminRequiredMixin, FormView):
                 booking = form.save(commit=False)
                 booking.appointment_datetime = aware_dt
                 booking.status = form.cleaned_data.get('status', 'confirmed')
+                
+                # Ищем или создаем клиента для админской записи
+                client = get_or_create_client(booking.phone, booking.client_name, booking.email)
+                booking.client = client
+                
                 booking.save()
                 booking.services.set(services)
                 
                 services_names = ", ".join([s.name for s in services])
-                # ОТПРАВКА УВЕДОМЛЕНИЙ АДМИНУ
                 send_fcm_notification(f'🔔 Новая запись (Админ): {booking.client_name}', f'{services_names}\n{aware_dt.strftime("%d.%m %H:%M")}', f'/admin-dashboard/bookings/{booking.pk}/edit/')
-                
-                # ОТПРАВКА SMS КЛИЕНТУ И ПЛАНИРОВАНИЕ НАПОМИНАНИЙ
                 async_task('booking_app.tasks.send_event_sms_task', booking.id, 'creation')
                 schedule_reminders(booking.id, booking.appointment_datetime)
                 
@@ -947,7 +935,6 @@ class BookingCancelView(AdminRequiredMixin, View):
         booking.status = 'cancelled'
         booking.save()
         
-        # ОТПРАВКА SMS ОБ ОТМЕНЕ
         async_task('booking_app.tasks.send_event_sms_task', booking.id, 'cancel')
         
         messages.success(request, f'Запись для {booking.client_name} отменена')

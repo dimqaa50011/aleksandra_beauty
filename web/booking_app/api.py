@@ -33,17 +33,14 @@ class AdminBookingUpdateAPIView(APIView):
             return Response({'error': 'Не все данные переданы'}, status=400)
 
         try:
-            # Обновляем время
             naive_dt = datetime.strptime(f"{date_str} {time_str}", "%Y-%m-%d %H:%M")
             aware_dt = timezone.make_aware(naive_dt, timezone.get_current_timezone())
             
-            # Обновляем услуги
             if isinstance(services_ids, str):
                 services_ids = [int(i) for i in services_ids.split(',') if i]
                 
             services = Service.objects.filter(id__in=services_ids, is_active=True)
             
-            # Сохраняем
             booking.appointment_datetime = aware_dt
             booking.save()
             booking.services.set(services)
@@ -78,7 +75,6 @@ def get_admin_available_times(request):
     except ValueError:
         return Response({'error': 'Неверный формат даты'}, status=400)
 
-    # Если услуги не выбраны, берем стандартную длительность (например, 60 минут)
     duration_minutes = 60
     if services_ids_str:
         try:
@@ -89,13 +85,11 @@ def get_admin_available_times(request):
         except ValueError:
             pass
     
-    # Добавляем буфер 10 минут, как на клиенте
     total_duration = duration_minutes + 10
 
     WORK_START, WORK_END, SLOT_STEP = dt_time(9, 0), dt_time(22, 0), 30
     current_tz = timezone.get_current_timezone()
     
-    # Проверяем, не заблокирован ли день полностью
     if BlockedSlot.objects.filter(date=date, is_full_day=True).exists():
         return Response({'times': [], 'is_blocked': True})
 
@@ -111,13 +105,11 @@ def get_admin_available_times(request):
         slot_start = timezone.make_aware(datetime.combine(date, current_time), current_tz)
         slot_end = slot_start + timedelta(minutes=total_duration)
         
-        # Если запись выходит за конец рабочего дня — пропускаем
         if slot_end.time() > WORK_END:
             break
 
         is_free = True
 
-        # Проверка блокировок по времени
         for blocked in blocked_slots:
             if blocked.start_time and blocked.end_time:
                 b_start = timezone.make_aware(datetime.combine(date, blocked.start_time), current_tz)
@@ -126,7 +118,6 @@ def get_admin_available_times(request):
                     is_free = False
                     break
         
-        # Проверка существующих записей
         if is_free:
             for booking in existing_bookings:
                 b_duration = sum(s.duration for s in booking.services.all() if s.duration)
@@ -143,11 +134,7 @@ def get_admin_available_times(request):
 
     return Response({'times': available_times, 'is_blocked': False})
 
-
 class AdminClientsAPIView(APIView):
-    """
-    GET: Список клиентов (CRM) с поиском
-    """
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
@@ -155,23 +142,23 @@ class AdminClientsAPIView(APIView):
         
         clients = Client.objects.all().order_by('-last_visit')
         if search_query:
-            clients = clients.filter(email__icontains=search_query)
+            # Ищем и по имени, и по телефону
+            clients = clients.filter(name__icontains=search_query) | clients.filter(phone__icontains=search_query)
 
-        # Ограничиваем до 100 последних для мобильного приложения
         clients = clients[:100]
 
         data = []
         for c in clients:
             data.append({
                 'id': c.id,
-                'email': c.email,
+                'name': c.name,
+                'phone': c.phone,
                 'total_bookings': c.total_bookings,
+                'total_spent': int(c.total_spent),
                 'last_visit': c.last_visit.strftime('%d.%m.%Y'),
-                'is_verified': c.is_verified,
             })
 
         return Response({'clients': data}, status=status.HTTP_200_OK)
-
 
 class AdminCalendarAPIView(APIView):
     """
@@ -182,7 +169,7 @@ class AdminCalendarAPIView(APIView):
 
     def get(self, request):
         date_str = request.query_params.get('date')
-        period = request.query_params.get('period', 'day') # 'day' или 'week'
+        period = request.query_params.get('period', 'day')
         
         if not date_str:
             return Response({'error': 'Не указана дата'}, status=400)
@@ -195,10 +182,9 @@ class AdminCalendarAPIView(APIView):
         days_count = 7 if period == 'week' else 1
         dates = [start_date + timedelta(days=i) for i in range(days_count)]
         
-        # Рабочие часы
         WORK_START = dt_time(9, 0)
         WORK_END = dt_time(23, 30)
-        SLOT_STEP = 30 # Шаг 30 минут
+        SLOT_STEP = 30
         
         result = {}
 
@@ -206,21 +192,17 @@ class AdminCalendarAPIView(APIView):
             date_key = current_date.strftime('%Y-%m-%d')
             result[date_key] = []
             
-            # Получаем блокировки на этот день
             blocked_slots = BlockedSlot.objects.filter(date=current_date)
             is_full_day_blocked = blocked_slots.filter(is_full_day=True).exists()
             
-            # Получаем записи
             bookings = Booking.objects.filter(
                 appointment_datetime__date=current_date,
                 status__in=['pending', 'confirmed']
             ).prefetch_related('services')
 
-            # Генерируем слоты
             current_time = datetime.combine(current_date, WORK_START)
             end_time = datetime.combine(current_date, WORK_END)
             
-            # Делаем время aware (с учетом часового пояса), чтобы сравнивать с базой
             current_tz = timezone.get_current_timezone()
             current_time = timezone.make_aware(current_time, current_tz)
             end_time = timezone.make_aware(end_time, current_tz)
@@ -230,11 +212,9 @@ class AdminCalendarAPIView(APIView):
                 slot_status = 'free'
                 booking_data = None
 
-                # 1. Проверяем, не заблокирован ли весь день
                 if is_full_day_blocked:
                     slot_status = 'blocked'
                 else:
-                    # 2. Проверяем частичные блокировки (по времени)
                     for b in blocked_slots:
                         if b.start_time and b.end_time:
                             b_start = timezone.make_aware(datetime.combine(current_date, b.start_time), current_tz)
@@ -243,23 +223,20 @@ class AdminCalendarAPIView(APIView):
                                 slot_status = 'blocked'
                                 break
 
-                    # 3. Проверяем, есть ли запись в это время
                     if slot_status == 'free':
                         for booking in bookings:
                             booking_start = booking.appointment_datetime
-                            
-                            # Защита от нулевой длительности
                             duration = sum(s.duration for s in booking.services.all() if s.duration)
                             if not duration or duration <= 0:
                                 duration = 30
                                 
                             booking_end = booking_start + timedelta(minutes=duration)
                             
-                            # Если текущий слот попадает в интервал записи
                             if booking_start <= current_time < booking_end:
                                 slot_status = 'booked'
                                 booking_data = {
                                     'id': booking.id,
+                                    'client_id': booking.client.id if booking.client else 0, # <-- ДОБАВИТЬ ЭТО
                                     'client_name': booking.client_name,
                                     'phone': booking.phone,
                                     'status': booking.status,
@@ -280,10 +257,6 @@ class AdminCalendarAPIView(APIView):
 
 
 class AdminBlockedSlotsAPIView(APIView):
-    """
-    GET: Список блокировок
-    POST: Создать блокировку (на весь день или на конкретные часы)
-    """
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
@@ -334,7 +307,6 @@ class AdminBlockedSlotsAPIView(APIView):
             except ValueError:
                 return Response({'error': 'Неверный формат времени'}, status=400)
 
-            # ПРОВЕРКА КОНФЛИКТОВ С ЗАПИСЯМИ
             block_start_dt = timezone.make_aware(datetime.combine(target_date, start_time), current_tz)
             block_end_dt = timezone.make_aware(datetime.combine(target_date, end_time), current_tz)
 
@@ -348,13 +320,11 @@ class AdminBlockedSlotsAPIView(APIView):
                 b_start = b.appointment_datetime
                 b_end = b_start + timedelta(minutes=b_duration)
 
-                # Если запись пересекается с блокировкой
                 if b_start < block_end_dt and b_end > block_start_dt:
                     return Response({
                         'error': f'Нельзя заблокировать это время. У вас запись на {b_start.strftime("%H:%M")} ({b.client_name})'
                     }, status=status.HTTP_409_CONFLICT)
 
-        # Создаем блокировку
         slot = BlockedSlot.objects.create(
             date=target_date,
             is_full_day=is_full_day,
@@ -368,9 +338,6 @@ class AdminBlockedSlotsAPIView(APIView):
 
 
 class AdminBlockedSlotDeleteAPIView(APIView):
-    """
-    DELETE: Удалить блокировку (разблокировать день)
-    """
     permission_classes = [IsAuthenticated]
 
     def delete(self, request, pk):
@@ -380,9 +347,6 @@ class AdminBlockedSlotDeleteAPIView(APIView):
 
 
 class ServiceListAPIView(APIView):
-    """
-    GET: Возвращает список всех активных услуг для выбора в мобильном приложении
-    """
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
@@ -402,9 +366,6 @@ class ServiceListAPIView(APIView):
 
 
 class AdminCategoriesAPIView(APIView):
-    """
-    GET: Список всех категорий
-    """
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
@@ -414,9 +375,6 @@ class AdminCategoriesAPIView(APIView):
 
 
 class AdminBookingsListAPIView(APIView):
-    """
-    GET: Получить список записей на выбранную дату (по умолчанию — на сегодня)
-    """
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
@@ -444,9 +402,6 @@ class AdminBookingsListAPIView(APIView):
 
 
 class AdminBookingStatusAPIView(APIView):
-    """
-    POST: Подтвердить или отменить запись из мобильного приложения
-    """
     permission_classes = [IsAuthenticated]
 
     def post(self, request, pk):
@@ -462,7 +417,6 @@ class AdminBookingStatusAPIView(APIView):
         booking.status = new_status
         booking.save()
         
-        # === ОТПРАВЛЯЕМ SMS ПРИ ОТМЕНЕ ===
         if new_status == 'cancelled':
             async_task('booking_app.tasks.send_event_sms_task', booking.id, 'cancel')
         
@@ -474,9 +428,6 @@ class AdminBookingStatusAPIView(APIView):
 
 
 class AdminBlockDayAPIView(APIView):
-    """
-    POST: Заблокировать целый день (выходной)
-    """
     permission_classes = [IsAuthenticated]
 
     def post(self, request):
@@ -486,7 +437,6 @@ class AdminBlockDayAPIView(APIView):
             target_date = serializer.validated_data['date']
             reason = serializer.validated_data.get('reason', 'Выходной')
             
-            # Создаем или обновляем блокировку на весь день
             slot, created = BlockedSlot.objects.get_or_create(
                 date=target_date,
                 is_full_day=True,
@@ -500,3 +450,56 @@ class AdminBlockDayAPIView(APIView):
             }, status=status.HTTP_201_CREATED if created else status.HTTP_200_OK)
             
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+# ==========================================
+# API ДЛЯ CRM (КЛИЕНТЫ)
+# ==========================================
+
+class AdminClientDetailAPIView(APIView):
+    """GET: Полная информация о клиенте и его история записей"""
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request, pk):
+        client = get_object_or_404(Client, pk=pk)
+        
+        # Получаем историю
+        bookings = client.bookings.all().order_by('-appointment_datetime')
+        history = []
+        for b in bookings:
+            history.append({
+                'id': b.id,
+                'date': b.appointment_datetime.strftime('%d.%m.%Y %H:%M'),
+                'services': [s.name for s in b.services.all()],
+                'total_price': int(b.total_price),
+                'status': b.status,
+                'status_display': b.get_status_display(),
+            })
+
+        data = {
+            'id': client.id,
+            'name': client.name,
+            'phone': client.phone,
+            'email': client.email,
+            'total_bookings': client.total_bookings,
+            'total_spent': int(client.total_spent),
+            'notes': client.notes,
+            'history': history,
+        }
+        
+        return Response(data, status=status.HTTP_200_OK)
+
+
+class AdminClientUpdateNotesAPIView(APIView):
+    """PATCH: Сохранить заметки о клиенте"""
+    permission_classes = [IsAuthenticated]
+
+    def patch(self, request, pk):
+        client = get_object_or_404(Client, pk=pk)
+        notes = request.data.get('notes')
+        
+        if notes is not None:
+            client.notes = notes
+            client.save()
+            return Response({'success': True, 'message': 'Заметки сохранены'})
+            
+        return Response({'error': 'Нет данных для обновления'}, status=400)
