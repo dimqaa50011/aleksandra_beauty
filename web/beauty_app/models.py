@@ -115,7 +115,7 @@ class ServiceCategory(models.Model):
     seo_description = models.TextField(blank=True, help_text="Описание для поисковиков (до 160 символов)")
 
     icon = models.CharField(max_length=10, help_text="Эмодзи", blank=True, null=True)
-    description = models.CharField(max_length=100, blank=True, help_text="Короткое описание для карточки на главной")
+    description = models.TextField(blank=True, help_text="Короткое описание для карточки на главной")
     order = models.PositiveIntegerField(default=0, help_text="Порядок отображения (меньше — выше)")
     image = models.ImageField(upload_to='categories/', blank=True, null=True, verbose_name="Обложка категории")
 
