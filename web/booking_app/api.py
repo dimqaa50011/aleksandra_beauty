@@ -402,24 +402,51 @@ class AdminBookingsListAPIView(APIView):
         }, status=status.HTTP_200_OK)
 
 
+        
 class AdminBookingStatusAPIView(APIView):
+    """
+    POST: Подтвердить, отменить, завершить или отметить неявку
+    """
     permission_classes = [IsAuthenticated]
 
     def post(self, request, pk):
         booking = get_object_or_404(Booking, pk=pk)
         new_status = request.data.get('status')
         
-        if new_status not in ['confirmed', 'cancelled']:
+        # Разрешаем все 4 статуса
+        if new_status not in ['confirmed', 'cancelled', 'completed', 'no_show']:
             return Response(
-                {'error': 'Неверный статус. Допустимо: confirmed, cancelled'}, 
+                {'error': 'Неверный статус. Допустимо: confirmed, cancelled, completed, no_show'}, 
                 status=status.HTTP_400_BAD_REQUEST
             )
             
+        old_status = booking.status
         booking.status = new_status
+        
+        # Если пришли услуги (например, при завершении приема админ менял состав услуг)
+        services_ids = request.data.get('services_ids')
+        if services_ids:
+            if isinstance(services_ids, str):
+                services_ids = [int(i) for i in services_ids.split(',') if i]
+            services = Service.objects.filter(id__in=services_ids, is_active=True)
+            booking.services.set(services)
+            
         booking.save()
         
+        # === ОБНОВЛЕНИЕ СТАТИСТИКИ КЛИЕНТА ===
+        if new_status == 'completed' and old_status != 'completed' and booking.client:
+            client = booking.client
+            client.total_bookings += 1
+            client.total_spent += booking.total_price # Считаем по актуальным услугам
+            client.last_visit = booking.appointment_datetime
+            client.save()
+            
+        # === ОТПРАВКА SMS ===
         if new_status == 'cancelled':
             async_task('booking_app.tasks.send_event_sms_task', booking.id, 'cancel')
+        elif new_status == 'completed':
+            # Отправка с просьбой об отзыве (если шаблон добавлен)
+            async_task('booking_app.tasks.send_event_sms_task', booking.id, 'review_request')
         
         return Response({
             'success': True, 
