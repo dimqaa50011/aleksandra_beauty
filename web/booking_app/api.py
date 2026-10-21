@@ -241,7 +241,8 @@ class AdminCalendarAPIView(APIView):
                                     'phone': booking.phone,
                                     'status': booking.status,
                                     'services': [{'id': s.id, 'name': s.name} for s in booking.services.all()],
-                                    'time': booking_start.strftime('%H:%M')
+                                    'time': booking_start.strftime('%H:%M'),
+                                    'is_start': current_time == booking_start 
                                 }
                                 break
 
