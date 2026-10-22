@@ -201,6 +201,13 @@
         const categorySelect = document.querySelector('select[name="category"]');
         const serviceSelect = document.querySelector('select[name="service"]');
         const dateInput = document.querySelector('input[name="appointment_date"]');
+        if (dateInput) {
+            const today = new Date();
+            const yyyy = today.getFullYear();
+            const mm = String(today.getMonth() + 1).padStart(2, '0');
+            const dd = String(today.getDate()).padStart(2, '0');
+            dateInput.setAttribute('min', `${yyyy}-${mm}-${dd}`);
+        }
         const timeSelect = document.querySelector('select[name="appointment_time"]');
         const timeHelp = document.getElementById('timeHelp');
         const bookingForm = document.getElementById('bookingForm');

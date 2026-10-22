@@ -1,4 +1,5 @@
 from django import forms
+from django.utils import timezone
 from .models import Booking, BlockedSlot
 from beauty_app.models import Service, ServiceCategory, Review
 
@@ -67,6 +68,11 @@ class BookingForm(forms.ModelForm):
                 'placeholder': 'example@mail.ru'
             }),
         }
+    
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # Для клиентов запрещаем выбирать прошлые даты
+        self.fields['appointment_date'].widget.attrs['min'] = timezone.localdate().isoformat()
 
     def clean_appointment_time(self):
         """Ручная валидация формата времени"""

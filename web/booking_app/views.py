@@ -289,6 +289,10 @@ def vk_booking_view(request):
             naive_dt = datetime.strptime(f"{date_str} {time_str}", "%Y-%m-%d %H:%M")
             aware_dt = timezone.make_aware(naive_dt, timezone.get_current_timezone())
             
+            if aware_dt.date() < timezone.localdate():
+                form.add_error(None, 'Нельзя записаться на прошедшую дату')
+                return render(request, 'booking_app/booking_form.html', {'form': form})
+            
             client = get_or_create_client(phone, client_name, email)
             
             booking = form.save(commit=False)
@@ -335,6 +339,10 @@ def telegram_booking_view(request):
             naive_dt = datetime.strptime(f"{date_str} {time_str}", "%Y-%m-%d %H:%M")
             aware_dt = timezone.make_aware(naive_dt, timezone.get_current_timezone())
             
+            if aware_dt.date() < timezone.localdate():
+                form.add_error(None, 'Нельзя записаться на прошедшую дату')
+                return render(request, 'booking_app/booking_form.html', {'form': form})
+            
             client = get_or_create_client(phone, client_name, email)
             
             booking = form.save(commit=False)
@@ -379,6 +387,10 @@ def max_booking_view(request):
             
             naive_dt = datetime.strptime(f"{date_str} {time_str}", "%Y-%m-%d %H:%M")
             aware_dt = timezone.make_aware(naive_dt, timezone.get_current_timezone())
+            
+            if aware_dt.date() < timezone.localdate():
+                form.add_error(None, 'Нельзя записаться на прошедшую дату')
+                return render(request, 'booking_app/booking_form.html', {'form': form})
             
             client = get_or_create_client(phone, client_name, email)
             
@@ -679,6 +691,8 @@ def get_available_times(request):
         return JsonResponse({'error': 'Не указана дата или услуги'}, status=400)
     try:
         date = datetime.strptime(date_str, '%Y-%m-%d').date()
+        if date < timezone.localdate():
+            return JsonResponse({'is_blocked': True, 'times': [], 'error': 'Прошедшая дата'}, status=400)
         services_ids = [int(id) for id in services_ids_str.split(',') if id]
         services = Service.objects.filter(id__in=services_ids, is_active=True)
         if not services.exists():
