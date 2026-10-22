@@ -516,7 +516,6 @@ class AdminNotificationReadAPIView(APIView):
         return Response({'success': True, 'message': 'Уведомление прочитано'}, status=status.HTTP_200_OK)
     
     
-    
 class AdminBookingStatusAPIView(APIView):
     """POST: Подтвердить, отменить, завершить или отметить неявку"""
     permission_classes = [IsAuthenticated]
@@ -526,10 +525,7 @@ class AdminBookingStatusAPIView(APIView):
         new_status = request.data.get('status')
         
         if new_status not in ['confirmed', 'cancelled', 'completed', 'no_show']:
-            return Response(
-                {'error': 'Неверный статус. Допустимо: confirmed, cancelled, completed, no_show'}, 
-                status=status.HTTP_400_BAD_REQUEST
-            )
+            return Response({'error': 'Неверный статус'}, status=status.HTTP_400_BAD_REQUEST)
             
         old_status = booking.status
         booking.status = new_status
@@ -544,19 +540,30 @@ class AdminBookingStatusAPIView(APIView):
             
         booking.save()
         
-        # === ОБНОВЛЕНИЕ СТАТИСТИКИ КЛИЕНТА ===
-        if new_status == 'completed' and old_status != 'completed' and booking.client:
-            client = booking.client
-            client.total_bookings += 1
-            client.total_spent += booking.total_price
-            client.last_visit = booking.appointment_datetime
-            client.save()
-            
-        # === ОТПРАВКА SMS ===
-        if new_status == 'cancelled':
+        # === ЛОГИКА ОТПРАВКИ СМС И НАПОМИНАНИЙ ===
+        
+        # 1. Если запись ПОДТВЕРЖДАЮТ (из pending в confirmed)
+        if old_status == 'pending' and new_status == 'confirmed':
+            # Отправляем СМС клиенту, что он записан
+            async_task('booking_app.tasks.send_event_sms_task', booking.id, 'creation')
+            # Ставим напоминания за 24ч, 2ч и 15м
+            schedule_reminders(booking.id, booking.appointment_datetime)
+
+        # 2. Если запись ОТМЕНЯЮТ (и она была до этого активна)
+        elif new_status == 'cancelled' and old_status in ['pending', 'confirmed']:
             async_task('booking_app.tasks.send_event_sms_task', booking.id, 'cancel')
-        elif new_status == 'completed':
-            # Отправка СМС с просьбой об отзыве (вызываем НАШУ НОВУЮ задачу)
+            
+        # 3. Если прием ЗАВЕРШЕН
+        elif new_status == 'completed' and old_status != 'completed':
+            # Обновляем статистику клиента
+            if booking.client:
+                client = booking.client
+                client.total_bookings += 1
+                client.total_spent += booking.total_price
+                client.last_visit = booking.appointment_datetime
+                client.save()
+            
+            # Отправляем СМС с просьбой об отзыве
             async_task('booking_app.tasks.send_review_request_task', booking.id)
         
         return Response({

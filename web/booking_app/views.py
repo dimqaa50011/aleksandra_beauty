@@ -268,8 +268,8 @@ def booking_create(request):
             send_push_notification('🔔 Новая запись!', f'{client_name} записался на {services_names}', '/admin-dashboard/bookings/')
             send_fcm_notification(f'🔔 Новая запись: {client_name}', f'{services_names}\n{aware_dt.strftime("%d.%m %H:%M")}', f'/admin-dashboard/bookings/{booking.pk}/edit/', booking.id)
             
-            async_task('booking_app.tasks.send_event_sms_task', booking.id, 'creation')
-            schedule_reminders(booking.id, booking.appointment_datetime)
+            # async_task('booking_app.tasks.send_event_sms_task', booking.id, 'creation')
+            # schedule_reminders(booking.id, booking.appointment_datetime)
             
             return redirect('booking_app:booking_success')
     else:
@@ -310,8 +310,8 @@ def vk_booking_view(request):
                 services_names = ", ".join([s.name for s in services])
             
             send_fcm_notification(f'🔔 Новая запись (VK): {booking.client_name}', f'{services_names}\n{aware_dt.strftime("%d.%m %H:%M")}', f'/admin-dashboard/bookings/{booking.pk}/edit/', booking.id)
-            async_task('booking_app.tasks.send_event_sms_task', booking.id, 'creation')
-            schedule_reminders(booking.id, booking.appointment_datetime)
+            # async_task('booking_app.tasks.send_event_sms_task', booking.id, 'creation')
+            # schedule_reminders(booking.id, booking.appointment_datetime)
 
             # Отправка email (оставляем, если email был указан)
             if email:
@@ -360,8 +360,8 @@ def telegram_booking_view(request):
                 services_names = ", ".join([s.name for s in services])
             
             send_fcm_notification(f'🔔 Новая запись (Telegram): {booking.client_name}', f'{services_names}\n{aware_dt.strftime("%d.%m %H:%M")}', f'/admin-dashboard/bookings/{booking.pk}/edit/', booking.id)
-            async_task('booking_app.tasks.send_event_sms_task', booking.id, 'creation')
-            schedule_reminders(booking.id, booking.appointment_datetime)
+            # async_task('booking_app.tasks.send_event_sms_task', booking.id, 'creation')
+            # schedule_reminders(booking.id, booking.appointment_datetime)
 
             if email:
                 try:
@@ -409,8 +409,8 @@ def max_booking_view(request):
                 services_names = ", ".join([s.name for s in services])
             
             send_fcm_notification(f'🔔 Новая запись (MAX): {booking.client_name}', f'{services_names}\n{aware_dt.strftime("%d.%m %H:%M")}', f'/admin-dashboard/bookings/{booking.pk}/edit/', booking.id)
-            async_task('booking_app.tasks.send_event_sms_task', booking.id, 'creation')
-            schedule_reminders(booking.id, booking.appointment_datetime)
+            # async_task('booking_app.tasks.send_event_sms_task', booking.id, 'creation')
+            # schedule_reminders(booking.id, booking.appointment_datetime)
 
             if email:
                 try:
