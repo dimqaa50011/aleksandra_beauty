@@ -170,7 +170,7 @@ def generate_post_task(idea_id: int):
         )
 
         # 3. Обновление статуса
-        idea.status = 'in_progress'
+        idea.status = 'ready'
         idea.save()
 
         print(f"✅ УСПЕХ: Пост #{post.id} создан и сохранен в базе!")
