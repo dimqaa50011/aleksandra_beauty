@@ -105,10 +105,7 @@ def send_reminder_task(booking_id, timeframe):
 
 
 def schedule_reminders(booking_id, appointment_datetime):
-    """
-    Планирует 3 напоминания для записи.
-    Вызывается сразу после создания или изменения записи.
-    """
+    """Планирует 3 напоминания для записи."""
     now = timezone.now()
     
     # 24 часа
@@ -117,7 +114,7 @@ def schedule_reminders(booking_id, appointment_datetime):
         async_task(
             'booking_app.tasks.send_reminder_task', 
             booking_id, '24h', 
-            schedule=time_24h
+            q_options={'schedule': time_24h} # <-- ВОТ ТАК ПРАВИЛЬНО
         )
         
     # 2 часа
@@ -126,7 +123,7 @@ def schedule_reminders(booking_id, appointment_datetime):
         async_task(
             'booking_app.tasks.send_reminder_task', 
             booking_id, '2h', 
-            schedule=time_2h
+            q_options={'schedule': time_2h} # <-- И ТУТ
         )
         
     # 15 минут
@@ -135,7 +132,7 @@ def schedule_reminders(booking_id, appointment_datetime):
         async_task(
             'booking_app.tasks.send_reminder_task', 
             booking_id, '15m', 
-            schedule=time_15m
+            q_options={'schedule': time_15m} # <-- И ТУТ
         )
 
 

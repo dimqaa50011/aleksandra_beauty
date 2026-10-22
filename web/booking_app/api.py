@@ -49,15 +49,16 @@ class AdminReviewActionAPIView(APIView):
             review.is_active = is_active
             review.save()
             action = "опубликован" if is_active else "скрыт"
-            return Response({'success': True, 'message': f'Отзыв {action}'})
+            return Response({'success': True, 'message': f'Отзыв {action}'}, status=status.HTTP_200_OK)
             
         return Response({'error': 'Нет данных для обновления'}, status=400)
 
     def delete(self, request, pk):
         review = get_object_or_404(Review, pk=pk)
         review.delete()
-        return Response({'success': True, 'message': 'Отзыв удален'}, status=status.HTTP_204_NO_CONTENT)
-
+        # Возвращаем 200 с JSON вместо 204
+        return Response({'success': True, 'message': 'Отзыв удален'}, status=status.HTTP_200_OK)
+    
 
 class AdminBookingUpdateAPIView(APIView):
     """

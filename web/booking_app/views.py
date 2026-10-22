@@ -146,7 +146,8 @@ def review_form_view(request, token):
             send_fcm_notification(
                 title='⭐ Новый отзыв!',
                 body=f'{booking.client_name} оценил(а) визит на {review.rating}/5',
-                url=f'/admin-dashboard/reviews/' # Ссылка, которую откроет приложение
+                url=f'/admin-dashboard/reviews/',
+                data_type='review'
             )
             
             return render(request, 'booking_app/review_success.html')
