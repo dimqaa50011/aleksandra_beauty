@@ -7,3 +7,8 @@ class BlogArticleAdmin(admin.ModelAdmin):
     prepopulated_fields = {'slug': ('title',)}
     list_filter = ('is_published', 'created_at')
     search_fields = ('title', 'content')
+
+
+@admin.register(models.PostContent)
+class PostContentAdmin(admin.ModelAdmin):
+    pass
