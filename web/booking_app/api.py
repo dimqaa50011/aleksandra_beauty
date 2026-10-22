@@ -13,8 +13,7 @@ from .tasks import schedule_reminders
 
 from .models import Booking, BlockedSlot, Client
 from .serializers import BookingSerializer, BlockDaySerializer
-from beauty_app.models import Service, ServiceCategory
-from .models import Review # Добавьте импорт в начале файла
+from beauty_app.models import Service, ServiceCategory, Review
 
 class AdminReviewsAPIView(APIView):
     """GET: Список всех отзывов"""
