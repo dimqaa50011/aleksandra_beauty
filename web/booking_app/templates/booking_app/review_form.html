@@ -10,13 +10,42 @@
         h1 { font-size: 1.5rem; text-align: center; margin-bottom: 8px; }
         p.sub { text-align: center; color: #6b5f5a; margin-bottom: 24px; font-size: 0.9rem; }
         
-        /* Красивые звездочки */
-        .rating-group { display: flex; flex-direction: row-reverse; justify-content: center; gap: 8px; margin-bottom: 24px; }
-        .rating-group input { display: none; }
-        .rating-group label { font-size: 2.5rem; color: #e0e0e0; cursor: pointer; transition: color 0.2s; }
-        .rating-group input:checked ~ label, 
-        .rating-group label:hover, 
-        .rating-group label:hover ~ label { color: #f5b342; }
+        /* =========================================
+           ИСПРАВЛЕННЫЕ ЗВЕЗДОЧКИ (1-2-3-4-5)
+           ========================================= */
+        .rating-group { 
+            display: flex; 
+            justify-content: center; 
+            gap: 8px; 
+            margin-bottom: 24px; 
+            flex-direction: row; /* Строго слева направо */
+        }
+        
+        .rating-group input { 
+            display: none; /* Скрываем стандартные кружочки */
+        }
+        
+        .rating-group label { 
+            font-size: 2.5rem; 
+            color: #e0e0e0; 
+            cursor: pointer; 
+            transition: color 0.2s; 
+            display: inline-block;
+        }
+        
+        /* 1. При наведении закрашиваем звезду и все ПРЕДЫДУЩИЕ */
+        .rating-group label:hover,
+        .rating-group label:has(~ label:hover) { 
+            color: #f5b342; 
+        }
+        
+        /* 2. При выборе закрашиваем выбранную и все ПРЕДЫДУЩИЕ */
+        .rating-group label:has(input:checked),
+        .rating-group label:has(~ label input:checked) { 
+            color: #f5b342; 
+        }
+        
+        /* ========================================= */
         
         .form-control { width: 100%; padding: 12px; border: 1px solid #e8e0dd; border-radius: 12px; font-family: inherit; resize: none; margin-bottom: 20px; background: #fef9f7; box-sizing: border-box;}
         .form-control:focus { outline: none; border-color: #f2a6b0; }
@@ -33,11 +62,23 @@
         <form method="post">
             {% csrf_token %}
             
+            <!-- Вместо цикла прописываем HTML напрямую, чтобы Django не ломал структуру -->
             <div class="rating-group">
-                {% for radio in form.rating %}
-                    {{ radio.tag }}
-                    <label for="{{ radio.id_for_label }}">★</label>
-                {% endfor %}
+                <label for="id_rating_1">
+                    <input type="radio" name="rating" value="1" id="id_rating_1" required> ★
+                </label>
+                <label for="id_rating_2">
+                    <input type="radio" name="rating" value="2" id="id_rating_2"> ★
+                </label>
+                <label for="id_rating_3">
+                    <input type="radio" name="rating" value="3" id="id_rating_3"> ★
+                </label>
+                <label for="id_rating_4">
+                    <input type="radio" name="rating" value="4" id="id_rating_4"> ★
+                </label>
+                <label for="id_rating_5">
+                    <input type="radio" name="rating" value="5" id="id_rating_5"> ★
+                </label>
             </div>
             
             {{ form.text }}

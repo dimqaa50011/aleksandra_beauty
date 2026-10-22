@@ -8,7 +8,8 @@ class ReviewForm(forms.ModelForm):
         model = Review
         fields = ['rating', 'text']
         widgets = {
-            'rating': forms.RadioSelect(choices=[(i, f"{i} ★") for i in range(5, 0, -1)]),
+            # Меняем порядок на 1, 2, 3, 4, 5
+            'rating': forms.RadioSelect(choices=[(i, f"{i} ★") for i in range(1, 6)]),
             'text': forms.Textarea(attrs={
                 'rows': 4, 
                 'placeholder': 'Поделитесь своими впечатлениями о визите...',
