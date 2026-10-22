@@ -12,3 +12,9 @@ class BlogArticleAdmin(admin.ModelAdmin):
 @admin.register(models.PostContent)
 class PostContentAdmin(admin.ModelAdmin):
     pass
+
+
+
+@admin.register(models.PostIdea)
+class PostIdeaAdmin(admin.ModelAdmin):
+    pass
