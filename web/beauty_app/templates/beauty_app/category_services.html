@@ -33,7 +33,11 @@
                             {% if service.is_bestseller %}
                                 <span class="bestseller-badge">🔥 Хит</span>
                             {% endif %}
-                            {{ service.title }}
+                            {% if service.title %}
+                                {{ service.title }}
+                            {% else %}
+                                {{ service.name }}
+                            {% endif %}
                         </h3>
                         
                         {% if service.description %}
