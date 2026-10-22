@@ -446,7 +446,77 @@ class AdminBookingsListAPIView(APIView):
         }, status=status.HTTP_200_OK)
 
 
-  
+
+class AdminNotificationsAPIView(APIView):
+    """
+    GET: Единый список уведомлений (неподтвержденные записи + новые отзывы)
+    """
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        notifications = []
+
+        # 1. Новые записи (pending)
+        pending_bookings = Booking.objects.filter(status='pending').order_by('-created_at')
+        for b in pending_bookings:
+            notifications.append({
+                'id': b.id,
+                'type': 'booking',
+                'title': f'Новая запись: {b.client_name}',
+                'body': f'{b.appointment_datetime.strftime("%d.%m %H:%M")} • {b.phone}',
+                'created_at': b.created_at,
+                'is_read': b.is_read,
+            })
+
+        # 2. Новые отзывы (не опубликованные)
+        new_reviews = Review.objects.filter(is_active=False).order_by('-created_at')
+        for r in new_reviews:
+            notifications.append({
+                'id': r.id,
+                'type': 'review',
+                'title': f'Новый отзыв от {r.author_name}',
+                'body': f'Оценка: {r.rating}/5 • {r.text[:30]}...',
+                'created_at': r.created_at,
+                'is_read': r.is_read,
+            })
+
+        # Сортируем по дате (сначала самые новые)
+        notifications.sort(key=lambda x: x['created_at'], reverse=True)
+
+        # Приводим даты к строкам для JSON
+        for n in notifications:
+            n['created_at'] = n['created_at'].strftime('%d.%m.%Y %H:%M')
+
+        return Response({'notifications': notifications}, status=status.HTTP_200_OK)
+
+
+class AdminNotificationReadAPIView(APIView):
+    """
+    PATCH: Пометить уведомление как прочитанное
+    """
+    permission_classes = [IsAuthenticated]
+
+    def patch(self, request):
+        notif_type = request.data.get('type')
+        notif_id = request.data.get('id')
+
+        if not notif_type or not notif_id:
+            return Response({'error': 'Не переданы type или id'}, status=status.HTTP_400_BAD_REQUEST)
+
+        if notif_type == 'booking':
+            obj = get_object_or_404(Booking, pk=notif_id)
+        elif notif_type == 'review':
+            obj = get_object_or_404(Review, pk=notif_id)
+        else:
+            return Response({'error': 'Неверный тип'}, status=status.HTTP_400_BAD_REQUEST)
+
+        obj.is_read = True
+        obj.save(update_fields=['is_read'])
+        
+        return Response({'success': True, 'message': 'Уведомление прочитано'}, status=status.HTTP_200_OK)
+    
+    
+    
 class AdminBookingStatusAPIView(APIView):
     """POST: Подтвердить, отменить, завершить или отметить неявку"""
     permission_classes = [IsAuthenticated]

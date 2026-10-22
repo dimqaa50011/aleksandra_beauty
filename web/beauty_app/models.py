@@ -256,6 +256,7 @@ class Review(models.Model):
 
     # Модерация: по умолчанию False (скрыт), админ включит в приложении
     is_active = models.BooleanField(default=False, help_text="Опубликован на сайте")
+    is_read = models.BooleanField('Прочитано админом', default=False)
 
     def __str__(self):
         status = "Опубликован" if self.is_active else "На модерации"

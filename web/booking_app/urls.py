@@ -74,4 +74,6 @@ urlpatterns = [
     path('api/app-clients/<int:pk>/update-notes/', api.AdminClientUpdateNotesAPIView.as_view(), name='api_app_client_update_notes'),
     path('api/app-reviews/', api.AdminReviewsAPIView.as_view(), name='api_app_reviews'),
     path('api/app-reviews/<int:pk>/', api.AdminReviewActionAPIView.as_view(), name='api_app_review_action'),
+    path('api/app-notifications-list/', api.AdminNotificationsAPIView.as_view(), name='api_app_notifications_list'),
+    path('api/app-notifications-read/', api.AdminNotificationReadAPIView.as_view(), name='api_app_notifications_read'),
 ]

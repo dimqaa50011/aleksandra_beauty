@@ -100,7 +100,7 @@ class Booking(models.Model):
     
     services = models.ManyToManyField('beauty_app.Service', verbose_name='Услуги', related_name='bookings')
     appointment_datetime = models.DateTimeField('Дата и время записи')
-    status = models.CharField('Статус', max_length=20, choices=STATUS_CHOICES, default='confirmed')
+    status = models.CharField('Статус', max_length=20, choices=STATUS_CHOICES, default='pending')
     
     google_event_id = models.CharField('ID события в Google', max_length=255, blank=True, null=True, editable=False)
     created_at = models.DateTimeField('Создано', auto_now_add=True)
@@ -111,6 +111,7 @@ class Booking(models.Model):
     reminded_2h = models.BooleanField('Напоминание 2ч отправлено', default=False)
     reminded_15m = models.BooleanField('Напоминание 15м отправлено', default=False)
     review_token = models.UUIDField(null=True, blank=True, unique=True, db_index=True)
+    is_read = models.BooleanField('Прочитано админом', default=False)
 
     class Meta:
         verbose_name = 'Запись клиента'

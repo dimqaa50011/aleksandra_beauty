@@ -256,7 +256,7 @@ def booking_create(request):
             booking = Booking.objects.create(
                 client=client, # <-- Привязка
                 client_name=client_name, phone=phone, email=email,
-                appointment_datetime=aware_dt, status='confirmed'
+                appointment_datetime=aware_dt, status='pending'
             )
             
             services_names = ""
@@ -469,7 +469,7 @@ def api_create_booking(request):
     booking = Booking.objects.create(
         client=client, # <-- Привязка
         client_name=client_name, phone=phone, email=email if email else None,
-        appointment_datetime=appointment_datetime, status='confirmed'
+        appointment_datetime=appointment_datetime, status='pending'
     )
     booking.services.set(services)
 
