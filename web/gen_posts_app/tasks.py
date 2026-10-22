@@ -1,56 +1,45 @@
-import logging
 import uuid
-import base64
 import json
 import re
 import requests
+import traceback # <-- Для вывода полной ошибки в консоль
 from django.conf import settings
 from django.core.cache import cache
 from .models import PostIdea, PostContent
-
-logger = logging.getLogger(__name__)
 
 # Константы API
 GIGACHAT_AUTH_URL = "https://ngw.devices.sberbank.ru:9443/api/v2/oauth"
 GIGACHAT_CHAT_URL = "https://gigachat.devices.sberbank.ru/api/v1/chat/completions"
 TOKEN_CACHE_KEY = "gigachat_access_token"
-TOKEN_TTL = 1500  # 25 минут (1500 секунд) с запасом
+TOKEN_TTL = 1500  # 25 минут
 
 
 def get_gigachat_token() -> str:
     """Получает токен из кэша или запрашивает новый у API."""
-    # 1. Проверяем кэш
     token = cache.get(TOKEN_CACHE_KEY)
     if token:
+        print("🔑 Токен GigaChat взят из кэша")
         return token
 
-    # 2. Токена нет, запрашиваем новый
     client_id = getattr(settings, 'GIGACHAT_CLIENT_ID', '')
     client_secret = getattr(settings, 'GIGACHAT_CLIENT_SECRET', '')
-    token = getattr(settings, 'GIGACHAT_AUTH_KEY', '')
+    auth_key = getattr(settings, 'GIGACHAT_AUTH_KEY', '')
     
     if not client_id or not client_secret:
-        logger.error("GIGACHAT_CLIENT_ID или GIGACHAT_CLIENT_SECRET не настроены в settings.py")
+        print("❌ ОШИБКА: GIGACHAT_CLIENT_ID или GIGACHAT_CLIENT_SECRET не настроены в settings.py")
         raise ValueError("Отсутствуют учетные данные GigaChat")
 
-    # Формируем Basic Auth заголовок (base64 от client_id:client_secret)
-    auth_string = f"{client_id}:{client_secret}"
-    encoded_auth = token
-    
     headers = {
         'Content-Type': 'application/x-www-form-urlencoded',
         'Accept': 'application/json',
         'RqUID': str(uuid.uuid4()),
-        'Authorization': f'Basic {encoded_auth}'
+        'Authorization': f'Basic {auth_key}'
     }
     
-    payload = {
-        'scope': 'GIGACHAT_API_PERS'
-    }
+    payload = {'scope': 'GIGACHAT_API_PERS'}
 
     try:
-        # verify=False иногда нужен для сертификатов Сбера, но попробуем стандартный запрос
-        # Если будет ошибка SSL, раскомментируй verify=False
+        print("📡 Запрашиваем новый токен GigaChat...")
         response = requests.post(GIGACHAT_AUTH_URL, headers=headers, data=payload, timeout=10, verify=False)
         response.raise_for_status()
         
@@ -58,25 +47,22 @@ def get_gigachat_token() -> str:
         access_token = data.get('access_token')
         
         if access_token:
-            # Сохраняем в кэш на 25 минут
             cache.set(TOKEN_CACHE_KEY, access_token, TOKEN_TTL)
-            logger.info("✅ Успешно получен новый токен GigaChat")
+            print("✅ Успешно получен новый токен GigaChat")
             return access_token
         else:
-            logger.error(f"Ошибка получения токена: {data}")
+            print(f"❌ Ошибка получения токена: {data}")
             raise Exception("Не удалось получить access_token из ответа API")
             
     except requests.exceptions.RequestException as e:
-        logger.error(f"Ошибка запроса токена GigaChat: {e}")
+        print(f"❌ Ошибка запроса токена GigaChat: {e}")
         raise
 
 
 def call_gigachat_api(topic: str, description: str) -> dict:
     """Делает запрос к GigaChat и возвращает структурированный ответ."""
-    
     token = get_gigachat_token()
     
-    # УЛУЧШЕННЫЙ ПРОМПТ с жестким запретом на реальные переносы строк в JSON
     system_prompt = (
         "Ты — профессиональный SMM-менеджер уютной бьюти-студии 'Sasha Sugar' в Санкт-Петербурге. "
         "Твоя задача — написать вовлекающий пост на основе темы и описания. "
@@ -112,62 +98,67 @@ def call_gigachat_api(topic: str, description: str) -> dict:
         "max_tokens": 1500
     }
 
-    chat_url = "https://gigachat.devices.sberbank.ru/api/v1/chat/completions"
-
     try:
-        response = requests.post(chat_url, headers=headers, json=payload, timeout=30, verify=False)
+        print(f"📡 Отправляем запрос к GigaChat. Тема: {topic}")
+        # Увеличили таймаут до 60 секунд, так как нейросети иногда думают долго
+        response = requests.post(GIGACHAT_CHAT_URL, headers=headers, json=payload, timeout=60, verify=False)
         
         if not response.ok:
-            logger.error(f"❌ GigaChat вернул ошибку {response.status_code}. Ответ: {response.text}")
+            print(f"❌ GigaChat вернул ошибку {response.status_code}. Ответ: {response.text}")
         response.raise_for_status()
         
         data = response.json()
         raw_content = data['choices'][0]['message']['content']
+        print(f"📥 Получен сырой ответ (первые 100 символов): {raw_content[:100]}...")
         
-        # 1. Убираем markdown-обертки ```json ... ```
+        # Очистка markdown
         cleaned_content = re.sub(r'^```(?:json)?\s*', '', raw_content, flags=re.IGNORECASE | re.MULTILINE)
         cleaned_content = re.sub(r'\s*```$', '', cleaned_content, flags=re.MULTILINE).strip()
         
-        # 2. МАГИЧЕСКОЕ ИСПРАВЛЕНИЕ: заменяем реальные переносы строк внутри кавычек на \n
-        # Это спасает от ошибки "Invalid control character", если модель все равно вставила Enter
+        # Экранирование переносов
         def escape_newlines_in_json(match):
             return match.group(0).replace('\n', '\\n').replace('\r', '')
         
         cleaned_content = re.sub(r'"[^"\\]*(?:\\.[^"\\]*)*"', escape_newlines_in_json, cleaned_content)
         
-        # 3. Парсим JSON
+        # Парсинг JSON
         result = json.loads(cleaned_content)
         
         if not all(k in result for k in ['headline', 'body', 'hashtags']):
             raise ValueError("API вернул JSON без обязательных полей")
             
+        print("✅ JSON успешно распарсен!")
         return result
 
     except requests.exceptions.RequestException as e:
-        logger.error(f"Ошибка сети при запросе к GigaChat API: {e}")
+        print(f"❌ Ошибка сети при запросе к GigaChat API: {e}")
         raise
     except json.JSONDecodeError as e:
-        logger.error(f"Не удалось распарсить JSON от GigaChat. Сырой ответ:\n{raw_content}")
+        print(f"❌ Не удалось распарсить JSON от GigaChat. Сырой ответ:\n{raw_content}")
         raise
     except Exception as e:
-        logger.error(f"Непредвиденная ошибка при генерации: {e}")
+        print(f"❌ Непредвиденная ошибка при генерации: {e}")
         raise
+
 
 def generate_post_task(idea_id: int):
     """Фоновая задача для генерации поста."""
+    print(f"\n{'='*40}")
+    print(f"🚀 НАЧАЛО ЗАДАЧИ генерации для идеи #{idea_id}")
+    
     try:
         idea = PostIdea.objects.get(id=idea_id)
     except PostIdea.DoesNotExist:
-        logger.error(f"Ошибка: Идея с id={idea_id} не найдена.")
+        print(f"❌ ОШИБКА: Идея с id={idea_id} не найдена в базе.")
         return
 
-    logger.info(f"🚀 Начинаем генерацию поста для идеи #{idea_id}: {idea.topic}")
+    print(f"📝 Тема: {idea.topic}")
 
     try:
-        # 1. Делаем реальный запрос к нейросети
+        # 1. Запрос к нейросети
         response = call_gigachat_api(idea.topic, idea.description)
 
-        # 2. Сохраняем сгенерированный контент
+        # 2. Сохранение в БД
         post = PostContent.objects.create(
             idea=idea,
             variant_name=f"Вариант {idea.posts.count() + 1}",
@@ -178,12 +169,18 @@ def generate_post_task(idea_id: int):
             is_published=False
         )
 
-        # 3. Обновляем статус идеи
+        # 3. Обновление статуса
         idea.status = 'in_progress'
         idea.save()
 
-        logger.info(f"✅ Пост #{post.id} успешно создан для идеи #{idea_id}")
+        print(f"✅ УСПЕХ: Пост #{post.id} создан и сохранен в базе!")
 
     except Exception as e:
-        logger.error(f"❌ Ошибка при генерации поста для идеи #{idea_id}: {str(e)}", exc_info=True)
-        # При ошибке статус идеи не меняем, чтобы можно было попробовать снова
+        print(f"❌ КРИТИЧЕСКАЯ ОШИБКА при генерации поста #{idea_id}:")
+        # Этот принт выведет полный стектрейс (где именно упало)
+        traceback.print_exc() 
+        
+        # Пробрасываем ошибку дальше, чтобы Django-Q покрасил задачу в красный
+        raise e
+    finally:
+        print(f"{'='*40}\n")
