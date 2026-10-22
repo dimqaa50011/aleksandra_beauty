@@ -1,4 +1,4 @@
-from .models import BlogArticle
+from .models import BlogArticle, PostContent
 from django.utils.text import slugify
 import random
 import string
@@ -116,3 +116,26 @@ class AdminBlogArticlesAPIView(APIView):
         )
         
         return Response({'success': True, 'id': article.id}, status=status.HTTP_201_CREATED)
+    
+    
+class AdminIdeaPostsAPIView(APIView):
+    """GET: Получить все сгенерированные посты для конкретной идеи"""
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request, idea_id):
+        posts = PostContent.objects.filter(idea_id=idea_id).order_by('-created_at')
+        
+        data = []
+        for p in posts:
+            data.append({
+                'id': p.id,
+                'variant_name': p.variant_name,
+                'headline': p.headline,
+                'body': p.body,
+                'hashtags': p.hashtags,
+                'is_approved': p.is_approved,
+                'is_published': p.is_published,
+                'created_at': p.created_at.strftime('%d.%m.%Y %H:%M')
+            })
+            
+        return Response({'posts': data}, status=status.HTTP_200_OK)

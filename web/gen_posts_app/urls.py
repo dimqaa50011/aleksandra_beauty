@@ -19,4 +19,5 @@ urlpatterns = [
     path('api/app-blog/', api.AdminBlogArticlesAPIView.as_view(), name='api_app_blog'),
     path('api/app-ideas/', api.AdminPostIdeasAPIView.as_view(), name='api_app_ideas'),
     path('api/app-ideas/<int:idea_id>/generate/', api.AdminGeneratePostAPIView.as_view(), name='api_app_generate'),
+    path('api/app-ideas/<int:idea_id>/posts/', api.AdminIdeaPostsAPIView.as_view(), name='api_app_idea_posts'),
 ]
