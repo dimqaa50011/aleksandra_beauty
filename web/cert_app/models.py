@@ -28,7 +28,7 @@ class CertificateModel(models.Model):
     is_used = models.BooleanField("Использован?", default=False)
     price = models.PositiveIntegerField("На сумму:")
     used_date = models.DateTimeField("Дата использования", blank=True, null=True)
-    token = models.CharField(max_length=128, unique=True)
+    token = models.CharField(max_length=1024, unique=True)
     qr_code = models.ImageField(blank=True, null=True)
     email_sended = models.BooleanField("Отправлен на почту?", default=False)
     
