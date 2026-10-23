@@ -8,4 +8,5 @@ app_name = StatsAppConfig.name
 urlpatterns = [
     path('api/app-stats/', api.AdminStatsAPIView.as_view(), name='api_app_stats'),
     path('api/app-expenses/', api.AdminExpenseAPIView.as_view(), name='api_app_expenses'),
+    path('api/app-expenses/<int:pk>/', api.AdminExpenseDetailAPIView.as_view(), name='api_app_expense_detail'),
 ]

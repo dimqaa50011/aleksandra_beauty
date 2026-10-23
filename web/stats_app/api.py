@@ -124,3 +124,32 @@ class AdminExpenseAPIView(APIView):
             date=timezone.localdate()
         )
         return Response({'success': True, 'id': expense.id}, status=201)
+
+class AdminExpenseDetailAPIView(APIView):
+    """PATCH: Обновить расход, DELETE: Удалить расход"""
+    permission_classes = [IsAuthenticated]
+
+    def patch(self, request, pk):
+        try:
+            expense = Expense.objects.get(pk=pk)
+        except Expense.DoesNotExist:
+            return Response({'error': 'Расход не найден'}, status=404)
+
+        amount = request.data.get('amount')
+        description = request.data.get('description')
+
+        if amount is not None:
+            expense.amount = amount
+        if description is not None:
+            expense.description = description
+            
+        expense.save()
+        return Response({'success': True, 'message': 'Расход обновлен'})
+
+    def delete(self, request, pk):
+        try:
+            expense = Expense.objects.get(pk=pk)
+            expense.delete()
+            return Response({'success': True, 'message': 'Расход удален'}, status=200)
+        except Expense.DoesNotExist:
+            return Response({'error': 'Расход не найден'}, status=404)
