@@ -38,7 +38,8 @@ ALLOWED_HOSTS = env.list('ALLOWED_HOSTS')
 
 # Application definition
 
-INSTALLED_APPS = [
+
+DJANGO_APPS = [
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
@@ -47,16 +48,36 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'django.contrib.sitemaps',
     
+]
+
+EXTENSIONS_APPS = [
     'corsheaders',
     'rest_framework',
     'rest_framework.authtoken',
-    
     'django_q',
+    
+    
+]
+
+DEV_EXTENSIONS_APPS = [
+    
+]
+
+PROJECTS_APP = [
     'booking_app',
     'beauty_app',
     'cert_app',
     'gen_posts_app',
+    'stats_app',
 ]
+
+if DEBUG:
+    EXTENSIONS_APPS += DEV_EXTENSIONS_APPS
+
+
+INSTALLED_APPS = DJANGO_APPS + EXTENSIONS_APPS + PROJECTS_APP
+
+
 
 
 MIDDLEWARE = [
