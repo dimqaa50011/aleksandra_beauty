@@ -9,56 +9,43 @@ import jwt
 import qrcode
 
 from .models import CertificateModel
+from booking_app.models import Client
+# Импортируем нашу функцию отправки СМС из booking_app
+from booking_app.sms_service import send_sms
 
 
 class CertController:
     def __init__(self, secret_key: str):
         self._secret = secret_key
     
-    # =============================================
-    # НОРМАЛИЗАЦИЯ ТЕЛЕФОНА
-    # =============================================
     def _normalize_phone(self, phone: str) -> str:
-        """
-        Нормализует номер телефона:
-        - Удаляет все пробелы, скобки, дефисы
-        - Если начинается с 8, заменяет на +7
-        - Если начинается с 9 (без кода), добавляет +7
-        - Если уже +7 — оставляет как есть
-        """
+        """Нормализация номера телефона (на случай, если в базе он записан криво)"""
         if not phone:
             return phone
-        
-        # Удаляем все пробелы, скобки, дефисы, точки
         phone = re.sub(r'[\s\(\)\-\.]', '', phone)
-        
-        # Если номер начинается с 8 — заменяем на +7
         if phone.startswith('8'):
             phone = '+7' + phone[1:]
-        
-        # Если номер начинается с 9 (типичный российский номер без кода)
         elif phone.startswith('9') and len(phone) == 10:
             phone = '+7' + phone
-        
-        # Если номер начинается с 7 (без +) — добавляем +
         elif phone.startswith('7') and not phone.startswith('+7'):
             phone = '+' + phone
-        
         return phone
     
     # =============================================
-    # ОСТАЛЬНЫЕ МЕТОДЫ (с использованием нормализации)
+    # СОЗДАНИЕ СЕРТИФИКАТА
     # =============================================
     def create_new_cert(
         self, 
-        phone: str, 
-        email: str, 
+        client: Client, # <-- Теперь принимаем объект клиента
         price: int, 
-        client_name: str = "",
         need_qr: bool = False
     ):
-        # Нормализуем телефон
-        phone = self._normalize_phone(phone)
+        if not client:
+            raise ValueError("Клиент не передан в контроллер")
+
+        phone = self._normalize_phone(client.phone)
+        email = client.email or ""
+        client_name = client.name or "Клиент"
         
         token = jwt.encode(
             {"phone": phone, "email": email, "exp": datetime.now() + relativedelta(years=1)},
@@ -70,7 +57,9 @@ class CertController:
         if need_qr:
             qr_code = self.make_qr(token)
         
+        # Создаем сертификат, привязывая его к клиенту
         crt = CertificateModel.objects.create(
+            client=client, # <-- Привязка
             phone=phone,
             email=email,
             client_name=client_name,
@@ -80,19 +69,48 @@ class CertController:
             qr_code=qr_code
         )
         
-        self.send_certificate_email(crt)
+        # Вызываем универсальный метод уведомления
+        self.notify_client(crt)
         return crt
-    
+
+    # =============================================
+    # УВЕДОМЛЕНИЯ (СНАЧАЛА СМС, ПОТОМ МОЖНО ДОБАВИТЬ ДРУГОЕ)
+    # =============================================
+    def notify_client(self, certificate: CertificateModel):
+        """
+        Универсальный метод оповещения клиента.
+        Сейчас отправляет только СМС. В будущем сюда можно добавить Telegram/WhatsApp.
+        """
+        # 1. Отправка по СМС
+        if certificate.phone:
+            sms_text = (
+                f"Здравствуйте, {certificate.client_name}! "
+                f"Ваш подарочный сертификат на {certificate.price} ₽ готов. "
+                f"Код: {certificate.token[:8]}. "
+                f"Действует до {certificate.expire_date.strftime('%d.%m.%Y')}."
+            )
+            try:
+                # Отправляем через наш сервис
+                send_sms(certificate.phone, sms_text)
+                print(f"✅ SMS с сертификатом отправлена на {certificate.phone}")
+            except Exception as e:
+                print(f"❌ Ошибка отправки SMS: {e}")
+
+        # 2. Задел на будущее (Email/Telegram)
+        # if certificate.email:
+        #     self.send_certificate_email(certificate)
+        
+    # =============================================
+    # ОСТАЛЬНЫЕ МЕТОДЫ (БЕЗ ИЗМЕНЕНИЙ)
+    # =============================================
     def find_by_token(self, token: str):
         return CertificateModel.objects.filter(token=token, is_used=False).first()
     
     def find_by_phone(self, phone: str):
-        """Найти все активные сертификаты по телефону (с нормализацией)"""
         phone = self._normalize_phone(phone)
         return CertificateModel.objects.filter(phone=phone, is_used=False)
     
     def find_all_by_phone(self, phone: str):
-        """Найти все сертификаты по телефону (включая использованные)"""
         phone = self._normalize_phone(phone)
         return CertificateModel.objects.filter(phone=phone)
     
@@ -100,7 +118,6 @@ class CertController:
         return CertificateModel.objects.filter(pk=pk).first()
     
     def redeem_by_phone(self, phone: str):
-        """Погасить все активные сертификаты по телефону"""
         phone = self._normalize_phone(phone)
         certificates = self.find_by_phone(phone)
         if not certificates.exists():
@@ -113,7 +130,6 @@ class CertController:
         return redeemed_count
     
     def redeem_by_id(self, pk: int):
-        """Погасить конкретный сертификат по ID"""
         crt = self.find_by_id(pk)
         if not crt:
             raise ValueError("Сертификат не найден")
@@ -140,37 +156,6 @@ class CertController:
         
         image_file = ContentFile(buffer.read(), name=f"qr_{data[:8]}.png")
         return image_file
-    
-    def send_certificate_email(self, certificate):
-        try:
-            from django.core.mail import send_mail
-            
-            message = f"""
-            Здравствуйте!
-            
-            Ваш подарочный сертификат №{certificate.token[:8]}
-            Номинал: {certificate.price} ₽
-            Действует до: {certificate.expire_date.strftime('%d.%m.%Y')}
-            
-            Для использования предъявите этот код: {certificate.token}
-            
-            С уважением,
-            Glowora Beauty Studio
-            """
-            
-            send_mail(
-                subject="Ваш подарочный сертификат",
-                message=message,
-                from_email=None,
-                recipient_list=[certificate.email],
-                fail_silently=False,
-            )
-            certificate.email_sended = True
-            certificate.save()
-            return True
-        except Exception as e:
-            print(f"Ошибка отправки письма: {e}")
-            return False
     
     def get_statistics(self):
         total = CertificateModel.objects.count()

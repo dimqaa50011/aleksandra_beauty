@@ -22,6 +22,13 @@ class CertificateNominal(models.Model):
 class CertificateModel(models.Model):
     """Подарочный сертификат"""
     
+    client = models.ForeignKey(
+        'booking_app.Client', 
+        on_delete=models.CASCADE, 
+        related_name='certificates',
+        verbose_name='Владелец',
+        null=True, blank=True # null=True для старых сертификатов
+    )
     phone = models.CharField("Телефон", max_length=16)
     email = models.CharField("Почта", max_length=128)
     expire_date = models.DateField("Действует до:")

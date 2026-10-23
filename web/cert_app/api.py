@@ -28,20 +28,23 @@ from rest_framework.response import Response
 from rest_framework import status
 from rest_framework.permissions import IsAuthenticated
 
+        
+        
 class AdminCertificateCreateAPIView(APIView):
-    """
-    POST: Создать новый сертификат
-    """
     permission_classes = [IsAuthenticated]
 
     def post(self, request):
-        phone = request.data.get('phone', '').strip()
-        email = request.data.get('email', '').strip()
+        client_id = request.data.get('client_id')
         price = request.data.get('price')
-        client_name = request.data.get('client_name', '').strip()
 
-        if not phone or not email or not price:
-            return Response({'error': 'Заполните телефон, email и сумму'}, status=status.HTTP_400_BAD_REQUEST)
+        if not client_id or not price:
+            return Response({'error': 'Выберите клиента и укажите сумму'}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            from booking_app.models import Client
+            client = Client.objects.get(id=client_id)
+        except Client.DoesNotExist:
+            return Response({'error': 'Клиент не найден'}, status=status.HTTP_404_NOT_FOUND)
 
         try:
             price_int = int(price)
@@ -49,30 +52,28 @@ class AdminCertificateCreateAPIView(APIView):
             return Response({'error': 'Неверный формат суммы'}, status=status.HTTP_400_BAD_REQUEST)
 
         try:
-            # Используем ваш контроллер!
+            # ВЫЗЫВАЕМ КОНТРОЛЛЕР, ПЕРЕДАВАЯ ОБЪЕКТ КЛИЕНТА
             certificate = cert_controller.create_new_cert(
-                phone=phone,
-                email=email,
+                client=client, 
                 price=price_int,
-                client_name=client_name,
-                need_qr=False # В мобильном приложении QR пока не нужен
+                need_qr=False 
             )
-            
+
             return Response({
                 'success': True,
-                'message': 'Сертификат создан и отправлен на почту!',
+                'message': 'Сертификат создан, клиенту отправлено SMS!',
                 'certificate': {
                     'id': certificate.id,
                     'token_short': certificate.token[:8]
                 }
             }, status=status.HTTP_201_CREATED)
             
-        except ValueError as e:
-            return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
         except Exception as e:
+            import traceback
+            traceback.print_exc()
             return Response({'error': f'Ошибка сервера: {str(e)}'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-
-
+        
+        
 class AdminCertificatesListAPIView(APIView):
     """GET: Список всех сертификатов (последние 50)"""
     permission_classes = [IsAuthenticated]

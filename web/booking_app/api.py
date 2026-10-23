@@ -572,7 +572,31 @@ class AdminBookingStatusAPIView(APIView):
             'message': f'Статус записи изменен на {booking.get_status_display()}'
         }, status=status.HTTP_200_OK)
         
+
+
+class AdminClientCreateAPIView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        name = request.data.get('name', '').strip()
+        phone = request.data.get('phone', '').strip()
+        email = request.data.get('email', '').strip()
+
+        if not phone:
+            return Response({'error': 'Телефон обязателен'}, status=status.HTTP_400_BAD_REQUEST)
+
+        # Используем нашу утилиту поиска/создания
+        from booking_app.utils import get_or_create_client
+        client = get_or_create_client(phone, name, email)
         
+        return Response({
+            'success': True, 
+            'client': {
+                'id': client.id,
+                'name': client.name,
+                'phone': client.phone
+            }
+        }, status=status.HTTP_201_CREATED)
 
 class AdminBlockDayAPIView(APIView):
     permission_classes = [IsAuthenticated]
