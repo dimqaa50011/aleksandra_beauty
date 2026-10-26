@@ -3,6 +3,8 @@ from django.contrib.auth.views import LoginView as AuthLoginView, LogoutView as 
 from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin
 from django.urls import reverse_lazy
 from django.shortcuts import render, get_object_or_404, redirect
+from django.utils.decorators import method_decorator
+from django.views.decorators.cache import cache_page
 
 from .models import (
     AboutBlock,
@@ -46,7 +48,7 @@ class Lend2View(TemplateView):
     template_name = "beauty_app/lending.html"
 
 
-# @method_decorator(cache_page(60 * 15), name='dispatch')
+@method_decorator(cache_page(60 * 15), name='dispatch')
 class LandingView(TemplateView):
     """Главная страница лендинга"""
     template_name = 'beauty_app/lending2.html'
