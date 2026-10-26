@@ -1,4 +1,5 @@
 from django.urls import path
+from django.views.generic import TemplateView
 from . import views, api
 
 app_name = 'beauty_app'
@@ -20,4 +21,8 @@ urlpatterns = [
     
     path('api/app-services/', api.AdminServicesAPIView.as_view(), name='api_app_services'),
     path('api/app-services/<int:pk>/update/', api.AdminServiceUpdateAPIView.as_view(), name='api_app_service_update'),
+    path('yandex_696a05861a1ca6ec.html', TemplateView.as_view(
+        template_name='yandex_696a05861a1ca6ec.html', 
+        content_type='text/html'
+    )),
 ]

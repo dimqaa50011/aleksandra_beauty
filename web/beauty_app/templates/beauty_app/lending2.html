@@ -1,7 +1,7 @@
 {% extends 'lending_base.html' %}
 {% load static %}
 
-{% block title %}Sasha Sugar — Бьюти-студия в центре СПб | Косметология, брови, ресницы.{% endblock %}
+{% block title %}Sasha Sugar — Бьюти-студия в центре СПб | Косметология, брови, ресницы {% endblock %}
 
 {% block description %}Бьюти-студия Sasha Sugar в центре СПб: уход за кожей, аппаратная косметология, депиляция, брови и ресницы. Мастера с опытом от 5 лет, рейтинг 4.8★. Спасский пер., 7 — запись онлайн.{% endblock %}
 
@@ -243,7 +243,7 @@
                         </div>
                     </div>
 
-                    <a href="{% url 'booking_app:booking_create' %}" class="btn" style="margin-top: 24px; display: inline-block; text-align: center;" target="_blank" rel="noopener nofollow">
+                    <a href="{% url 'booking_app:booking_create' %}" class="btn" style="margin-top: 24px; display: inline-block; text-align: center;" target="_blank" rel="noopener">
                         Записаться онлайн
                     </a>
                 </div>
@@ -284,38 +284,6 @@
     </section>
     {% endif %}
 
-    <!-- ===== STRUCTURED DATA ===== -->
-    <script type="application/ld+json">
-    {
-      "@context": "https://schema.org",
-      "@type": "BeautySalon",
-      "name": "Sasha Sugar",
-      "url": "https://sasha-sugar.ru/",
-      "telephone": "+7-905-269-86-54",
-      "email": "hello@sashasugar.ru",
-      "priceRange": "₽₽",
-      "address": {
-        "@type": "PostalAddress",
-        "streetAddress": "Спасский переулок, д. 7",
-        "addressLocality": "Санкт-Петербург",
-        "addressCountry": "RU"
-      },
-      "geo": {
-        "@type": "GeoCoordinates",
-        "latitude": 59.9268,
-        "longitude": 30.3205
-      },
-      "openingHoursSpecification": [{
-        "@type": "OpeningHoursSpecification",
-        "dayOfWeek": ["Monday","Tuesday","Wednesday","Thursday","Friday","Saturday","Sunday"],
-        "opens": "09:00",
-        "closes": "22:00"
-      }],
-      "sameAs": [
-        "https://vk.ru/alexandrasaharova"
-      ]
-    }
-    </script>
 
     {% if faqs %}
     <script type="application/ld+json">
