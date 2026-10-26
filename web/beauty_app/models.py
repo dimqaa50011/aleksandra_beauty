@@ -184,7 +184,7 @@ class Service(models.Model):
         verbose_name_plural = "Услуги"
 
     def __str__(self):
-        return self.title if self.title else self.name
+        return f"{self.name} категория {self.category.name}"
 
     @property
     def display_name(self):

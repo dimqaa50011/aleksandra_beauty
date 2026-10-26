@@ -58,7 +58,7 @@ class ServiceCategoryAdmin(admin.ModelAdmin):
 
 @admin.register(models.Service)
 class ServiceAdmin(admin.ModelAdmin):
-    list_display = ('name', 'price', 'old_price', 'is_bestseller', 'is_active', 'order')
+    list_display = ('__str__', 'price', 'old_price', 'is_bestseller', 'is_active', 'order')
     list_editable = ('price', 'old_price', 'is_bestseller', 'is_active', 'order')
     list_filter = ('category', 'is_active', 'is_bestseller')
     search_fields = ('name',)
