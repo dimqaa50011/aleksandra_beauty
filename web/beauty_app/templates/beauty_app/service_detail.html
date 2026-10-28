@@ -41,7 +41,7 @@
                     </div>
                 </div>
 
-                <a href="{% url 'booking_app:booking_create' %}?service={{ service.id }}" class="btn btn-primary-large">
+                <a href="{% url 'booking_app:booking_create' %}?service={{ service.id }}" class="btn btn-primary-large btn-service">
                     {{ service.button_text|default:"Записаться на процедуру" }}
                 </a>
             </div>
@@ -249,6 +249,11 @@
         transform: translateY(-2px);
         box-shadow: 0 8px 28px rgba(242, 166, 176, 0.4);
         color: #fff;
+    }
+    @media (min-width: 768px) {
+        .btn-service {
+            width: 30%;
+        }
     }
 
     /* =========================================
