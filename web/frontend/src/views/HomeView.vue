@@ -6,7 +6,14 @@
         <h1>Привет, {{ userName }}!</h1>
         <p>Рады видеть вас снова</p>
       </div>
-      <div class="avatar">S</div>
+      
+      <!-- Динамическая аватарка -->
+      <div class="avatar-wrapper">
+        <img v-if="user?.avatar" :src="user.avatar" class="avatar-img" alt="Аватар" />
+        <div v-else class="avatar">
+          {{ userName.charAt(0).toUpperCase() }}
+        </div>
+      </div>
     </div>
 
     <!-- Блок ближайшей записи -->
@@ -17,7 +24,7 @@
         <van-loading color="#f2a6b0" size="24px">Загружаем...</van-loading>
       </div>
 
-      <div v-else-if="nextAppointment" class="appointment-card">
+      <div v-else-if="nextAppointment" class="appointment-card" @click="$router.push('/appointments')">
         <div class="appt-date">
           <span class="day">{{ formatDate(nextAppointment.appointment_datetime, 'DD') }}</span>
           <span class="month">{{ formatDate(nextAppointment.appointment_datetime, 'MMM') }}</span>
@@ -59,16 +66,12 @@
           <div class="icon-circle"><van-icon name="orders-o" size="24" /></div>
           <span>История</span>
         </div>
-        <div class="action-item" @click="$router.push('/certificates')">
+        <!-- Перекидываем на вкладку сертификатов -->
+        <div class="action-item" @click="$router.push({ path: '/bonuses', query: { tab: 'certificates' } })">
           <div class="icon-circle"><van-icon name="coupon-o" size="24" /></div>
           <span>Сертификаты</span>
         </div>
       </div>
-    </div>
-
-    <!-- Кнопка выхода (пока для теста, потом уберем в профиль) -->
-    <div class="logout-block">
-      <van-button plain round block @click="handleLogout">Выйти из аккаунта</van-button>
     </div>
 
     <!-- Нижняя навигация -->
@@ -78,18 +81,15 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
-import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import apiClient from '@/api/client'
 import BottomTabbar from '@/components/BottomTabbar.vue'
 
-const router = useRouter()
 const authStore = useAuthStore()
 
 const user = computed(() => authStore.user)
 const userName = computed(() => {
   if (!user.value?.name) return 'Гость'
-  // Берем только первое имя (например, "Анна" из "Анна Петрова")
   return user.value.name.split(' ')[0]
 })
 
@@ -100,7 +100,6 @@ const nextAppointment = ref<any>(null)
 async function fetchNextAppointment() {
   try {
     const { data } = await apiClient.get('/appointments/')
-    // data.upcoming — это массив будущих записей, берем первую
     if (data.upcoming && data.upcoming.length > 0) {
       nextAppointment.value = data.upcoming[0]
     }
@@ -116,7 +115,6 @@ function getServicesText(appt: any) {
 }
 
 function formatDate(dateStr: string, format: string) {
-  // Пока используем встроенный JS, но лучше установить dayjs
   const d = new Date(dateStr)
   if (format === 'DD') return d.getDate().toString().padStart(2, '0')
   if (format === 'MMM') {
@@ -129,13 +127,7 @@ function formatDate(dateStr: string, format: string) {
   return dateStr
 }
 
-async function handleLogout() {
-  await authStore.logout()
-  router.push({ name: 'login' })
-}
-
 onMounted(async () => {
-  // Обновляем профиль (чтобы подтянуть свежий баланс бонусов)
   await authStore.fetchMe()
   await fetchNextAppointment()
 })
@@ -144,7 +136,7 @@ onMounted(async () => {
 <style scoped>
 .home-page {
   min-height: 100vh;
-  padding: 24px 16px 80px 16px; /* padding-bottom для Tabbar */
+  padding: 24px 16px 80px 16px;
   background-color: var(--bg-light, #fef9f7);
   font-family: 'Inter', sans-serif;
 }
@@ -171,6 +163,13 @@ onMounted(async () => {
   color: var(--text-gray, #6b5f5a);
 }
 
+/* Аватарка */
+.avatar-wrapper {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
 .avatar {
   width: 48px;
   height: 48px;
@@ -183,6 +182,14 @@ onMounted(async () => {
   display: flex;
   align-items: center;
   justify-content: center;
+}
+
+.avatar-img {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 2px solid var(--primary, #f2a6b0);
 }
 
 /* Секции */
@@ -347,10 +354,5 @@ onMounted(async () => {
 .brand-btn {
   background-color: var(--primary, #f2a6b0);
   border-color: var(--primary, #f2a6b0);
-}
-
-.logout-block {
-  margin-top: 32px;
-  margin-bottom: 16px;
 }
 </style>
