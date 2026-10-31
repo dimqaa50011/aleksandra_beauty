@@ -56,7 +56,7 @@ class AdminCertificateCreateAPIView(APIView):
             certificate = cert_controller.create_new_cert(
                 client=client, 
                 price=price_int,
-                need_qr=False 
+                need_qr=True 
             )
 
             return Response({
