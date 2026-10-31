@@ -42,6 +42,8 @@ class Client(models.Model):
     
     # Заметки администратора (аллергии, предпочтения)
     notes = models.TextField('Заметки', blank=True)
+    
+    bonus_balance = models.IntegerField('Баланс бонусов', default=0)
 
     class Meta:
         verbose_name = 'Клиент (CRM)'
@@ -112,6 +114,27 @@ class Booking(models.Model):
     reminded_15m = models.BooleanField('Напоминание 15м отправлено', default=False)
     review_token = models.UUIDField(null=True, blank=True, unique=True, db_index=True)
     is_read = models.BooleanField('Прочитано админом', default=False)
+    
+    use_bonuses_requested = models.BooleanField('Запрошено списание бонусов', default=False)
+    bonuses_to_apply = models.PositiveIntegerField('Сколько бонусов применить', default=0)
+    bonuses_applied = models.PositiveIntegerField('Списано бонусов', default=0)
+    cashback_accrued = models.PositiveIntegerField('Начислено кэшбэка', default=0)
+
+    # ─── Отмена (заполняется из cabinet_app или админки) ───
+    cancel_reason = models.CharField('Причина отмены (код)', max_length=50, blank=True)
+    cancel_reason_text = models.CharField('Причина отмены (текст)', max_length=255, blank=True)
+    cancelled_by = models.CharField(
+        'Кто отменил', max_length=20, blank=True,
+        help_text='client / admin',
+    )
+    cancelled_at = models.DateTimeField('Отменено', null=True, blank=True)
+
+    # ─── Перенос ───
+    rescheduled_from = models.DateTimeField('Перенесено с', null=True, blank=True)
+    bonuses_processed_at = models.DateTimeField(
+        'Бонусы обработаны', null=True, blank=True,
+        help_text='Идемпотентность apply_bonus_effects',
+    )
 
     class Meta:
         verbose_name = 'Запись клиента'

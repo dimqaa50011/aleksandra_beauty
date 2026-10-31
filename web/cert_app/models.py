@@ -43,6 +43,24 @@ class CertificateModel(models.Model):
     client_name = models.CharField("Имя клиента", max_length=100, blank=True)
     created_at = models.DateTimeField("Дата создания", auto_now_add=True)
     
+        # ─── НОВЫЕ поля для личного кабинета ───
+    reserved_for_booking = models.ForeignKey(
+        'booking_app.Booking', on_delete=models.SET_NULL, null=True, blank=True,
+        related_name='reserved_certificates',
+        verbose_name='Зарезервирован под запись',
+    )
+    used_booking = models.ForeignKey(
+        'booking_app.Booking', on_delete=models.SET_NULL, null=True, blank=True,
+        related_name='used_certificates',
+        verbose_name='Погашен записью',
+    )
+    issued_by = models.ForeignKey(
+        'auth.User', on_delete=models.SET_NULL, null=True, blank=True,
+        related_name='issued_certificates',
+        verbose_name='Выдал (админ)',
+    )
+    note = models.CharField('Заметка', max_length=200, blank=True)
+    
     class Meta:
         verbose_name = "Сертификат"
         verbose_name_plural = "Сертификаты"
@@ -51,10 +69,39 @@ class CertificateModel(models.Model):
     def __str__(self):
         return f"Сертификат #{self.token[:8]} — {self.email}"
     
+    @property
+    def is_expired(self) -> bool:
+        return timezone.localdate() > self.expire_date
+
+    @property
+    def is_reserved(self) -> bool:
+        return self.reserved_for_booking_id is not None and not self.is_used
+
+    @property
+    def is_available(self) -> bool:
+        """Можно применить к новой записи."""
+        return (
+            not self.is_used
+            and not self.is_expired
+            and self.reserved_for_booking_id is None
+        )
+
+    @property
+    def status_display(self) -> str:
+        """Удобный статус для UI кабинета."""
+        if self.is_used:
+            return 'Использован'
+        if self.is_expired:
+            return 'Истёк'
+        if self.is_reserved:
+            return 'Зарезервирован'
+        return 'Активен'
+    
     def use(self):
         if not self.is_used:
             self.is_used = True
             self.used_date = timezone.now()
+            self.reserved_for_booking = None
             self.save()
             return True
         return False

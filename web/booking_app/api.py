@@ -4,16 +4,27 @@ from rest_framework import status
 from rest_framework.permissions import IsAuthenticated
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
+from django.db import transaction
 from datetime import datetime, timedelta, time as dt_time
 from rest_framework.decorators import api_view, permission_classes
 
 # Импорты для очереди и задач
 from django_q.tasks import async_task
+
+from booking_app.services.slots import (
+    calculate_services_duration,
+    get_available_slots,
+)
 from .tasks import schedule_reminders
 
 from .models import Booking, BlockedSlot, Client
 from .serializers import BookingSerializer, BlockDaySerializer
 from beauty_app.models import Service, ServiceCategory, Review
+
+import logging
+
+logger = logging.getLogger(__name__)
+
 
 class AdminReviewsAPIView(APIView):
     """GET: Список всех отзывов"""
@@ -21,7 +32,7 @@ class AdminReviewsAPIView(APIView):
 
     def get(self, request):
         reviews = Review.objects.all().order_by('-created_at')
-        
+
         data = []
         for r in reviews:
             data.append({
@@ -33,7 +44,7 @@ class AdminReviewsAPIView(APIView):
                 'created_at': r.created_at.strftime('%d.%m.%Y %H:%M'),
                 'is_active': r.is_active,
             })
-            
+
         return Response({'reviews': data}, status=status.HTTP_200_OK)
 
 
@@ -44,34 +55,37 @@ class AdminReviewActionAPIView(APIView):
     def patch(self, request, pk):
         review = get_object_or_404(Review, pk=pk)
         is_active = request.data.get('is_active')
-        
+
         if is_active is not None:
             review.is_active = is_active
             review.save()
             action = "опубликован" if is_active else "скрыт"
             return Response({'success': True, 'message': f'Отзыв {action}'}, status=status.HTTP_200_OK)
-            
+
         return Response({'error': 'Нет данных для обновления'}, status=400)
 
     def delete(self, request, pk):
         review = get_object_or_404(Review, pk=pk)
         review.delete()
-        # Возвращаем 200 с JSON вместо 204
         return Response({'success': True, 'message': 'Отзыв удален'}, status=status.HTTP_200_OK)
-    
+
 
 class AdminBookingUpdateAPIView(APIView):
     """
-    PUT: Обновить запись (время, услуги) из мобильного приложения
+    PUT: Обновить запись (время, услуги) из мобильного приложения.
+
+    ВНИМАНИЕ: сейчас нет проверки на пересечение с другими записями.
+    Админ может перенести запись на уже занятое время, что создаст накладку.
+    Если нужно — добавить is_slot_free(..., apply_lead_time=False, exclude_booking_id=pk).
     """
     permission_classes = [IsAuthenticated]
 
     def put(self, request, pk):
         booking = get_object_or_404(Booking, pk=pk)
-        
+
         date_str = request.data.get('date')
         time_str = request.data.get('time')
-        services_ids = request.data.get('services_ids') # список ID или строка "1,2"
+        services_ids = request.data.get('services_ids')
 
         if not date_str or not time_str or not services_ids:
             return Response({'error': 'Не все данные переданы'}, status=400)
@@ -79,27 +93,26 @@ class AdminBookingUpdateAPIView(APIView):
         try:
             naive_dt = datetime.strptime(f"{date_str} {time_str}", "%Y-%m-%d %H:%M")
             aware_dt = timezone.make_aware(naive_dt, timezone.get_current_timezone())
-            
+
             if isinstance(services_ids, str):
                 services_ids = [int(i) for i in services_ids.split(',') if i]
-                
+
             services = Service.objects.filter(id__in=services_ids, is_active=True)
-            
+
             booking.appointment_datetime = aware_dt
             booking.save()
             booking.services.set(services)
-            
-            # === СБРАСЫВАЕМ ФЛАГИ И ОТПРАВЛЯЕМ SMS ===
+
             booking.reminded_24h = False
             booking.reminded_2h = False
             booking.reminded_15m = False
             booking.save()
-            
+
             async_task('booking_app.tasks.send_event_sms_task', booking.id, 'edit')
             schedule_reminders(booking.id, booking.appointment_datetime)
-            
+
             return Response({'success': True, 'message': 'Запись обновлена'})
-            
+
         except Exception as e:
             return Response({'error': str(e)}, status=500)
 
@@ -107,15 +120,15 @@ class AdminBookingUpdateAPIView(APIView):
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def get_admin_available_times(request):
-    """Возвращает свободные слоты для админской формы записи"""
+    """Свободные слоты для админской формы — БЕЗ лид-тайма (walk-in)."""
     date_str = request.GET.get('date')
     services_ids_str = request.GET.get('services_ids')
-    
+
     if not date_str:
         return Response({'error': 'Не указана дата'}, status=400)
-    
+
     try:
-        date = datetime.strptime(date_str, '%Y-%m-%d').date()
+        target_date = datetime.strptime(date_str, '%Y-%m-%d').date()
     except ValueError:
         return Response({'error': 'Неверный формат даты'}, status=400)
 
@@ -125,68 +138,22 @@ def get_admin_available_times(request):
             services_ids = [int(id) for id in services_ids_str.split(',') if id]
             services = Service.objects.filter(id__in=services_ids, is_active=True)
             if services.exists():
-                duration_minutes = sum(s.duration for s in services if s.duration)
+                duration_minutes = calculate_services_duration(services)
         except ValueError:
             pass
-    
-    total_duration = duration_minutes + 10
 
-    WORK_START, WORK_END, SLOT_STEP = dt_time(9, 0), dt_time(22, 0), 30
-    current_tz = timezone.get_current_timezone()
-    
-    if BlockedSlot.objects.filter(date=date, is_full_day=True).exists():
-        return Response({'times': [], 'is_blocked': True})
+    result = get_available_slots(target_date, duration_minutes, apply_lead_time=False)
+    return Response({'times': result['times'], 'is_blocked': result['is_blocked']})
 
-    blocked_slots = BlockedSlot.objects.filter(date=date)
-    existing_bookings = Booking.objects.filter(
-        appointment_datetime__date=date, status__in=['pending', 'confirmed']
-    ).prefetch_related('services')
-
-    available_times = []
-    current_time = WORK_START
-
-    while current_time < WORK_END:
-        slot_start = timezone.make_aware(datetime.combine(date, current_time), current_tz)
-        slot_end = slot_start + timedelta(minutes=total_duration)
-        
-        if slot_end.time() > WORK_END:
-            break
-
-        is_free = True
-
-        for blocked in blocked_slots:
-            if blocked.start_time and blocked.end_time:
-                b_start = timezone.make_aware(datetime.combine(date, blocked.start_time), current_tz)
-                b_end = timezone.make_aware(datetime.combine(date, blocked.end_time), current_tz)
-                if slot_start < b_end and slot_end > b_start:
-                    is_free = False
-                    break
-        
-        if is_free:
-            for booking in existing_bookings:
-                b_duration = sum(s.duration for s in booking.services.all() if s.duration)
-                b_start = booking.appointment_datetime
-                b_end = b_start + timedelta(minutes=b_duration)
-                if slot_start < b_end and slot_end > b_start:
-                    is_free = False
-                    break
-
-        if is_free:
-            available_times.append(current_time.strftime('%H:%M'))
-
-        current_time = (datetime.combine(date, current_time) + timedelta(minutes=SLOT_STEP)).time()
-
-    return Response({'times': available_times, 'is_blocked': False})
 
 class AdminClientsAPIView(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
         search_query = request.query_params.get('search', '').strip()
-        
+
         clients = Client.objects.all().order_by('-last_visit')
         if search_query:
-            # Ищем и по имени, и по телефону
             clients = clients.filter(name__icontains=search_query) | clients.filter(phone__icontains=search_query)
 
         clients = clients[:100]
@@ -204,17 +171,18 @@ class AdminClientsAPIView(APIView):
 
         return Response({'clients': data}, status=status.HTTP_200_OK)
 
+
 class AdminCalendarAPIView(APIView):
     """
-    GET: Отдает сетку времени на день (или неделю) с статусами:
-    free (свободно), booked (занято), blocked (выходной)
+    GET: Сетка времени на день/неделю со статусами: free / booked / blocked.
+    WORK_END=22:00 для консистентности с рабочими часами студии.
     """
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
         date_str = request.query_params.get('date')
         period = request.query_params.get('period', 'day')
-        
+
         if not date_str:
             return Response({'error': 'Не указана дата'}, status=400)
 
@@ -225,20 +193,20 @@ class AdminCalendarAPIView(APIView):
 
         days_count = 7 if period == 'week' else 1
         dates = [start_date + timedelta(days=i) for i in range(days_count)]
-        
+
         WORK_START = dt_time(9, 0)
-        WORK_END = dt_time(23, 30)
+        WORK_END = dt_time(22, 0)
         SLOT_STEP = 30
-        
+
         result = {}
 
         for current_date in dates:
             date_key = current_date.strftime('%Y-%m-%d')
             result[date_key] = []
-            
+
             blocked_slots = BlockedSlot.objects.filter(date=current_date)
             is_full_day_blocked = blocked_slots.filter(is_full_day=True).exists()
-            
+
             bookings = Booking.objects.filter(
                 appointment_datetime__date=current_date,
                 status__in=['pending', 'confirmed']
@@ -246,7 +214,7 @@ class AdminCalendarAPIView(APIView):
 
             current_time = datetime.combine(current_date, WORK_START)
             end_time = datetime.combine(current_date, WORK_END)
-            
+
             current_tz = timezone.get_current_timezone()
             current_time = timezone.make_aware(current_time, current_tz)
             end_time = timezone.make_aware(end_time, current_tz)
@@ -273,20 +241,20 @@ class AdminCalendarAPIView(APIView):
                             duration = sum(s.duration for s in booking.services.all() if s.duration)
                             if not duration or duration <= 0:
                                 duration = 30
-                                
+
                             booking_end = booking_start + timedelta(minutes=duration)
-                            
+
                             if booking_start <= current_time < booking_end:
                                 slot_status = 'booked'
                                 booking_data = {
                                     'id': booking.id,
-                                    'client_id': booking.client.id if booking.client else 0, # <-- ДОБАВИТЬ ЭТО
+                                    'client_id': booking.client.id if booking.client else 0,
                                     'client_name': booking.client_name,
                                     'phone': booking.phone,
                                     'status': booking.status,
                                     'services': [{'id': s.id, 'name': s.name} for s in booking.services.all()],
                                     'time': booking_start.strftime('%H:%M'),
-                                    'is_start': current_time == booking_start 
+                                    'is_start': current_time == booking_start
                                 }
                                 break
 
@@ -295,7 +263,7 @@ class AdminCalendarAPIView(APIView):
                     'status': slot_status,
                     'booking': booking_data
                 })
-                
+
                 current_time += timedelta(minutes=SLOT_STEP)
 
         return Response({'calendar': result}, status=200)
@@ -307,7 +275,7 @@ class AdminBlockedSlotsAPIView(APIView):
     def get(self, request):
         today = timezone.now().date()
         slots = BlockedSlot.objects.filter(date__gte=today).order_by('date', 'start_time')
-        
+
         data = []
         for s in slots:
             data.append({
@@ -327,7 +295,7 @@ class AdminBlockedSlotsAPIView(APIView):
         start_time_str = request.data.get('start_time')
         end_time_str = request.data.get('end_time')
         reason = request.data.get('reason', 'Личные дела')
-        
+
         if not date_str:
             return Response({'error': 'Не указана дата'}, status=status.HTTP_400_BAD_REQUEST)
 
@@ -343,7 +311,7 @@ class AdminBlockedSlotsAPIView(APIView):
         if not is_full_day:
             if not start_time_str or not end_time_str:
                 return Response({'error': 'Укажите время начала и конца'}, status=400)
-                
+
             try:
                 start_time = datetime.strptime(start_time_str, '%H:%M').time()
                 end_time = datetime.strptime(end_time_str, '%H:%M').time()
@@ -378,7 +346,7 @@ class AdminBlockedSlotsAPIView(APIView):
             reason=reason,
             slot_type='day_off' if is_full_day else 'personal'
         )
-        
+
         return Response({'success': True, 'id': slot.id}, status=status.HTTP_201_CREATED)
 
 
@@ -396,7 +364,7 @@ class ServiceListAPIView(APIView):
 
     def get(self, request):
         services = Service.objects.filter(is_active=True).order_by('category', 'name')
-        
+
         data = []
         for s in services:
             data.append({
@@ -406,7 +374,7 @@ class ServiceListAPIView(APIView):
                 'category_name': s.category.name if s.category else 'Без категории',
                 'category_id': s.category.id if s.category else 0
             })
-            
+
         return Response({'services': data}, status=status.HTTP_200_OK)
 
 
@@ -424,12 +392,12 @@ class AdminBookingsListAPIView(APIView):
 
     def get(self, request):
         date_str = request.query_params.get('date', timezone.now().date().isoformat())
-        
+
         try:
             target_date = datetime.strptime(date_str, '%Y-%m-%d').date()
         except ValueError:
             return Response(
-                {'error': 'Неверный формат даты. Ожидается YYYY-MM-DD'}, 
+                {'error': 'Неверный формат даты. Ожидается YYYY-MM-DD'},
                 status=status.HTTP_400_BAD_REQUEST
             )
 
@@ -439,24 +407,20 @@ class AdminBookingsListAPIView(APIView):
         ).prefetch_related('services').order_by('appointment_datetime')
 
         serializer = BookingSerializer(bookings, many=True)
-        
+
         return Response({
             'bookings': serializer.data,
             'count': bookings.count()
         }, status=status.HTTP_200_OK)
 
 
-
 class AdminNotificationsAPIView(APIView):
-    """
-    GET: Единый список уведомлений (неподтвержденные записи + новые отзывы)
-    """
+    """GET: Единый список уведомлений (неподтвержденные записи + новые отзывы)"""
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
         notifications = []
 
-        # 1. Новые записи (pending)
         pending_bookings = Booking.objects.filter(status='pending').order_by('-created_at')
         for b in pending_bookings:
             notifications.append({
@@ -468,7 +432,6 @@ class AdminNotificationsAPIView(APIView):
                 'is_read': b.is_read,
             })
 
-        # 2. Новые отзывы (не опубликованные)
         new_reviews = Review.objects.filter(is_active=False).order_by('-created_at')
         for r in new_reviews:
             notifications.append({
@@ -480,10 +443,8 @@ class AdminNotificationsAPIView(APIView):
                 'is_read': r.is_read,
             })
 
-        # Сортируем по дате (сначала самые новые)
         notifications.sort(key=lambda x: x['created_at'], reverse=True)
 
-        # Приводим даты к строкам для JSON
         for n in notifications:
             n['created_at'] = n['created_at'].strftime('%d.%m.%Y %H:%M')
 
@@ -491,9 +452,7 @@ class AdminNotificationsAPIView(APIView):
 
 
 class AdminNotificationReadAPIView(APIView):
-    """
-    PATCH: Пометить уведомление как прочитанное
-    """
+    """PATCH: Пометить уведомление как прочитанное"""
     permission_classes = [IsAuthenticated]
 
     def patch(self, request):
@@ -512,10 +471,10 @@ class AdminNotificationReadAPIView(APIView):
 
         obj.is_read = True
         obj.save(update_fields=['is_read'])
-        
+
         return Response({'success': True, 'message': 'Уведомление прочитано'}, status=status.HTTP_200_OK)
-    
-    
+
+
 class AdminBookingStatusAPIView(APIView):
     """POST: Подтвердить, отменить, завершить или отметить неявку"""
     permission_classes = [IsAuthenticated]
@@ -523,55 +482,84 @@ class AdminBookingStatusAPIView(APIView):
     def post(self, request, pk):
         booking = get_object_or_404(Booking, pk=pk)
         new_status = request.data.get('status')
-        
+
         if new_status not in ['confirmed', 'cancelled', 'completed', 'no_show']:
             return Response({'error': 'Неверный статус'}, status=status.HTTP_400_BAD_REQUEST)
-            
+
         old_status = booking.status
         booking.status = new_status
-        
-        # Если пришли услуги (админ менял состав при завершении)
+
         services_ids = request.data.get('services_ids')
         if services_ids:
             if isinstance(services_ids, str):
                 services_ids = [int(i) for i in services_ids.split(',') if i]
             services = Service.objects.filter(id__in=services_ids, is_active=True)
             booking.services.set(services)
-            
+
         booking.save()
-        
+
         # === ЛОГИКА ОТПРАВКИ СМС И НАПОМИНАНИЙ ===
-        
-        # 1. Если запись ПОДТВЕРЖДАЮТ (из pending в confirmed)
+
+        # 1. ПОДТВЕРЖДЕНИЕ
         if old_status == 'pending' and new_status == 'confirmed':
-            # Отправляем СМС клиенту, что он записан
             async_task('booking_app.tasks.send_event_sms_task', booking.id, 'creation')
-            # Ставим напоминания за 24ч, 2ч и 15м
             schedule_reminders(booking.id, booking.appointment_datetime)
 
-        # 2. Если запись ОТМЕНЯЮТ (и она была до этого активна)
+        # 2. ОТМЕНА
         elif new_status == 'cancelled' and old_status in ['pending', 'confirmed']:
-            async_task('booking_app.tasks.send_event_sms_task', booking.id, 'cancel')
-            
-        # 3. Если прием ЗАВЕРШЕН
-        elif new_status == 'completed' and old_status != 'completed':
-            # Обновляем статистику клиента
             if booking.client:
-                client = booking.client
-                client.total_bookings += 1
-                client.total_spent += booking.total_price
-                client.last_visit = booking.appointment_datetime
-                client.save()
-            
-            # Отправляем СМС с просьбой об отзыве
+                from cabinet_app.services.bonuses import handle_booking_cancelled
+                try:
+                    handle_booking_cancelled(booking)
+                except Exception:
+                    logger.exception('handle_booking_cancelled failed for booking %s', booking.pk)
+            async_task('booking_app.tasks.send_event_sms_task', booking.id, 'cancel')
+
+        # 2b. НЕЯВКА — освобождаем сертификат, без SMS «отмена»
+        elif new_status == 'no_show' and old_status in ['pending', 'confirmed']:
+            if booking.client:
+                from cabinet_app.services.bonuses import handle_booking_cancelled
+                try:
+                    handle_booking_cancelled(booking)
+                except Exception:
+                    logger.exception(
+                        'handle_booking_cancelled failed for booking %s (no_show)',
+                        booking.pk,
+                    )
+
+        # 3. ЗАВЕРШЕНИЕ
+        elif new_status == 'completed' and old_status != 'completed':
+            try:
+                with transaction.atomic():
+                    locked = Booking.objects.select_for_update().get(pk=booking.pk)
+
+                    if locked.bonuses_processed_at is not None:
+                        # Уже обработано ранее — не инкрементим статистику повторно
+                        logger.warning(
+                            'booking %s already processed (bonuses_processed_at=%s), '
+                            'skip stats & bonuses',
+                            booking.pk, locked.bonuses_processed_at,
+                        )
+                    elif locked.client:
+                        client = locked.client
+                        client.total_bookings += 1
+                        client.total_spent += locked.total_price
+                        client.last_visit = locked.appointment_datetime
+                        client.save()
+
+                        from cabinet_app.services.bonuses import apply_bonus_effects
+                        apply_bonus_effects(locked, created_by=request.user)
+            except Exception:
+                logger.exception('completed flow failed for booking %s', booking.pk)
+
+            # SMS с просьбой об отзыве — вне транзакции
             async_task('booking_app.tasks.send_review_request_task', booking.id)
-        
+
         return Response({
-            'success': True, 
+            'success': True,
             'status': booking.status,
             'message': f'Статус записи изменен на {booking.get_status_display()}'
         }, status=status.HTTP_200_OK)
-        
 
 
 class AdminClientCreateAPIView(APIView):
@@ -585,12 +573,11 @@ class AdminClientCreateAPIView(APIView):
         if not phone:
             return Response({'error': 'Телефон обязателен'}, status=status.HTTP_400_BAD_REQUEST)
 
-        # Используем нашу утилиту поиска/создания
         from booking_app.utils import get_or_create_client
         client = get_or_create_client(phone, name, email)
-        
+
         return Response({
-            'success': True, 
+            'success': True,
             'client': {
                 'id': client.id,
                 'name': client.name,
@@ -598,29 +585,31 @@ class AdminClientCreateAPIView(APIView):
             }
         }, status=status.HTTP_201_CREATED)
 
+
 class AdminBlockDayAPIView(APIView):
     permission_classes = [IsAuthenticated]
 
     def post(self, request):
         serializer = BlockDaySerializer(data=request.data)
-        
+
         if serializer.is_valid():
             target_date = serializer.validated_data['date']
             reason = serializer.validated_data.get('reason', 'Выходной')
-            
+
             slot, created = BlockedSlot.objects.get_or_create(
                 date=target_date,
                 is_full_day=True,
                 defaults={'reason': reason, 'slot_type': 'day_off'}
             )
-            
+
             return Response({
-                'success': True, 
+                'success': True,
                 'created': created,
                 'message': 'День успешно заблокирован' if created else 'Этот день уже был заблокирован'
             }, status=status.HTTP_201_CREATED if created else status.HTTP_200_OK)
-            
+
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
 
 # ==========================================
 # API ДЛЯ CRM (КЛИЕНТЫ)
@@ -632,8 +621,7 @@ class AdminClientDetailAPIView(APIView):
 
     def get(self, request, pk):
         client = get_object_or_404(Client, pk=pk)
-        
-        # Получаем историю
+
         bookings = client.bookings.all().order_by('-appointment_datetime')
         history = []
         for b in bookings:
@@ -656,7 +644,7 @@ class AdminClientDetailAPIView(APIView):
             'notes': client.notes,
             'history': history,
         }
-        
+
         return Response(data, status=status.HTTP_200_OK)
 
 
@@ -667,13 +655,14 @@ class AdminClientUpdateNotesAPIView(APIView):
     def patch(self, request, pk):
         client = get_object_or_404(Client, pk=pk)
         notes = request.data.get('notes')
-        
+
         if notes is not None:
             client.notes = notes
             client.save()
             return Response({'success': True, 'message': 'Заметки сохранены'})
-            
+
         return Response({'error': 'Нет данных для обновления'}, status=400)
+
 
 class AdminBookingDetailAPIView(APIView):
     """GET: Получить данные одной записи по ID"""
@@ -681,10 +670,9 @@ class AdminBookingDetailAPIView(APIView):
 
     def get(self, request, pk):
         booking = get_object_or_404(Booking, pk=pk)
-        
-        # Формируем JSON в формате, который ждет Flutter (BookingInfo)
+
         services_data = [{'id': s.id, 'name': s.name} for s in booking.services.all()]
-        
+
         data = {
             'id': booking.id,
             'client_id': booking.client.id if booking.client else 0,
@@ -693,7 +681,7 @@ class AdminBookingDetailAPIView(APIView):
             'status': booking.status,
             'services': services_data,
             'time': booking.appointment_datetime.strftime('%H:%M'),
-            'date': booking.appointment_datetime.strftime('%Y-%m-%d'), # Нам нужна дата для календаря
+            'date': booking.appointment_datetime.strftime('%Y-%m-%d'),
             'is_start': True
         }
         return Response(data, status=status.HTTP_200_OK)

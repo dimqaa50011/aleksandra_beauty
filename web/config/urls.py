@@ -40,6 +40,9 @@ urlpatterns = [
     path('admin/', admin.site.urls),
     path('', include('booking_app.urls')),
     path('', include("beauty_app.urls")),
+    
+    path('api/client/cabinet/v1/', include('cabinet_app.urls', namespace="cabinet")),
+    
     path('privacy/', TemplateView.as_view(template_name='privacy_policy.html'), name='privacy_policy'),
     path('posts/', include("gen_posts_app.urls")),
     path('stats/', include('stats_app.urls')),
