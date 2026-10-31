@@ -53,9 +53,9 @@ class CertController:
             algorithm="HS256"
         )
         
-        qr_code = None
-        if need_qr:
-            qr_code = self.make_qr(token)
+        # qr_code = None
+        # if need_qr:
+        qr_code = self.make_qr(token)
         
         # Создаем сертификат, привязывая его к клиенту
         crt = CertificateModel.objects.create(
