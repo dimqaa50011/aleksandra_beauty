@@ -51,9 +51,11 @@ apiClient.interceptors.response.use(
         return apiClient(original)
       } catch (refreshError) {
         setAccessToken(null)
-        // Редиректим на логин
-        if (window.location.pathname !== '/login') {
-          window.location.href = '/login'
+        
+        // ИСПРАВЛЕНО: Используем BASE_URL для правильного редиректа внутри /cabinet/
+        const loginPath = `${import.meta.env.BASE_URL}login`
+        if (window.location.pathname !== loginPath) {
+          window.location.href = loginPath
         }
         return Promise.reject(refreshError)
       }
