@@ -477,6 +477,8 @@ class AdminNotificationReadAPIView(APIView):
         return Response({'success': True, 'message': 'Уведомление прочитано'}, status=status.HTTP_200_OK)
 
 
+
+
 class AdminBookingStatusAPIView(APIView):
     """POST: Подтвердить, отменить, завершить или отметить неявку"""
     permission_classes = [IsAuthenticated]
@@ -491,14 +493,13 @@ class AdminBookingStatusAPIView(APIView):
         old_status = booking.status
         booking.status = new_status
 
+        # Если админ менял услуги при завершении
         services_ids = request.data.get('services_ids')
         if services_ids:
             if isinstance(services_ids, str):
                 services_ids = [int(i) for i in services_ids.split(',') if i]
             services = Service.objects.filter(id__in=services_ids, is_active=True)
             booking.services.set(services)
-            
-            
 
         booking.save()
 
@@ -508,7 +509,6 @@ class AdminBookingStatusAPIView(APIView):
         if old_status == 'pending' and new_status == 'confirmed':
             async_task('booking_app.tasks.send_event_sms_task', booking.id, 'creation')
             schedule_reminders(booking.id, booking.appointment_datetime)
-            
 
         # 2. ОТМЕНА
         elif new_status == 'cancelled' and old_status in ['pending', 'confirmed']:
@@ -520,17 +520,14 @@ class AdminBookingStatusAPIView(APIView):
                     logger.exception('handle_booking_cancelled failed for booking %s', booking.pk)
             async_task('booking_app.tasks.send_event_sms_task', booking.id, 'cancel')
 
-        # 2b. НЕЯВКА — освобождаем сертификат, без SMS «отмена»
+        # 2b. НЕЯВКА
         elif new_status == 'no_show' and old_status in ['pending', 'confirmed']:
             if booking.client:
                 from cabinet_app.services.bonuses import handle_booking_cancelled
                 try:
                     handle_booking_cancelled(booking)
                 except Exception:
-                    logger.exception(
-                        'handle_booking_cancelled failed for booking %s (no_show)',
-                        booking.pk,
-                    )
+                    logger.exception('handle_booking_cancelled failed for booking %s (no_show)', booking.pk)
 
         # 3. ЗАВЕРШЕНИЕ
         elif new_status == 'completed' and old_status != 'completed':
@@ -539,10 +536,8 @@ class AdminBookingStatusAPIView(APIView):
                     locked = Booking.objects.select_for_update().get(pk=booking.pk)
 
                     if locked.bonuses_processed_at is not None:
-                        # Уже обработано ранее — не инкрементим статистику повторно
                         logger.warning(
-                            'booking %s already processed (bonuses_processed_at=%s), '
-                            'skip stats & bonuses',
+                            'booking %s already processed (bonuses_processed_at=%s), skip',
                             booking.pk, locked.bonuses_processed_at,
                         )
                     elif locked.client:
@@ -551,14 +546,16 @@ class AdminBookingStatusAPIView(APIView):
                         client.total_spent += locked.total_price
                         client.last_visit = locked.appointment_datetime
                         client.save()
-                        
+
+                        # Читаем флаг из запроса (админка должна его передать)
                         use_bonuses = request.data.get('use_bonuses', False)
                         if isinstance(use_bonuses, str):
                             use_bonuses = use_bonuses.lower() in ('true', '1', 'yes')
 
                         from cabinet_app.services.bonuses import apply_bonus_effects
-                        apply_bonus_effects(locked, created_by=request.user)
-                    
+                        # Передаем флаг в функцию, сертификаты она не тронет
+                        apply_bonus_effects(locked, use_bonuses=use_bonuses, created_by=request.user)
+                        
             except Exception:
                 logger.exception('completed flow failed for booking %s', booking.pk)
 
@@ -570,7 +567,6 @@ class AdminBookingStatusAPIView(APIView):
             'status': booking.status,
             'message': f'Статус записи изменен на {booking.get_status_display()}'
         }, status=status.HTTP_200_OK)
-
 
 class AdminClientCreateAPIView(APIView):
     permission_classes = [IsAuthenticated]
