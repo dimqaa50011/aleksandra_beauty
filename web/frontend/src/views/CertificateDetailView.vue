@@ -12,21 +12,31 @@
 
     <div v-else-if="cert" class="cert-detail-container">
       
-      <!-- КАРТОЧКА СЕРТИФИКАТА -->
-      <div class="cert-ticket" :class="{ 'used': !cert.is_available }">
-        <div class="ticket-header">
-          <span class="brand">Sasha Sugar</span>
-          <span class="price">{{ cert.price }} ₽</span>
-        </div>
+      <!-- КАРТОЧКА СЕРТИФИКАТА С АВАТАРКОЙ -->
+      <div 
+        class="cert-ticket" 
+        :class="{ 'used': !cert.is_available }"
+        :style="ticketStyle"
+      >
+        <!-- Градиентный оверлей для читаемости текста -->
+        <div class="ticket-overlay" :class="{ 'used-overlay': !cert.is_available }"></div>
         
-        <div class="ticket-body">
-          <div class="status">{{ cert.status_display }}</div>
-          <div class="code">Код: {{ cert.code }}</div>
-          <div class="expire">Действует до: {{ formatDate(cert.expire_date) }}</div>
-        </div>
-        
-        <div class="ticket-footer">
-          Подарочный сертификат
+        <!-- Контент карточки -->
+        <div class="ticket-content">
+          <div class="ticket-header">
+            <span class="brand">Sasha Sugar</span>
+            <span class="price">{{ cert.price }} ₽</span>
+          </div>
+          
+          <div class="ticket-body">
+            <div class="status">{{ cert.status_display }}</div>
+            <div class="code">Код: {{ cert.code }}</div>
+            <div class="expire">Действует до: {{ formatDate(cert.expire_date) }}</div>
+          </div>
+          
+          <div class="ticket-footer">
+            Подарочный сертификат
+          </div>
         </div>
       </div>
 
@@ -55,14 +65,30 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, computed } from 'vue'
 import { useRoute } from 'vue-router'
 import { showSuccessToast, showFailToast } from 'vant'
 import apiClient from '@/api/client'
+import { useAuthStore } from '@/stores/auth' // <-- Импортируем стейт для аватарки
 
 const route = useRoute()
+const authStore = useAuthStore()
+
 const loading = ref(true)
 const cert = ref<any>(null)
+
+// Получаем URL аватарки пользователя
+const avatarUrl = computed(() => authStore.user?.avatar)
+
+// Динамический стиль для карточки
+const ticketStyle = computed(() => {
+  if (avatarUrl.value && cert.value?.is_available) {
+    return {
+      backgroundImage: `url(${avatarUrl.value})`
+    }
+  }
+  return {} // Если нет аватарки или сертификат использован, останется стандартный CSS
+})
 
 async function fetchCert() {
   try {
@@ -113,28 +139,73 @@ onMounted(() => {
   margin: 0;
 }
 
-/* Красивая карточка-билет */
+/* --- НОВАЯ КАРТОЧКА-БИЛЕТ С АВАТАРКОЙ --- */
 .cert-ticket {
-  background: linear-gradient(135deg, #f2a6b0 0%, #e8919c 100%);
   border-radius: 20px;
   color: white;
   padding: 24px;
-  box-shadow: 0 10px 30px rgba(242, 166, 176, 0.4);
+  box-shadow: 0 10px 30px rgba(242, 166, 176, 0.3);
   position: relative;
   overflow: hidden;
   margin-bottom: 32px;
+  min-height: 220px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  
+  /* Настройки фонового изображения (аватарки) */
+  background-color: #f2a6b0; /* Базовый цвет */
+  background-size: cover;
+  background-position: right center; /* Аватарка прижата вправо */
+  background-repeat: no-repeat;
 }
 
+/* Карточка, если сертификат использован */
 .cert-ticket.used {
-  background: linear-gradient(135deg, #9ca3af 0%, #6b7280 100%);
+  background-color: #9ca3af;
   box-shadow: none;
-  opacity: 0.8;
+  opacity: 0.9;
+}
+
+/* Градиент от левого края (плотный) к правому (прозрачный) */
+.ticket-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(90deg, 
+    #f2a6b0 0%, 
+    #f2a6b0 30%, 
+    rgba(242, 166, 176, 0.8) 60%, 
+    rgba(242, 166, 176, 0.1) 100%
+  );
+  z-index: 1;
+}
+
+.ticket-overlay.used-overlay {
+  background: linear-gradient(90deg, 
+    #9ca3af 0%, 
+    #9ca3af 30%, 
+    rgba(156, 163, 175, 0.8) 60%, 
+    rgba(156, 163, 175, 0.2) 100%
+  );
+}
+
+/* Контент поверх градиента */
+.ticket-content {
+  position: relative;
+  z-index: 2;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
 }
 
 .ticket-header {
   display: flex;
   justify-content: space-between;
-  align-items: center;
+  align-items: flex-start;
   border-bottom: 1px dashed rgba(255,255,255,0.3);
   padding-bottom: 16px;
   margin-bottom: 16px;
@@ -142,7 +213,7 @@ onMounted(() => {
 
 .brand {
   font-size: 14px;
-  font-weight: 600;
+  font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 1px;
 }
@@ -150,6 +221,7 @@ onMounted(() => {
 .price {
   font-size: 28px;
   font-weight: 800;
+  text-shadow: 0 2px 4px rgba(0,0,0,0.1);
 }
 
 .ticket-body {
@@ -158,7 +230,8 @@ onMounted(() => {
 
 .status {
   display: inline-block;
-  background: rgba(255,255,255,0.2);
+  background: rgba(255,255,255,0.25);
+  backdrop-filter: blur(4px);
   padding: 4px 12px;
   border-radius: 12px;
   font-size: 12px;
@@ -168,24 +241,25 @@ onMounted(() => {
 
 .code {
   font-size: 18px;
-  font-weight: 600;
-  margin-bottom: 8px;
+  font-weight: 700;
+  margin-bottom: 4px;
+  font-family: monospace;
 }
 
 .expire {
   font-size: 13px;
-  opacity: 0.8;
+  opacity: 0.9;
 }
 
 .ticket-footer {
   font-size: 12px;
   text-align: center;
-  opacity: 0.6;
+  opacity: 0.7;
   border-top: 1px dashed rgba(255,255,255,0.3);
   padding-top: 16px;
 }
 
-/* QR */
+/* --- ОСТАЛЬНОЕ (QR и токен) --- */
 .qr-section h3 {
   font-size: 16px;
   text-align: center;
@@ -208,7 +282,6 @@ onMounted(() => {
   display: block;
 }
 
-/* Токен */
 .token-section {
   text-align: center;
 }
