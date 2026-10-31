@@ -13,17 +13,13 @@
     <div v-else-if="cert" class="cert-detail-container">
       
       <!-- КАРТОЧКА СЕРТИФИКАТА С АВАТАРКОЙ -->
-      <div class="cert-ticket" :class="{ 'used': !cert.is_available }">
-        
-        <!-- Слой с аватаркой (растворяется слева) -->
-        <div 
-          class="ticket-avatar-bg" 
-          v-if="avatarUrl && cert.is_available"
-          :style="{ backgroundImage: `url(${avatarUrl})` }"
-        ></div>
-
-        <!-- Затемняющий слой для использованных сертификатов -->
-        <div class="ticket-overlay" v-if="!cert.is_available"></div>
+      <div 
+        class="cert-ticket" 
+        :class="{ 'used': !cert.is_available }"
+        :style="ticketStyle"
+      >
+        <!-- Градиентный оверлей для читаемости текста -->
+        <div class="ticket-overlay" :class="{ 'used-overlay': !cert.is_available }"></div>
         
         <!-- Контент карточки -->
         <div class="ticket-content">
@@ -73,7 +69,7 @@ import { ref, onMounted, computed } from 'vue'
 import { useRoute } from 'vue-router'
 import { showSuccessToast, showFailToast } from 'vant'
 import apiClient from '@/api/client'
-import { useAuthStore } from '@/stores/auth'
+import { useAuthStore } from '@/stores/auth' // <-- Импортируем стейт для аватарки
 
 const route = useRoute()
 const authStore = useAuthStore()
@@ -81,7 +77,18 @@ const authStore = useAuthStore()
 const loading = ref(true)
 const cert = ref<any>(null)
 
+// Получаем URL аватарки пользователя
 const avatarUrl = computed(() => authStore.user?.avatar)
+
+// Динамический стиль для карточки
+const ticketStyle = computed(() => {
+  if (avatarUrl.value && cert.value?.is_available) {
+    return {
+      backgroundImage: `url(${avatarUrl.value})`
+    }
+  }
+  return {} // Если нет аватарки или сертификат использован, останется стандартный CSS
+})
 
 async function fetchCert() {
   try {
@@ -132,11 +139,12 @@ onMounted(() => {
   margin: 0;
 }
 
-/* --- КАРТОЧКА-БИЛЕТ --- */
+/* --- НОВАЯ КАРТОЧКА-БИЛЕТ С АВАТАРКОЙ --- */
 .cert-ticket {
   border-radius: 20px;
   color: white;
   padding: 24px;
+  box-shadow: 0 10px 30px rgba(242, 166, 176, 0.3);
   position: relative;
   overflow: hidden;
   margin-bottom: 32px;
@@ -145,50 +153,46 @@ onMounted(() => {
   flex-direction: column;
   justify-content: space-between;
   
-  /* Фирменный розовый фон */
-  background: linear-gradient(135deg, #f2a6b0 0%, #e8919c 100%);
-  box-shadow: 0 10px 30px rgba(242, 166, 176, 0.3);
-  z-index: 1;
-}
-
-.cert-ticket.used {
-  background: #9ca3af;
-  box-shadow: none;
-}
-
-/* Слой с аватаркой */
-.ticket-avatar-bg {
-  position: absolute;
-  top: 0;
-  right: 0;
-  bottom: 0;
-  width: 75%; /* Занимает правую часть карточки */
-  
+  /* Настройки фонового изображения (аватарки) */
+  background-color: #f2a6b0; /* Базовый цвет */
   background-size: cover;
-  /* Центрируем фото так, чтобы лицо было видно (можно поиграть с 20%) */
-  background-position: center 20%; 
+  background-position: right center; /* Аватарка прижата вправо */
   background-repeat: no-repeat;
-  
-  /* МАГИЯ: растворяем левый край фото в прозрачность */
-  -webkit-mask-image: linear-gradient(to right, transparent 0%, black 70%);
-  mask-image: linear-gradient(to right, transparent 0%, black 70%);
-  
-  z-index: -1; /* Уходит под текст, но над фоном карточки */
-  pointer-events: none;
 }
 
-/* Затемнение для неактивных */
+/* Карточка, если сертификат использован */
+.cert-ticket.used {
+  background-color: #9ca3af;
+  box-shadow: none;
+  opacity: 0.9;
+}
+
+/* Градиент от левого края (плотный) к правому (прозрачный) */
 .ticket-overlay {
   position: absolute;
   top: 0;
   left: 0;
   right: 0;
   bottom: 0;
-  background: rgba(0, 0, 0, 0.4);
-  z-index: -1;
+  background: linear-gradient(90deg, 
+    #f2a6b0 0%, 
+    #f2a6b0 30%, 
+    rgba(242, 166, 176, 0.8) 60%, 
+    rgba(242, 166, 176, 0.1) 100%
+  );
+  z-index: 1;
 }
 
-/* Контент */
+.ticket-overlay.used-overlay {
+  background: linear-gradient(90deg, 
+    #9ca3af 0%, 
+    #9ca3af 30%, 
+    rgba(156, 163, 175, 0.8) 60%, 
+    rgba(156, 163, 175, 0.2) 100%
+  );
+}
+
+/* Контент поверх градиента */
 .ticket-content {
   position: relative;
   z-index: 2;
@@ -196,8 +200,6 @@ onMounted(() => {
   display: flex;
   flex-direction: column;
   justify-content: space-between;
-  /* Легкая тень, чтобы текст не терялся, если попадет на светлое фото */
-  text-shadow: 0 1px 3px rgba(0,0,0,0.15); 
 }
 
 .ticket-header {
@@ -219,6 +221,7 @@ onMounted(() => {
 .price {
   font-size: 28px;
   font-weight: 800;
+  text-shadow: 0 2px 4px rgba(0,0,0,0.1);
 }
 
 .ticket-body {
@@ -227,7 +230,7 @@ onMounted(() => {
 
 .status {
   display: inline-block;
-  background: rgba(255,255,255,0.2);
+  background: rgba(255,255,255,0.25);
   backdrop-filter: blur(4px);
   padding: 4px 12px;
   border-radius: 12px;
