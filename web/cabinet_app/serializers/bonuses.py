@@ -39,13 +39,14 @@ class CertificateSerializer(serializers.ModelSerializer):
     code = serializers.SerializerMethodField()
     status_display = serializers.SerializerMethodField()
     is_available = serializers.SerializerMethodField()
+    qr_code = serializers.ImageField(read_only=True)
 
     class Meta:
         model = CertificateModel
         fields = [
             'id', 'code', 'price', 'expire_date', 
             'is_used', 'used_date', 'status_display', 
-            'is_available', 'created_at'
+            'is_available', 'created_at', 'qr_code'
         ]
 
     def get_code(self, obj):
