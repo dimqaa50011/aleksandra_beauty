@@ -46,6 +46,12 @@ const router = createRouter({
       component: () => import('@/views/ProfileView.vue'),
       meta: { requiresAuth: true },
     },
+    {
+      path: '/certificates/:id',
+      name: 'certificate-detail',
+      component: () => import('@/views/CertificateDetailView.vue'),
+      meta: { requiresAuth: true },
+    },
   ],
 })
 

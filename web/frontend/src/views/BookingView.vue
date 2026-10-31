@@ -1,7 +1,9 @@
 <template>
   <div class="booking-page">
     <div class="page-header">
+      <van-icon name="arrow-left" size="24" class="back-icon" @click="goBack" />
       <h1>Онлайн-запись</h1>
+      <div class="header-spacer"></div> <!-- Для центрирования заголовка -->
     </div>
 
     <div class="form-container">
@@ -134,6 +136,10 @@ const totalDuration = computed(() => selectedServices.value.reduce((sum, s) => s
 const isReadyToBook = computed(() => selectedServices.value.length > 0 && selectedDate.value && selectedTime.value && consentPd.value)
 
 // Методы
+function goBack() {
+  router.back()
+}
+
 async function fetchServices() {
   try {
     const { data } = await apiClient.get('/services/')
@@ -217,7 +223,6 @@ onMounted(() => {
 </script>
 
 <style scoped>
-/* Стили остались точно такими же, как в предыдущем сообщении */
 .booking-page {
   min-height: 100vh;
   background-color: #ffffff;
@@ -225,16 +230,36 @@ onMounted(() => {
   font-family: 'Inter', sans-serif;
 }
 
+/* Обновленный хедер с кнопкой назад */
 .page-header {
-  text-align: center;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
   margin-bottom: 32px;
+  margin-top: 10px;
+  padding: 0 4px;
+}
+
+.back-icon {
+  cursor: pointer;
+  color: var(--text-dark, #2d2a28);
+  transition: opacity 0.2s;
+}
+
+.back-icon:active {
+  opacity: 0.5;
 }
 
 .page-header h1 {
-  font-size: 28px;
+  font-size: 24px;
   font-weight: 700;
   color: var(--text-dark, #2d2a28);
   margin: 0;
+  text-align: center;
+}
+
+.header-spacer {
+  width: 24px;
 }
 
 .form-container {

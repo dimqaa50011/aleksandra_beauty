@@ -60,16 +60,28 @@
 
       <!-- ВКЛАДКА 2: СЕРТИФИКАТЫ -->
       <van-tab title="Сертификаты">
+        <!-- Переключатель активных/всех -->
+        <div class="cert-controls">
+          <van-switch v-model="showOnlyActive" size="20px" active-color="#f2a6b0" @change="fetchCertificates" />
+          <span>Только активные</span>
+        </div>
+
         <div v-if="loadingCerts" class="loading-center">
           <van-loading color="#f2a6b0" />
         </div>
         
         <div v-else-if="!certificates.length" class="empty-state">
-          <p>У вас нет сертификатов.</p>
+          <p>{{ showOnlyActive ? 'У вас нет активных сертификатов.' : 'У вас нет сертификатов.' }}</p>
         </div>
 
         <div v-else class="list-container">
-          <div v-for="cert in certificates" :key="cert.id" class="cert-card" :class="{ 'is-used': !cert.is_available }">
+          <div 
+            v-for="cert in certificates" 
+            :key="cert.id" 
+            class="cert-card" 
+            :class="{ 'is-used': !cert.is_available }"
+            @click="$router.push('/certificates/' + cert.id)"
+          >
             <div class="cert-header">
               <div class="cert-price">{{ cert.price }} ₽</div>
               <div class="cert-status" :class="cert.is_available ? 'active' : 'inactive'">
@@ -78,6 +90,7 @@
             </div>
             <div class="cert-code">Код: {{ cert.code }}</div>
             <div class="cert-expire">Действует до: {{ formatDate(cert.expire_date) }}</div>
+            <van-icon name="arrow" class="cert-arrow" />
           </div>
         </div>
       </van-tab>
@@ -142,6 +155,9 @@ const bonuses = ref<any>(null)
 const certificates = ref<any[]>([])
 const referral = ref<any>(null)
 
+// По умолчанию показываем только активные сертификаты
+const showOnlyActive = ref(true)
+
 async function fetchBonuses() {
   try {
     const { data } = await apiClient.get('/bonuses/')
@@ -154,11 +170,15 @@ async function fetchBonuses() {
 }
 
 async function fetchCertificates() {
+  loadingCerts.value = true
   try {
-    const { data } = await apiClient.get('/certificates/')
+    const { data } = await apiClient.get('/certificates/', {
+      params: { active: showOnlyActive.value ? 'true' : 'false' }
+    })
     certificates.value = data.certificates
   } catch (error) {
     console.error(error)
+    showFailToast('Ошибка загрузки сертификатов')
   } finally {
     loadingCerts.value = false
   }
@@ -372,6 +392,15 @@ onMounted(() => {
 .text-gray { color: #6b5f5a; }
 
 /* Сертификаты */
+.cert-controls {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 16px 16px 0;
+  font-size: 14px;
+  color: var(--text-gray, #6b5f5a);
+}
+
 .cert-card {
   background: #fff;
   border-radius: 16px;
@@ -381,6 +410,12 @@ onMounted(() => {
   box-shadow: 0 4px 15px rgba(0,0,0,0.02);
   position: relative;
   overflow: hidden;
+  cursor: pointer;
+  transition: transform 0.2s;
+}
+
+.cert-card:active {
+  transform: scale(0.98);
 }
 
 .cert-card::before {
@@ -441,6 +476,13 @@ onMounted(() => {
 .cert-expire {
   font-size: 12px;
   color: var(--text-gray, #6b5f5a);
+}
+
+.cert-arrow {
+  position: absolute;
+  right: 16px;
+  bottom: 20px;
+  color: #ccc;
 }
 
 /* Рефералка */

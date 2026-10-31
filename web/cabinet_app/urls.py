@@ -17,7 +17,7 @@ from .api.bookings import (
 from .api.catalog import ServiceListView
 from .api.slots import SlotListView
 from .api.profile import AvatarUploadView, MeView, UpdateConsentsView
-from .api.bonuses import BonusesView, CertificatesView, ReferralView
+from .api.bonuses import BonusesView, CertificateDetailView, CertificatesView, ReferralView
 
 app_name = CabinetAppConfig.name
 
@@ -42,6 +42,7 @@ urlpatterns = [
     path('me/consents/', UpdateConsentsView.as_view(), name='me-consents'),
     path('bonuses/', BonusesView.as_view(), name='bonuses'),
     path('certificates/', CertificatesView.as_view(), name='certificates'),
+    path('certificates/<int:pk>/', CertificateDetailView.as_view(), name='certificate-detail'),
     path('referral/', ReferralView.as_view(), name='referral'),
     path('me/avatar/', AvatarUploadView.as_view(), name='me-avatar'),
     

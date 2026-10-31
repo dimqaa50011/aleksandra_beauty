@@ -38,7 +38,7 @@ class CertController:
         self, 
         client: Client, # <-- Теперь принимаем объект клиента
         price: int, 
-        need_qr: bool = False
+        need_qr: bool = True
     ):
         if not client:
             raise ValueError("Клиент не передан в контроллер")

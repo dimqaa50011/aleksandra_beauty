@@ -41,21 +41,42 @@ class BonusesView(CabinetAPIView):
         })
 
 
+from rest_framework.exceptions import NotFound
+
 class CertificatesView(CabinetAPIView):
     """GET: Список сертификатов клиента."""
-
     def get(self, request):
         client = request.user.client
         
-        # Ищем сертификаты по прямой привязке или по телефону
         variants = phone_variants(client.phone)
-        certs = CertificateModel.objects.filter(
+        qs = CertificateModel.objects.filter(
             Q(client=client) | Q(client__isnull=True, phone__in=variants)
         ).order_by('-created_at')
 
+        # Фильтр по параметру (например, ?active=true)
+        active_only = request.query_params.get('active') == 'true'
+        if active_only:
+            qs = qs.filter(is_used=False, expire_date__gte=timezone.localdate())
+
         return Response({
-            'certificates': CertificateSerializer(certs, many=True).data
+            'certificates': CertificateSerializer(qs, many=True).data
         })
+
+
+class CertificateDetailView(CabinetAPIView):
+    """GET: Детали одного сертификата."""
+    def get(self, request, pk):
+        client = request.user.client
+        variants = phone_variants(client.phone)
+        
+        cert = CertificateModel.objects.filter(
+            Q(id=pk) & (Q(client=client) | Q(client__isnull=True, phone__in=variants))
+        ).first()
+        
+        if not cert:
+            raise NotFound('Сертификат не найден')
+            
+        return Response(CertificateSerializer(cert).data)
 
 from ..models import Referral # добавь в импорты наверху
 
