@@ -58,6 +58,13 @@ services:
       web:
         condition: service_healthy
     restart: unless-stopped
+  
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: beauty_frontend
+    restart: unless-stopped
 
   # PostgreSQL
   db:
