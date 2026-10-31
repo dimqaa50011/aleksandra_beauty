@@ -177,6 +177,7 @@ class Service(models.Model):
     is_active = models.BooleanField(default=True)
     is_bestseller = models.BooleanField(default=False, help_text="Помечать как бестселлер (🔥)")
     order = models.PositiveIntegerField(default=0)
+    cashback_percent = models.PositiveSmallIntegerField("Процент кэшбека", default=0)
 
     class Meta:
         ordering = ['order']

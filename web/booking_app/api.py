@@ -7,10 +7,12 @@ from django.utils import timezone
 from django.db import transaction
 from datetime import datetime, timedelta, time as dt_time
 from rest_framework.decorators import api_view, permission_classes
+from django.conf import settings
 
 # Импорты для очереди и задач
 from django_q.tasks import async_task
 
+from booking_app.services.bonuses import set_bonuses, spend_bonuses_booking
 from booking_app.services.slots import (
     calculate_services_duration,
     get_available_slots,
@@ -495,6 +497,8 @@ class AdminBookingStatusAPIView(APIView):
                 services_ids = [int(i) for i in services_ids.split(',') if i]
             services = Service.objects.filter(id__in=services_ids, is_active=True)
             booking.services.set(services)
+            
+            
 
         booking.save()
 
@@ -504,6 +508,7 @@ class AdminBookingStatusAPIView(APIView):
         if old_status == 'pending' and new_status == 'confirmed':
             async_task('booking_app.tasks.send_event_sms_task', booking.id, 'creation')
             schedule_reminders(booking.id, booking.appointment_datetime)
+            
 
         # 2. ОТМЕНА
         elif new_status == 'cancelled' and old_status in ['pending', 'confirmed']:
@@ -546,9 +551,14 @@ class AdminBookingStatusAPIView(APIView):
                         client.total_spent += locked.total_price
                         client.last_visit = locked.appointment_datetime
                         client.save()
+                        
+                        use_bonuses = request.data.get('use_bonuses', False)
+                        if isinstance(use_bonuses, str):
+                            use_bonuses = use_bonuses.lower() in ('true', '1', 'yes')
 
                         from cabinet_app.services.bonuses import apply_bonus_effects
                         apply_bonus_effects(locked, created_by=request.user)
+                    
             except Exception:
                 logger.exception('completed flow failed for booking %s', booking.pk)
 

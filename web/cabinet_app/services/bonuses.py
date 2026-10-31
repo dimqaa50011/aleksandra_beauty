@@ -157,27 +157,38 @@ def max_bonuses_for_booking(booking: Booking) -> int:
 def calculate_cashback(booking: Booking) -> int:
     """
     Кэшбэк: сумма процентов по каждой услуге на дату визита.
-    Берём полную стоимость услуги. Округление вниз.
+    Сначала ищем правило в CashbackRule. Если правила нет — берем
+    процент из самого объекта Service (поле cashback_percent), если оно есть.
     """
     visit_date = booking.appointment_datetime.date()
     total = 0
     applied_rules = []
+
     for service in booking.services.all():
+        # 1. Ищем активное правило в БД
         rule = CashbackRule.objects.filter(
             service=service,
             is_active=True,
             valid_from__lte=visit_date,
             valid_until__gte=visit_date,
         ).order_by('-valid_from').first()
-        if rule is None:
-            continue
-        amount = int(service.price * rule.percent / Decimal('100'))
+
+        if rule:
+            percent = rule.percent
+            applied_rules.append(f'{service.pk}:{rule.percent}%(rule)')
+        # 2. Если правила нет, проверяем поле в услуге
+        elif hasattr(service, 'cashback_percent') and service.cashback_percent is not None:
+            percent = Decimal(str(service.cashback_percent))
+            applied_rules.append(f'{service.pk}:{percent}%(service)')
+        else:
+            percent = Decimal('0')
+
+        amount = int(service.price * percent / Decimal('100'))
         if amount > 0:
             total += amount
-            applied_rules.append(f'{service.pk}:{rule.percent}%')
 
     logger.info(
-        'cashback.calc booking=%s visit_date=%s rules=[%s] total=%s',
+        'cashback.calc booking=%s visit_date=%s applied=[%s] total=%s',
         booking.pk, visit_date, ','.join(applied_rules), total,
     )
     return total
@@ -214,21 +225,28 @@ def release_certificate(cert: CertificateModel) -> None:
 
 
 @transaction.atomic
-def use_certificate(cert: CertificateModel, booking: Booking) -> None:
-    """Гасит сертификат полностью. Остаток, если номинал больше суммы — сгорает."""
-    if cert.is_used:
-        return
+def redeem_certificate_for_booking(cert_id: int, booking_id: int) -> CertificateModel:
+    """
+    Гасит сертификат под конкретную бронь.
+    Вызывается отдельно (из админки), когда админ нажимает "Погасить сертификат".
+    """
+    cert = CertificateModel.objects.select_for_update().filter(pk=cert_id, is_used=False).first()
+    if not cert:
+        raise ValidationError('Сертификат не найден или уже погашен')
+
+    if cert.is_expired:
+        raise ValidationError('Срок действия сертификата истек')
+
+    booking = Booking.objects.get(pk=booking_id)
+
     cert.is_used = True
     cert.used_date = timezone.now()
     cert.used_booking = booking
-    cert.reserved_for_booking = None
-    cert.save(update_fields=[
-        'is_used', 'used_date', 'used_booking', 'reserved_for_booking',
-    ])
-    logger.info(
-        'cert.use cert=%s booking=%s face_value=%s visit_total=%s',
-        cert.pk, booking.pk, cert.price, booking.total_price,
-    )
+    cert.reserved_for_booking = None  # Снимаем резерв, если был
+    cert.save(update_fields=['is_used', 'used_date', 'used_booking', 'reserved_for_booking'])
+
+    logger.info('cert.redeem cert=%s booking=%s price=%s', cert.pk, booking.pk, cert.price)
+    return cert
 
 
 # ─────────────────────────────────────────────────────────────
@@ -236,11 +254,16 @@ def use_certificate(cert: CertificateModel, booking: Booking) -> None:
 # ─────────────────────────────────────────────────────────────
 
 @transaction.atomic
-def apply_bonus_effects(booking: Booking, *, created_by=None) -> dict:
+def apply_bonus_effects(
+    booking: Booking,
+    *,
+    use_bonuses: bool = False,
+    created_by=None
+) -> dict:
     """
     Бонусная часть завершения визита.
-    Статистику клиента (total_bookings, total_spent, last_visit) НЕ трогает —
-    её обновляет вызывающий код (AdminBookingStatusAPIView).
+    Сертификаты здесь НЕ гасятся (для них есть redeem_certificate_for_booking).
+    Списание бонусов происходит только если use_bonuses=True.
 
     Идемпотентно по Booking.bonuses_processed_at.
     """
@@ -270,39 +293,34 @@ def apply_bonus_effects(booking: Booking, *, created_by=None) -> dict:
     result = {
         'bonuses_spent': 0,
         'cashback': 0,
-        'certificate_used': False,
         'achievements_unlocked': [],
     }
 
     logger.info(
-        'bonus.apply start booking=%s client=%s total_price=%s '
-        'requested_bonuses=%s reserved_cert=%s',
-        booking.pk, client.pk, booking.total_price,
-        booking.bonuses_to_apply if booking.use_bonuses_requested else 0,
-        booking.reserved_certificates.filter(is_used=False).exists(),
+        'bonus.apply start booking=%s client=%s total_price=%s use_bonuses=%s',
+        booking.pk, client.pk, booking.total_price, use_bonuses,
     )
 
-    # 1. Списание бонусов
-    if booking.use_bonuses_requested and booking.bonuses_to_apply > 0:
-        tx = spend_bonuses(
-            client,
-            booking.bonuses_to_apply,
-            reason='visit',
-            booking=booking,
-            description=f'Оплата бонусами за визит #{booking.pk}',
-            created_by=created_by,
-        )
-        applied = abs(tx.amount) if tx else 0
-        booking.bonuses_applied = applied
-        result['bonuses_spent'] = applied
+    # 1. СПИСАНИЕ БОНУСОВ (только если админ/клиент выбрал use_bonuses=True)
+    if use_bonuses:
+        max_allowed = max_bonuses_for_booking(booking)
+        to_spend = min(client.bonus_balance, max_allowed)
 
-    # 2. Гашение сертификата
-    cert = booking.reserved_certificates.filter(is_used=False).first()
-    if cert is not None:
-        use_certificate(cert, booking)
-        result['certificate_used'] = True
+        if to_spend > 0:
+            tx = spend_bonuses(
+                client,
+                to_spend,
+                reason='visit',
+                booking=booking,
+                description=f'Оплата бонусами за визит #{booking.pk}',
+                created_by=created_by,
+            )
+            applied = abs(tx.amount) if tx else 0
+            booking.bonuses_applied = applied
+            result['bonuses_spent'] = applied
+            logger.info('bonus.apply spent=%s booking=%s', applied, booking.pk)
 
-    # 3. Кэшбэк
+    # 2. НАЧИСЛЕНИЕ КЭШБЭКА (всегда)
     cashback = calculate_cashback(booking)
     if cashback > 0:
         accrue_bonuses(
@@ -315,11 +333,12 @@ def apply_bonus_effects(booking: Booking, *, created_by=None) -> dict:
         )
         booking.cashback_accrued = cashback
         result['cashback'] = cashback
+        logger.info('bonus.apply cashback=%s booking=%s', cashback, booking.pk)
 
-    # 4. Рефералка (если клиент — referee и это первый визит)
+    # 3. Рефералка (если клиент — referee и это первый визит)
     _process_referral_first_visit(client, booking, created_by=created_by)
 
-    # 5. Достижения
+    # 4. Достижения
     unlocked = check_achievements(client)
     result['achievements_unlocked'] = [a.definition.code for a in unlocked]
     if unlocked:
@@ -328,22 +347,22 @@ def apply_bonus_effects(booking: Booking, *, created_by=None) -> dict:
             client.pk, result['achievements_unlocked'],
         )
 
-    # 6. Метка идемпотентности
+    # 5. Метка идемпотентности
     booking.bonuses_processed_at = timezone.now()
     booking.save(update_fields=[
         'bonuses_processed_at', 'bonuses_applied', 'cashback_accrued',
     ])
 
-    # 7. Уведомление — после коммита, чтобы не откатить бонусы из-за него
+    # 6. Уведомление — после коммита, чтобы не откатить бонусы из-за него
     if result['cashback'] > 0:
         transaction.on_commit(
             lambda: _notify_cashback_safe(client.pk, booking.pk, result['cashback']),
         )
 
     logger.info(
-        'bonus.apply done booking=%s spent=%s cashback=%s cert=%s achievements=%s',
+        'bonus.apply done booking=%s spent=%s cashback=%s achievements=%s',
         booking.pk, result['bonuses_spent'], result['cashback'],
-        result['certificate_used'], result['achievements_unlocked'],
+        result['achievements_unlocked'],
     )
     return result
 
