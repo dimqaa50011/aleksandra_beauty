@@ -74,7 +74,7 @@ class ReferralView(CabinetAPIView):
         return Response({
             'code': user.referral_code,
             # Ссылка на фронтенд с параметром ref
-            'link': f'https://cabinet.sasha-sugar.ru/register?ref={user.referral_code}',
+            'link': f'https://cabinet.sasha-sugar.ru/cabinet/register?ref={user.referral_code}',
             'invited_count': referrals.count(),
             'rewarded_count': referrals.filter(status=Referral.STATUS_REWARDED).count(),
             'referrals': [

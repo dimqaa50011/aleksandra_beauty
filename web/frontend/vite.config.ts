@@ -4,6 +4,9 @@ import { VitePWA } from 'vite-plugin-pwa'
 import path from 'path'
 
 export default defineConfig({
+  // 1. Указываем базовый путь для всего проекта
+  base: '/cabinet/', 
+
   plugins: [
     vue(),
     VitePWA({
@@ -17,7 +20,11 @@ export default defineConfig({
         theme_color: '#f2a6b0',
         background_color: '#fef9f7',
         display: 'standalone',
-        start_url: '/',
+        
+        // 2. Обновляем пути для PWA
+        start_url: '/cabinet/', 
+        scope: '/cabinet/',
+        
         icons: [
           {
             src: 'icons/icon-192x192.png',
@@ -33,7 +40,7 @@ export default defineConfig({
             src: 'icons/icon-512x512.png',
             sizes: '512x512',
             type: 'image/png',
-            purpose: 'any maskable' // Важно для Android
+            purpose: 'any maskable'
           }
         ]
       }
