@@ -191,6 +191,8 @@ class Service(models.Model):
     def display_name(self):
         """Красивое имя для вывода на сайте"""
         return self.title if self.title else self.name
+
+
 class HeroSlide(models.Model):
     """Фоновые картинки для главного экрана (слайдер)"""
     image = models.ImageField(upload_to='hero_slides/', help_text="Рекомендуемый размер: 1920x1080")

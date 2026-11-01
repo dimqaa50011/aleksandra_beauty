@@ -654,3 +654,129 @@ body.menu-open { overflow: hidden; }
     .policy-page-container { padding-top: 90px; }
     .policy-title { font-size: 1.8rem; }
 }
+
+/* Сетка для карточек */
+.services-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr); /* 2 колонки на ПК */
+    gap: 30px;
+    margin-top: 40px;
+}
+
+/* Сама карточка */
+.service-card {
+    display: flex;
+    flex-direction: column;
+    background: #fff;
+    border-radius: 16px;
+    overflow: hidden;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05); /* Легкая тень */
+    text-decoration: none;
+    color: inherit;
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+/* Эффект при наведении на ПК */
+.service-card:hover {
+    transform: translateY(-5px); /* Приподнимаем */
+    box-shadow: 0 12px 25px rgba(0, 0, 0, 0.1); /* Усиливаем тень */
+}
+
+/* Обертка картинки */
+.service-card-image-wrapper {
+    position: relative;
+    width: 100%;
+    height: 220px;
+    overflow: hidden;
+}
+
+/* Сама картинка */
+.service-card-img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transition: transform 0.5s ease;
+}
+
+/* Зум картинки при наведении */
+.service-card:hover .service-card-img {
+    transform: scale(1.05);
+}
+
+/* Иконка поверх фото */
+.service-card-icon {
+    position: absolute;
+    top: 15px;
+    left: 15px;
+    background: rgba(255, 255, 255, 0.9);
+    width: 45px;
+    height: 45px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    font-size: 22px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+}
+
+/* Текстовый контент */
+.service-card-content {
+    padding: 24px;
+    display: flex;
+    flex-direction: column;
+    flex-grow: 1;
+}
+
+.service-card-content h3 {
+    margin-top: 0;
+    margin-bottom: 10px;
+    font-size: 22px;
+    color: #333;
+}
+
+.service-card-content p {
+    color: #666;
+    font-size: 15px;
+    line-height: 1.5;
+    margin-bottom: 20px;
+    flex-grow: 1; /* Чтобы кнопка всегда была прижата к низу */
+}
+
+/* Кнопка внутри карточки */
+.service-card-btn {
+    display: inline-flex;
+    align-items: center;
+    color: #8b6b4d; /* Замените на ваш фирменный цвет, например, зеленый из хедера */
+    font-weight: 600;
+    font-size: 16px;
+    transition: color 0.3s ease;
+}
+
+.service-card-btn .arrow {
+    margin-left: 8px;
+    transition: transform 0.3s ease;
+}
+
+/* Анимация стрелочки при наведении */
+.service-card:hover .service-card-btn {
+    color: #000; 
+}
+.service-card:hover .service-card-btn .arrow {
+    transform: translateX(5px);
+}
+
+/* АДАПТИВ ДЛЯ МОБИЛЬНЫХ */
+@media (max-width: 768px) {
+    .services-grid {
+        grid-template-columns: 1fr; /* 1 колонка на телефонах */
+        gap: 20px;
+    }
+    
+    .service-card-image-wrapper {
+        height: 180px; /* Уменьшаем высоту фото на телефоне */
+    }
+    
+    .service-card-content {
+        padding: 20px;
+    }
+}

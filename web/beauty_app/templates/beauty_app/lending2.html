@@ -54,33 +54,48 @@
     </section>
 
         <!-- КАТЕГОРИИ (УСЛУГИ) -->
+        <!-- НОВЫЕ КАТЕГОРИИ (УСЛУГИ) - Карточки -->
     {% if categories %}
-    <section class="section">
+    <section class="section" id="services">
         <div class="container">
-            <h2 class="section-title">Наши услуги</h2>
+            <h2 class="section-title text-center">Наши услуги</h2>
             
-            <div class="services-list-full">
+            <div class="services-grid">
                 {% for category in categories %}
-                    <a href="{% url 'beauty_app:category_services' category.id %}" class="service-row-link">
-                        <div class="service-row">
-                            
-                            <!-- Если появятся свои фото, их можно вывести здесь как <img> -->
-                            
-                            <div class="service-row-content">
-                                <div class="service-text">
-                                    <h3>{{ category.display_name }}</h3>
-                                    {% if category.description %}
-                                        <p>{{ category.description }}</p>
-                                    {% endif %}
-                                </div>
-                                <span class="service-row-arrow" aria-hidden="true">→</span>
-                            </div>
-                            
+                    <a href="{% url 'beauty_app:category_services' category.id %}" class="service-card">
+                        
+                        <!-- Блок с картинкой -->
+                        <div class="service-card-image-wrapper">
+                            {% if category.image %}
+                                <!-- Если в модели категории есть поле image, выводим его -->
+                                <img src="{{ category.image.url }}" alt="{{ category.display_name }}" class="service-card-img" loading="lazy">
+                            {% else %}
+                                <!-- Заглушка, пока нет фото в БД (используем тематические картинки) -->
+                                {% if 'косметолог' in category.display_name|lower %}
+                                    <img src="https://images.unsplash.com/photo-1570172619644-dfd03ed5d881?q=80&w=600&auto=format&fit=crop" alt="Косметология" class="service-card-img" loading="lazy">
+                                {% elif 'депиляц' in category.display_name|lower %}
+                                    <img src="https://images.unsplash.com/photo-1574689049597-7e6a1a8f8b7a?q=80&w=600&auto=format&fit=crop" alt="Депиляция" class="service-card-img" loading="lazy">
+                                {% elif 'бров' in category.display_name|lower or 'ресниц' in category.display_name|lower %}
+                                    <img src="https://images.unsplash.com/photo-1512496015851-a90fb38ba796?q=80&w=600&auto=format&fit=crop" alt="Брови и ресницы" class="service-card-img" loading="lazy">
+                                {% else %}
+                                    <img src="https://images.unsplash.com/photo-1620331311520-246422fd82f9?q=80&w=600&auto=format&fit=crop" alt="Услуги" class="service-card-img" loading="lazy">
+                                {% endif %}
+                            {% endif %}
+
                         </div>
+
+                        <!-- Текстовый блок -->
+                        <div class="service-card-content">
+                            <h3>{{ category.display_name }}</h3>
+                            {% if category.description %}
+                                <p>{{ category.description }}</p>
+                            {% endif %}
+                            <span class="service-card-btn"> <span class="arrow">→</span></span>
+                        </div>
+                        
                     </a>
                 {% endfor %}
             </div>
-            
         </div>
     </section>
     {% endif %}

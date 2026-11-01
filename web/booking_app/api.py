@@ -416,24 +416,60 @@ class AdminBookingsListAPIView(APIView):
         }, status=status.HTTP_200_OK)
 
 
+    from django.db.models import Q
+
 class AdminNotificationsAPIView(APIView):
-    """GET: Единый список уведомлений (неподтвержденные записи + новые отзывы)"""
+    """GET: Единый список уведомлений (новые записи + отмены клиентов + отзывы)"""
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
         notifications = []
 
-        pending_bookings = Booking.objects.filter(status='pending').order_by('-created_at')
-        for b in pending_bookings:
-            notifications.append({
-                'id': b.id,
-                'type': 'booking',
-                'title': f'Новая запись: {b.client_name}',
-                'body': f'{b.appointment_datetime.strftime("%d.%m %H:%M")} • {b.phone}',
-                'created_at': b.created_at,
-                'is_read': b.is_read,
-            })
+        # 1. Новые записи (pending) и отмены от клиентов
+        # Берем последние 100 событий, чтобы не грузить сервер
+        recent_bookings = Booking.objects.filter(
+            Q(status='pending') | Q(status='cancelled', cancelled_by='client')
+        ).order_by('-created_at')[:100]
 
+        # Словарь для красивых причин отмены
+        reasons_map = {
+            'sick': 'Болею',
+            'plans_changed': 'Планы изменились',
+            'cant_make_it': 'Не смогу прийти',
+            'other': 'Другое',
+        }
+
+        for b in recent_bookings:
+            if b.status == 'pending':
+                # Уведомление о НОВОЙ записи
+                notifications.append({
+                    'id': b.id,
+                    'type': 'booking', # Оставляем type='booking', чтобы мобилка не сломалась при прочтении
+                    'title': f'Новая запись: {b.client_name}',
+                    'body': f'{b.appointment_datetime.strftime("%d.%m %H:%M")} • {b.phone}',
+                    'created_at': b.created_at,
+                    'is_read': b.is_read,
+                })
+            elif b.status == 'cancelled' and b.cancelled_by == 'client':
+                # Уведомление об ОТМЕНЕ
+                notif_time = b.cancelled_at if b.cancelled_at else b.created_at
+                
+                reason_display = reasons_map.get(b.cancel_reason, b.cancel_reason)
+                if b.cancel_reason == 'other' and b.cancel_reason_text:
+                    reason_display = b.cancel_reason_text
+                elif not reason_display:
+                    reason_display = 'Не указана'
+
+                notifications.append({
+                    'id': b.id,
+                    'type': 'booking', 
+                    'title': f'❌ Отмена записи: {b.client_name}',
+                    'body': f'{b.appointment_datetime.strftime("%d.%m %H:%M")} • Причина: {reason_display}',
+                    'created_at': notif_time,
+                    'is_read': b.is_read,
+                })
+
+        # 2. Новые отзывы (не опубликованные)
         new_reviews = Review.objects.filter(is_active=False).order_by('-created_at')
         for r in new_reviews:
             notifications.append({
@@ -445,8 +481,10 @@ class AdminNotificationsAPIView(APIView):
                 'is_read': r.is_read,
             })
 
+        # Сортируем по дате (сначала самые новые)
         notifications.sort(key=lambda x: x['created_at'], reverse=True)
 
+        # Приводим даты к строкам для JSON
         for n in notifications:
             n['created_at'] = n['created_at'].strftime('%d.%m.%Y %H:%M')
 
