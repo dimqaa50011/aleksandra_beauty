@@ -254,6 +254,15 @@
                     console.log('Telegram init error:', e);
                 }
             }
+            else if (platform === 'vk') { // <--- ДОБАВИТЬ ЭТОТ БЛОК
+                try {
+                    // Обязательный сигнал для VK, что приложение загрузилось
+                    window.vkBridge.send('VKWebAppInit');
+                    console.log('VK WebApp initialized');
+                } catch (e) {
+                    console.log('VK init error:', e);
+                }
+            }
             // MAX и VK не требуют явной инициализации в этом контексте
         }
 
