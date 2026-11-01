@@ -18,7 +18,8 @@ def send_sms(phone, text):
     
     payload = {
         "textMessage": {"text": text},
-        "phoneNumbers": [clean_phone]
+        "phoneNumbers": [clean_phone],
+        "simNumber": 2
     }
 
     try:
