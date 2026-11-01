@@ -119,7 +119,6 @@ def create_appointment(
 
     return booking
 
-
 @transaction.atomic
 def cancel_appointment(
     *,
@@ -163,15 +162,32 @@ def cancel_appointment(
         booking.pk, booking.client_id, old_status, reason, cert is not None,
     )
 
-    # SMS клиенту и админу — как при отмене с сайта
+    # 1. Отправляем SMS клиенту (как и раньше)
     from django_q.tasks import async_task
     try:
-        async_task('booking_app.tasks.send_event_sms_task', booking.id, 'cancel')
+        async_task('booking_app.tasks.send_event_sms_task', booking.pk, 'cancel')
     except Exception:
         logger.exception('booking.cancel sms failed booking=%s', booking.pk)
 
-    return booking
+    # 2. Отправляем FCM-пуш админу в мобильное приложение
+    try:
+        from booking_app.views import send_fcm_notification
+        
+        # Формируем красивую причину
+        reason_display = CANCEL_REASONS.get(reason, 'Другое')
+        if reason == 'other' and reason_text:
+            reason_display = reason_text 
+            
+        send_fcm_notification(
+            title='❌ Клиент отменил запись',
+            body=f'{booking.client_name} отменил визит на {booking.appointment_datetime.strftime("%d.%m %H:%M")}.\nПричина: {reason_display}',
+            url=f'/admin-dashboard/bookings/{booking.pk}/edit/',
+            booking_id=booking.pk
+        )
+    except Exception:
+        logger.exception('booking.cancel FCM failed booking=%s', booking.pk)
 
+    return booking
 
 @transaction.atomic
 def reschedule_appointment(
