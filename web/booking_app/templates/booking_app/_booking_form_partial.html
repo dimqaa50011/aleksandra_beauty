@@ -635,7 +635,8 @@
                     window.Telegram.WebApp.openLink(url);
                 } else if (platform === 'vk' && window.vkBridge) {
                     e.preventDefault();
-                    window.vkBridge.send('VKWebAppOpenWebView', { url: url });
+                    // window.vkBridge.send('VKWebAppOpenWebView', { url: url });
+                    window.open(url, '_blank', 'noopener,noreferrer');
                 } else if (platform === 'max' && window.WebApp.openLink) {
                     e.preventDefault();
                     window.WebApp.openLink(url);
