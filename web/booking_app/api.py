@@ -8,6 +8,7 @@ from django.db import transaction
 from datetime import datetime, timedelta, time as dt_time
 from rest_framework.decorators import api_view, permission_classes
 from django.conf import settings
+from django.db.models import Q
 
 # Импорты для очереди и задач
 from django_q.tasks import async_task
@@ -416,7 +417,6 @@ class AdminBookingsListAPIView(APIView):
         }, status=status.HTTP_200_OK)
 
 
-    from django.db.models import Q
 
 class AdminNotificationsAPIView(APIView):
     """GET: Единый список уведомлений (новые записи + отмены клиентов + отзывы)"""
@@ -516,7 +516,6 @@ class AdminNotificationReadAPIView(APIView):
 
 
 
-
 class AdminBookingStatusAPIView(APIView):
     """POST: Подтвердить, отменить, завершить или отметить неявку"""
     permission_classes = [IsAuthenticated]
@@ -531,7 +530,7 @@ class AdminBookingStatusAPIView(APIView):
         old_status = booking.status
         booking.status = new_status
 
-        # Если админ менял услуги при завершении
+        # Если админ менял услуги
         services_ids = request.data.get('services_ids')
         if services_ids:
             if isinstance(services_ids, str):
@@ -541,14 +540,24 @@ class AdminBookingStatusAPIView(APIView):
 
         booking.save()
 
-        # === ЛОГИКА ОТПРАВКИ СМС И НАПОМИНАНИЙ ===
+        # === ЛОГИКА ОТПРАВКИ СМС, ПУШЕЙ И НАПОМИНАНИЙ ===
 
         # 1. ПОДТВЕРЖДЕНИЕ
         if old_status == 'pending' and new_status == 'confirmed':
             async_task('booking_app.tasks.send_event_sms_task', booking.id, 'creation')
             schedule_reminders(booking.id, booking.appointment_datetime)
+            
+            # ПУШ КЛИЕНТУ
+            if booking.client_id:
+                async_task(
+                    'cabinet_app.tasks.task_send_bulk_push',
+                    [booking.client_id],
+                    '✅ Запись подтверждена',
+                    f'Ждём вас {booking.appointment_datetime.strftime("%d.%m в %H:%M")}',
+                    '/cabinet/appointments'
+                )
 
-        # 2. ОТМЕНА
+        # 2. ОТМЕНА (админом)
         elif new_status == 'cancelled' and old_status in ['pending', 'confirmed']:
             if booking.client:
                 from cabinet_app.services.bonuses import handle_booking_cancelled
@@ -557,6 +566,16 @@ class AdminBookingStatusAPIView(APIView):
                 except Exception:
                     logger.exception('handle_booking_cancelled failed for booking %s', booking.pk)
             async_task('booking_app.tasks.send_event_sms_task', booking.id, 'cancel')
+            
+            # ПУШ КЛИЕНТУ
+            if booking.client_id:
+                async_task(
+                    'cabinet_app.tasks.task_send_bulk_push',
+                    [booking.client_id],
+                    '❌ Запись отменена',
+                    f'Ваша запись на {booking.appointment_datetime.strftime("%d.%m %H:%M")} отменена студией.',
+                    '/cabinet/appointments'
+                )
 
         # 2b. НЕЯВКА
         elif new_status == 'no_show' and old_status in ['pending', 'confirmed']:
@@ -566,6 +585,16 @@ class AdminBookingStatusAPIView(APIView):
                     handle_booking_cancelled(booking)
                 except Exception:
                     logger.exception('handle_booking_cancelled failed for booking %s (no_show)', booking.pk)
+            
+            # ПУШ КЛИЕНТУ (по желанию, можно не отправлять, чтобы не расстраивать)
+            if booking.client_id:
+                async_task(
+                    'cabinet_app.tasks.task_send_bulk_push',
+                    [booking.client_id],
+                    'Вы не пришли на визит',
+                    f'Запись на {booking.appointment_datetime.strftime("%d.%m %H:%M")} отмечена.',
+                    '/cabinet/appointments'
+                )
 
         # 3. ЗАВЕРШЕНИЕ
         elif new_status == 'completed' and old_status != 'completed':
@@ -574,10 +603,7 @@ class AdminBookingStatusAPIView(APIView):
                     locked = Booking.objects.select_for_update().get(pk=booking.pk)
 
                     if locked.bonuses_processed_at is not None:
-                        logger.warning(
-                            'booking %s already processed (bonuses_processed_at=%s), skip',
-                            booking.pk, locked.bonuses_processed_at,
-                        )
+                        logger.warning('booking %s already processed', booking.pk)
                     elif locked.client:
                         client = locked.client
                         client.total_bookings += 1
@@ -585,20 +611,32 @@ class AdminBookingStatusAPIView(APIView):
                         client.last_visit = locked.appointment_datetime
                         client.save()
 
-                        # Читаем флаг из запроса (админка должна его передать)
                         use_bonuses = request.data.get('use_bonuses', False)
                         if isinstance(use_bonuses, str):
                             use_bonuses = use_bonuses.lower() in ('true', '1', 'yes')
 
                         from cabinet_app.services.bonuses import apply_bonus_effects
-                        # Передаем флаг в функцию, сертификаты она не тронет
                         apply_bonus_effects(locked, use_bonuses=use_bonuses, created_by=request.user)
                         
             except Exception:
                 logger.exception('completed flow failed for booking %s', booking.pk)
 
-            # SMS с просьбой об отзыве — вне транзакции
+            # SMS с просьбой об отзыве
             async_task('booking_app.tasks.send_review_request_task', booking.id)
+            
+            # ПУШ КЛИЕНТУ
+            if booking.client_id:
+                url = f"https://sasha-sugar.ru/review/{booking.review_token}/"
+                    
+                text = f"Здравствуйте! Спасибо, что посетили Sasha Sugar. Будем рады, если вы поделитесь впечатлениями: {url}"
+                    
+                async_task(
+                    'cabinet_app.tasks.task_send_bulk_push',
+                    [booking.client_id],
+                    '🌟 Спасибо за визит!',
+                    text,
+                    '/cabinet/appointments'
+                )
 
         return Response({
             'success': True,

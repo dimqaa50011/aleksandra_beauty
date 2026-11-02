@@ -39,19 +39,8 @@
     <!-- НАСТРОЙКИ ПРОФИЛЯ -->
     <div class="section-title">Личные данные</div>
     <van-cell-group inset class="custom-group">
-      <van-field
-        v-model="editName"
-        label="Имя"
-        placeholder="Ваше имя"
-        :border="false"
-      />
-      <van-field
-        v-model="editEmail"
-        label="Email"
-        placeholder="example@mail.ru"
-        type="email"
-        :border="false"
-      />
+      <van-field v-model="editName" label="Имя" placeholder="Ваше имя" :border="false" />
+      <van-field v-model="editEmail" label="Email" placeholder="example@mail.ru" type="email" :border="false" />
     </van-cell-group>
     <div class="save-btn-wrap" v-if="isDataChanged">
       <van-button round block size="small" type="primary" class="brand-btn" @click="saveProfile" :loading="saving">
@@ -67,12 +56,7 @@
           <span class="cell-label">Получать скидки и акции</span>
         </template>
         <template #right-icon>
-          <van-switch 
-            v-model="consentMarketing" 
-            size="24px" 
-            active-color="#f2a6b0" 
-            @change="toggleMarketing"
-          />
+          <van-switch v-model="consentMarketing" size="24px" active-color="#f2a6b0" @change="toggleMarketing" />
         </template>
       </van-cell>
       
@@ -85,7 +69,8 @@
             v-model="pushEnabled" 
             size="24px" 
             active-color="#f2a6b0" 
-            @click="togglePush"
+            @change="togglePush"
+            :loading="pushLoading"
           />
         </template>
       </van-cell>
@@ -109,6 +94,7 @@ import { showSuccessToast, showFailToast, showLoadingToast, closeToast } from 'v
 import { useAuthStore } from '@/stores/auth'
 import apiClient from '@/api/client'
 import BottomTabbar from '@/components/BottomTabbar.vue'
+import { subscribeToPush } from '@/utils/push'
 
 const router = useRouter()
 const authStore = useAuthStore()
@@ -127,7 +113,8 @@ const isDataChanged = computed(() => {
 
 // Настройки
 const consentMarketing = ref(false)
-const pushEnabled = ref(true)
+const pushEnabled = ref(false)
+const pushLoading = ref(false)
 
 // --- ЗАГРУЗКА АВАТАРКИ ---
 async function onAvatarUpload(file: any) {
@@ -182,9 +169,34 @@ async function toggleMarketing(val: boolean) {
   }
 }
 
-function togglePush() {
-  showFailToast('Push-уведомления будут доступны в ближайшем обновлении')
-  setTimeout(() => { pushEnabled.value = !pushEnabled.value }, 0)
+// --- ПУШИ ---
+async function togglePush(val: boolean) {
+  if (!val) {
+    // Отключение пушей (пока просто визуально)
+    pushEnabled.value = false
+    return
+  }
+
+  const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent)
+  const isStandalone = window.matchMedia('(display-mode: standalone)').matches
+
+  if (isIOS && !isStandalone) {
+    showFailToast('Для push на iPhone добавьте приложение на главный экран')
+    pushEnabled.value = false
+    return
+  }
+
+  pushLoading.value = true
+  try {
+    await subscribeToPush()
+    pushEnabled.value = true
+    showSuccessToast('Уведомления включены!')
+  } catch (e: any) {
+    showFailToast(e.message || 'Ошибка включения')
+    pushEnabled.value = false
+  } finally {
+    pushLoading.value = false
+  }
 }
 
 async function handleLogout() {
@@ -198,10 +210,22 @@ onMounted(async () => {
   editName.value = user.value?.name || ''
   editEmail.value = user.value?.email || ''
   consentMarketing.value = user.value?.consent_marketing || false
+
+  // Проверяем, подписан ли уже браузер на пуши
+  if ('serviceWorker' in navigator && 'PushManager' in window) {
+    try {
+      const registration = await navigator.serviceWorker.ready
+      const sub = await registration.pushManager.getSubscription()
+      pushEnabled.value = !!sub
+    } catch (e) {
+      console.error('Ошибка проверки подписки:', e)
+    }
+  }
 })
 </script>
 
 <style scoped>
+/* Стили оставляем без изменений, как у тебя были */
 .profile-page {
   min-height: 100vh;
   padding-bottom: 80px;
@@ -221,7 +245,6 @@ onMounted(async () => {
   color: var(--text-dark, #2d2a28);
 }
 
-/* Профиль сверху */
 .user-hero {
   display: flex;
   flex-direction: column;
@@ -288,7 +311,6 @@ onMounted(async () => {
   margin: 0;
 }
 
-/* Статистика */
 .stats-grid {
   display: flex;
   gap: 8px;
@@ -332,7 +354,6 @@ onMounted(async () => {
   color: #d85c6b;
 }
 
-/* Секции */
 .section-title {
   font-size: 14px;
   font-weight: 600;
@@ -342,7 +363,6 @@ onMounted(async () => {
   letter-spacing: 0.5px;
 }
 
-/* Группы Vant */
 .custom-group {
   background: #fff;
   border-radius: 16px;
@@ -386,7 +406,6 @@ onMounted(async () => {
   border-color: var(--primary, #f2a6b0);
 }
 
-/* Выход */
 .logout-wrap {
   padding: 0 16px;
   margin-top: 32px;

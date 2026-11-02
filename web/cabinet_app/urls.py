@@ -1,4 +1,6 @@
 from django.urls import path
+
+from cabinet_app.api.push import PushSubscribeView, PushVapidKeyView
 from .apps import CabinetAppConfig
 
 from .api.auth import (
@@ -45,5 +47,10 @@ urlpatterns = [
     path('certificates/<int:pk>/', CertificateDetailView.as_view(), name='certificate-detail'),
     path('referral/', ReferralView.as_view(), name='referral'),
     path('me/avatar/', AvatarUploadView.as_view(), name='me-avatar'),
+    
+    
+    # Push
+    path('push/vapid-key/', PushVapidKeyView.as_view(), name='push-vapid-key'),
+    path('push/subscribe/', PushSubscribeView.as_view(), name='push-subscribe'),
     
 ]

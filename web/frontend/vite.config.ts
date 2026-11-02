@@ -10,9 +10,22 @@ export default defineConfig({
   plugins: [
     vue(),
     VitePWA({
+      strategies: 'injectManifest',
+      srcDir: 'src',           // <-- Где искать sw.ts
+      filename: 'sw.ts',       // <-- Имя нашего файла Service Worker
       registerType: 'autoUpdate',
-      devOptions: { enabled: true },
-      includeAssets: ['favicon.ico', 'apple-touch-icon.png', 'mask-icon.svg'],
+      
+      // Настройки для работы в dev-режиме (чтобы SW работал при npm run dev)
+      devOptions: { 
+        enabled: true,
+        type: 'module'
+      },
+
+      // Указываем, какие файлы Workbox должен предварительно кэшировать (precache)
+      injectManifest: {
+        globPatterns: ['**/*.{js,css,html,ico,png,svg}']
+      },
+
       manifest: {
         name: 'Sasha Sugar | Личный кабинет',
         short_name: 'Sasha Sugar',
@@ -21,7 +34,7 @@ export default defineConfig({
         background_color: '#fef9f7',
         display: 'standalone',
         
-        // 2. Обновляем пути для PWA
+        // Пути для PWA
         start_url: '/cabinet/', 
         scope: '/cabinet/',
         
