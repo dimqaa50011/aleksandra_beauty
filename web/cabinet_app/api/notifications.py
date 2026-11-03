@@ -38,7 +38,8 @@ class NotificationDetailView(CabinetAPIView):
             'id': notif.id,
             'title': notif.payload.get('title', 'Уведомление'),
             'body': notif.payload.get('body', ''),
-            'url': notif.payload.get('url', ''),
+            # ОТДАЕМ ССЫЛКУ НА ДЕЙСТВИЕ
+            'action_url': notif.payload.get('action_url', ''), 
             'created_at': notif.created_at.strftime('%d.%m.%Y %H:%M'),
         })
 

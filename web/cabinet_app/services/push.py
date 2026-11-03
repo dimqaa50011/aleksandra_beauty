@@ -36,60 +36,51 @@ def _send_to_subscription(sub: ClientPushSubscription, payload: dict) -> bool:
         return False
 
 
-def send_bulk_push_to_clients(client_ids: list[int], title: str, body: str, url: str = '/cabinet/'):
-    """
-    Отправляет пуш-уведомление списку клиентов.
-    Создает запись в NotificationLog для каждого клиента.
-    """
+def send_bulk_push_to_clients(client_ids: list[int], title: str, body: str, action_url: str = '/cabinet/'):
     if not client_ids:
         return
 
-    payload = {
-        'title': title,
-        'body': body,
-        'url': url
-    }
-
-    # Получаем все активные устройства для указанных клиентов
     subscriptions = ClientPushSubscription.objects.filter(
         user__client_id__in=client_ids, 
         is_active=True
     ).select_related('user__client')
 
-    # Группируем подписки по клиентам
     client_subs = {cid: [] for cid in client_ids}
     for sub in subscriptions:
         client_subs[sub.user.client_id].append(sub)
 
-    # Рассылаем
     for client_id, subs in client_subs.items():
-        if not subs:
-            # У клиента нет подписок, пишем в лог, что пропущено
-            log = NotificationLog.objects.create(
-                client_id=client_id,
-                event_type='broadcast',
-                channel=NotificationLog.CHANNEL_PUSH,
-                status=NotificationLog.STATUS_SKIPPED,
-                payload=payload,
-                error='Нет активных подписок на устройствах'
-            )
-            payload['url'] = f'/cabinet/notifications/{log.id}'
-            continue
-
-        success = False
-        for sub in subs:
-            if _send_to_subscription(sub, payload):
-                success = True
-        
-        # Записываем общий результат для этого клиента
-        NotificationLog.objects.create(
+        # 1. Создаем лог и сохраняем туда кнопку действия (action_url)
+        log = NotificationLog.objects.create(
             client_id=client_id,
             event_type='broadcast',
             channel=NotificationLog.CHANNEL_PUSH,
-            status=NotificationLog.STATUS_SENT if success else NotificationLog.STATUS_FAILED,
-            payload=payload,
-            sent_at=timezone.now() if success else None,
-            error='' if success else 'Ошибка отправки на все устройства'
+            status=NotificationLog.STATUS_PENDING,
+            payload={
+                'title': title, 
+                'body': body, 
+                'action_url': action_url  # <--- Сохраняем ссылку на отзыв/запись
+            }
         )
 
-    logger.info(f"Bulk push finished for clients: {client_ids}")
+        if not subs:
+            log.status = NotificationLog.STATUS_SKIPPED
+            log.error = 'Нет активных подписок'
+            log.save()
+            continue
+
+        # 2. В пуш кладем ссылку на ЭКРАН УВЕДОМЛЕНИЯ (а не на отзыв)
+        push_payload = {
+            'title': title,
+            'body': body,  # <--- Чистый текст без ссылок
+            'url': f'/cabinet/notifications/{log.id}' # <--- При клике откроется уведомление
+        }
+
+        success = False
+        for sub in subs:
+            if _send_to_subscription(sub, push_payload):
+                success = True
+        
+        log.status = NotificationLog.STATUS_SENT if success else NotificationLog.STATUS_FAILED
+        log.sent_at = timezone.now() if success else None
+        log.save()

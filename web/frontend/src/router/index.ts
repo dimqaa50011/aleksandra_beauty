@@ -64,6 +64,12 @@ const router = createRouter({
       component: () => import('@/views/NotificationDetailView.vue'),
       meta: { requiresAuth: true },
     },
+    {
+      path: '/reviews/:token',
+      name: 'review',
+      component: () => import('@/views/ReviewFormView.vue'),
+      meta: { requiresAuth: true },
+    },
   ],
 })
 

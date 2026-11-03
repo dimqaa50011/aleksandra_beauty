@@ -16,10 +16,10 @@
         <p class="date">{{ notif.created_at }}</p>
         <div class="body">{{ notif.body }}</div>
         
-        <!-- Если есть ссылка, показываем кнопку перехода -->
-        <div class="action-btn" v-if="notif.url">
-          <van-button round block color="#f2a6b0" @click="goToUrl(notif.url)">
-            Перейти
+        <!-- Используем action_url и умный текст кнопки -->
+        <div class="action-btn" v-if="notif.action_url">
+          <van-button round block color="#f2a6b0" @click="goToUrl(notif.action_url)">
+            {{ getButtonText(notif.action_url) }}
           </van-button>
         </div>
       </div>
@@ -49,6 +49,8 @@ async function fetchDetail() {
 }
 
 function goToUrl(url: string) {
+  if (!url) return
+  
   // Если ссылка внутренняя (начинается с /), используем vue-router
   if (url.startsWith('/')) {
     // Заменяем /cabinet/ на пустоту, так как роутер и так в base
@@ -58,6 +60,14 @@ function goToUrl(url: string) {
     // Если внешняя — открываем в новой вкладке
     window.open(url, '_blank')
   }
+}
+
+// Функция для красивого текста кнопки
+function getButtonText(url: string) {
+  if (!url) return 'Перейти'
+  if (url.includes('/reviews/')) return '⭐ Оставить отзыв'
+  if (url.includes('/appointments')) return 'Посмотреть запись'
+  return 'Перейти'
 }
 
 onMounted(() => {
@@ -113,6 +123,7 @@ h2 {
   line-height: 1.6;
   color: var(--text-dark, #2d2a28);
   margin-bottom: 24px;
+  white-space: pre-line; /* Чтобы сохранялись переносы строк из текста */
 }
 
 .loading-center {

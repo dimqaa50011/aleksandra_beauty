@@ -515,7 +515,6 @@ class AdminNotificationReadAPIView(APIView):
         return Response({'success': True, 'message': 'Уведомление прочитано'}, status=status.HTTP_200_OK)
 
 
-
 class AdminBookingStatusAPIView(APIView):
     """POST: Подтвердить, отменить, завершить или отметить неявку"""
     permission_classes = [IsAuthenticated]
@@ -554,7 +553,7 @@ class AdminBookingStatusAPIView(APIView):
                     [booking.client_id],
                     '✅ Запись подтверждена',
                     f'Ждём вас {booking.appointment_datetime.strftime("%d.%m в %H:%M")}',
-                    '/cabinet/appointments'
+                    '/cabinet/appointments' # action_url
                 )
 
         # 2. ОТМЕНА (админом)
@@ -574,7 +573,7 @@ class AdminBookingStatusAPIView(APIView):
                     [booking.client_id],
                     '❌ Запись отменена',
                     f'Ваша запись на {booking.appointment_datetime.strftime("%d.%m %H:%M")} отменена студией.',
-                    '/cabinet/appointments'
+                    '/cabinet/appointments' # action_url
                 )
 
         # 2b. НЕЯВКА
@@ -586,14 +585,14 @@ class AdminBookingStatusAPIView(APIView):
                 except Exception:
                     logger.exception('handle_booking_cancelled failed for booking %s (no_show)', booking.pk)
             
-            # ПУШ КЛИЕНТУ (по желанию, можно не отправлять, чтобы не расстраивать)
+            # ПУШ КЛИЕНТУ
             if booking.client_id:
                 async_task(
                     'cabinet_app.tasks.task_send_bulk_push',
                     [booking.client_id],
                     'Вы не пришли на визит',
                     f'Запись на {booking.appointment_datetime.strftime("%d.%m %H:%M")} отмечена.',
-                    '/cabinet/appointments'
+                    '/cabinet/appointments' # action_url
                 )
 
         # 3. ЗАВЕРШЕНИЕ
@@ -625,17 +624,19 @@ class AdminBookingStatusAPIView(APIView):
             async_task('booking_app.tasks.send_review_request_task', booking.id)
             
             # ПУШ КЛИЕНТУ
-            if booking.client_id:
-                url = f"https://sasha-sugar.ru/review/{booking.review_token}/"
-                    
-                text = f"Здравствуйте! Спасибо, что посетили Sasha Sugar. Будем рады, если вы поделитесь впечатлениями: {url}"
+            if booking.client_id and booking.review_token:
+                # ВАЖНО: Чистый текст без ссылки
+                text = "Здравствуйте! Спасибо, что посетили Sasha Sugar. Будем рады, если вы оцените наш сервис."
+                
+                # ВАЖНО: Ссылка передается отдельным аргументом action_url
+                action_url = f"/cabinet/reviews/{booking.review_token}"
                     
                 async_task(
                     'cabinet_app.tasks.task_send_bulk_push',
                     [booking.client_id],
                     '🌟 Спасибо за визит!',
                     text,
-                    '/cabinet/appointments'
+                    action_url
                 )
 
         return Response({
