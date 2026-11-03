@@ -1,5 +1,6 @@
 from django.urls import path
 
+from cabinet_app.api.notifications import NotificationDetailView, NotificationListView, UnreadCountView
 from cabinet_app.api.push import PushSubscribeView, PushVapidKeyView
 from .apps import CabinetAppConfig
 
@@ -52,5 +53,8 @@ urlpatterns = [
     # Push
     path('push/vapid-key/', PushVapidKeyView.as_view(), name='push-vapid-key'),
     path('push/subscribe/', PushSubscribeView.as_view(), name='push-subscribe'),
+    path('notifications/', NotificationListView.as_view(), name='notifications'),
+    path('notifications/unread/', UnreadCountView.as_view(), name='notifications-unread'),
+    path('notifications/<int:pk>/', NotificationDetailView.as_view(), name='notification-detail'),
     
 ]

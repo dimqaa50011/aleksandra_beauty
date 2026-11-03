@@ -213,6 +213,7 @@ class NotificationLog(models.Model):
     error = models.TextField('Ошибка', blank=True)
     created_at = models.DateTimeField('Создано', auto_now_add=True)
     sent_at = models.DateTimeField('Отправлено', null=True, blank=True)
+    is_read = models.BooleanField('Прочитано клиентом', default=False)
 
     class Meta:
         verbose_name = 'Лог уведомления'

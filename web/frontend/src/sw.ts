@@ -16,7 +16,9 @@ self.addEventListener('push', (event: PushEvent) => {
         icon: '/cabinet/icons/icon-192x192.png',
         badge: '/cabinet/icons/icon-192x192.png',
         data: { url: data.url || '/cabinet/' },
-        vibrate: [200, 100, 200]
+        vibrate: [200, 100, 200],
+        requireInteraction: true, // <--- ДОБАВИТЬ (не скрывать баннер сам)
+        tag: 'sasha-sugar-notification' // Группировка
       }
       
       event.waitUntil(

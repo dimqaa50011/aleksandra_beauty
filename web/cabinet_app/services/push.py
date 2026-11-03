@@ -19,6 +19,7 @@ def _send_to_subscription(sub: ClientPushSubscription, payload: dict) -> bool:
             data=json.dumps(payload),
             vapid_private_key=settings.VAPID_PRIVATE_KEY,
             vapid_claims={'sub': f'mailto:{settings.VAPID_ADMIN_EMAIL}'},
+            headers={'Urgency': 'high'}
         )
         return True
     except WebPushException as e:
@@ -64,7 +65,7 @@ def send_bulk_push_to_clients(client_ids: list[int], title: str, body: str, url:
     for client_id, subs in client_subs.items():
         if not subs:
             # У клиента нет подписок, пишем в лог, что пропущено
-            NotificationLog.objects.create(
+            log = NotificationLog.objects.create(
                 client_id=client_id,
                 event_type='broadcast',
                 channel=NotificationLog.CHANNEL_PUSH,
@@ -72,6 +73,7 @@ def send_bulk_push_to_clients(client_ids: list[int], title: str, body: str, url:
                 payload=payload,
                 error='Нет активных подписок на устройствах'
             )
+            payload['url'] = f'/cabinet/notifications/{log.id}'
             continue
 
         success = False
