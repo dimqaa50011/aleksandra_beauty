@@ -1,3 +1,5 @@
+from uuid import uuid4
+
 from rest_framework import status
 from rest_framework.exceptions import NotFound
 from rest_framework.response import Response
@@ -46,6 +48,7 @@ class AppointmentListCreateView(CabinetAPIView):
             use_bonuses=data.get('use_bonuses', False),
             bonuses_to_apply=data.get('bonuses_to_apply', 0),
             certificate_id=data.get('certificate_id'),
+            review_token=uuid4()
         )
         return Response(
             BookingDetailSerializer(booking).data,
