@@ -32,21 +32,27 @@ self.addEventListener('push', (event: PushEvent) => {
 
 // Обработка клика по уведомлению
 self.addEventListener('notificationclick', (event: NotificationEvent) => {
-  event.notification.close()
-  const urlToOpen = event.notification.data?.url || '/cabinet/'
+  event.notification.close();
+  
+  // Берем URL из данных уведомления или ведем на общий список
+  const urlToOpen = event.notification.data?.url || '/cabinet/notifications';
 
   event.waitUntil(
     self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((windowClients) => {
-      // Если приложение уже открыто — фокусируемся на нем
+      // 1. Ищем уже открытое окно нашего приложения
       for (const client of windowClients) {
         if (client.url.includes('/cabinet/') && 'focus' in client) {
-          return (client as WindowClient).focus()
+          // 2. Если нашли — фокусируемся и ПРИНУДИТЕЛЬНО переходим по URL
+          return (client as WindowClient).focus().then(() => {
+            return (client as WindowClient).navigate(urlToOpen);
+          });
         }
       }
-      // Иначе открываем новую вкладку
+      
+      // 3. Если приложение закрыто — открываем новое окно с нужным URL
       if (self.clients.openWindow) {
-        return self.clients.openWindow(urlToOpen)
+        return self.clients.openWindow(urlToOpen);
       }
     })
-  )
-})
+  );
+});
