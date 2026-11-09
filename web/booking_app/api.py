@@ -828,6 +828,9 @@ class AdminBookingDetailAPIView(APIView):
 
         services_data = [{'id': s.id, 'name': s.name} for s in booking.services.all()]
 
+        # МАГИЯ: Переводим время из UTC в локальное (Московское)
+        local_dt = timezone.localtime(booking.appointment_datetime)
+
         data = {
             'id': booking.id,
             'client_id': booking.client.id if booking.client else 0,
@@ -835,8 +838,8 @@ class AdminBookingDetailAPIView(APIView):
             'phone': booking.phone,
             'status': booking.status,
             'services': services_data,
-            'time': booking.appointment_datetime.strftime('%H:%M'),
-            'date': booking.appointment_datetime.strftime('%Y-%m-%d'),
+            'time': local_dt.strftime('%H:%M'),         # <--- используем local_dt
+            'date': local_dt.strftime('%Y-%m-%d'),      # <--- используем local_dt
             'is_start': True
         }
         return Response(data, status=status.HTTP_200_OK)
