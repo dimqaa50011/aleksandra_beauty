@@ -1,3 +1,5 @@
+import json
+
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
@@ -17,7 +19,10 @@ from booking_app.services.bonuses import set_bonuses, spend_bonuses_booking
 from booking_app.services.slots import (
     calculate_services_duration,
     get_available_slots,
+    is_slot_free,
 )
+from booking_app.utils import get_or_create_client
+from booking_app.views import send_fcm_notification
 from .tasks import schedule_reminders
 
 from .models import Booking, BlockedSlot, Client
@@ -28,6 +33,73 @@ import logging
 
 logger = logging.getLogger(__name__)
 
+
+class AdminBookingCreateAPIView(APIView):
+    """POST: Создание записи админом"""
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        try:
+            data = json.loads(request.body)
+        except json.JSONDecodeError:
+            return Response({'error': 'Неверный формат JSON'}, status=400)
+
+        client_name = data.get('client_name', '').strip()
+        phone = data.get('phone', '').strip()
+        email = data.get('email', '').strip()
+        date_str = data.get('date')
+        time_str = data.get('time')
+        services_ids_input = data.get('services_ids') or data.get('service_id')
+
+        if not client_name or not phone or not services_ids_input or not date_str or not time_str:
+            return Response({'error': 'Не заполнены обязательные поля'}, status=400)
+
+        try:
+            services_ids = [int(id) for id in str(services_ids_input).split(',') if id]
+            services = Service.objects.filter(id__in=services_ids, is_active=True)
+            if not services.exists():
+                return Response({'error': 'Услуги не найдены'}, status=404)
+        except ValueError:
+            return Response({'error': 'Неверный формат ID услуг'}, status=400)
+
+        try:
+            date = datetime.strptime(date_str, '%Y-%m-%d').date()
+            time = datetime.strptime(time_str, '%H:%M').time()
+            appointment_datetime = timezone.make_aware(datetime.combine(date, time), timezone.get_current_timezone())
+        except ValueError:
+            return Response({'error': 'Неверный формат даты или времени'}, status=400)
+
+        total_duration = calculate_services_duration(services)
+
+        # СТРОГАЯ ПРОВЕРКА ДЛЯ API
+        if not is_slot_free(appointment_datetime, total_duration, apply_lead_time=True):
+            return Response({'error': 'Это время уже занято или недоступно для записи (менее 3 часов до визита)'}, status=409)
+
+        client = get_or_create_client(phone, client_name, email)
+
+        booking = Booking.objects.create(
+            client=client,
+            client_name=client_name, phone=phone, email=email if email else None,
+            appointment_datetime=appointment_datetime, status='pending'
+        )
+        booking.services.set(services)
+
+        services_names = ", ".join([s.name for s in services])
+
+        # send_fcm_notification(f'🔔 Новая запись (API): {client_name}', f'{services_names}\n{appointment_datetime.strftime("%d.%m %H:%M")}', f'/admin-dashboard/bookings/{booking.id}/edit/', booking.id)
+        async_task('booking_app.tasks.send_event_sms_task', booking.id, 'creation')
+        schedule_reminders(booking.id, booking.appointment_datetime)
+
+
+        return Response({
+            'success': True, 'booking_id': booking.id, 'message': 'Запись успешно создана',
+            'booking_details': {
+                'client_name': booking.client_name, 'services': [s.name for s in services],
+                'date': booking.appointment_datetime.strftime('%Y-%m-%d'),
+                'time': booking.appointment_datetime.strftime('%H:%M'),
+                'status': booking.get_status_display()
+            }
+        }, status=201)
 
 class AdminReviewsAPIView(APIView):
     """GET: Список всех отзывов"""

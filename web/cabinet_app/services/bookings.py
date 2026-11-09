@@ -109,13 +109,13 @@ def create_appointment(
         logger.exception('booking.create notify_admin failed booking=%s', booking.pk)
 
     # SMS-подтверждение и напоминания — как при создании с сайта
-    from django_q.tasks import async_task
-    from booking_app.tasks import schedule_reminders
-    try:
-        async_task('booking_app.tasks.send_event_sms_task', booking.id, 'creation')
-        schedule_reminders(booking.id, booking.appointment_datetime)
-    except Exception:
-        logger.exception('booking.create schedule_reminders failed booking=%s', booking.pk)
+    # from django_q.tasks import async_task
+    # from booking_app.tasks import schedule_reminders
+    # try:
+    #     async_task('booking_app.tasks.send_event_sms_task', booking.id, 'creation')
+    #     schedule_reminders(booking.id, booking.appointment_datetime)
+    # except Exception:
+    #     logger.exception('booking.create schedule_reminders failed booking=%s', booking.pk)
 
     return booking
 

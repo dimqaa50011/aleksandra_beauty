@@ -436,3 +436,27 @@ class PersonalOffer(models.Model):
         indexes = [
             models.Index(fields=['client', 'is_active']),
         ]
+
+
+class Feedback(models.Model):
+    """Обратная связь от клиентов (вопросы, предложения, жалобы)."""
+    client = models.ForeignKey(
+        'booking_app.Client', 
+        on_delete=models.CASCADE, 
+        related_name='cabinet_feedbacks',
+        verbose_name='Клиент'
+    )
+    text = models.TextField('Текст сообщения')
+    admin_reply = models.TextField('Ответ студии', blank=True, default='')
+    
+    is_processed = models.BooleanField('Обработано', default=False)
+    created_at = models.DateTimeField('Создано', auto_now_add=True)
+    replied_at = models.DateTimeField('Дата ответа', null=True, blank=True)
+
+    class Meta:
+        verbose_name = 'Обратная связь'
+        verbose_name_plural = 'Обратная связь'
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f"{self.client.name or self.client.phone} — {self.created_at.strftime('%d.%m.%Y')}"
