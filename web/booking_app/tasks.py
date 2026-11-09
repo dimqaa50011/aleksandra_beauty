@@ -25,13 +25,16 @@ def get_formatted_text(booking, template_key):
     services = booking.services.all()
     services_text = ", ".join([s.name for s in services]) if services else "процедуры"
 
-    # 2. Подставляем данные в шаблон
+    # 2. МАГИЯ: Переводим время из UTC в локальный часовой пояс (Москву)
+    local_dt = timezone.localtime(booking.appointment_datetime)
+
+    # 3. Подставляем данные в шаблон
     try:
         return template.text.format(
             name=booking.client_name,
-            date=booking.appointment_datetime.strftime('%d.%m'),
-            date_full=booking.appointment_datetime.strftime('%d %B'),
-            time=booking.appointment_datetime.strftime('%H:%M'),
+            date=local_dt.strftime('%d.%m'),           # <--- используем local_dt
+            date_full=local_dt.strftime('%d %B'),      # <--- используем local_dt
+            time=local_dt.strftime('%H:%M'),           # <--- используем local_dt
             services=services_text,
             address="Спасский пер., 7"
         )
