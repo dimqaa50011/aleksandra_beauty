@@ -196,7 +196,9 @@ async function onSubmit() {
   submitting.value = true
   
   try {
-    const datetimeStr = dayjs(`${selectedDate.value} ${selectedTime.value}`).format()
+    // ИСПОЛЬЗУЕМ ФОРМАТ БЕЗ СМЕЩЕНИЯ (naive datetime)
+    // Отправляем "2026-11-03T14:30:00". Бэкенд сам поймет, что это время студии.
+    const datetimeStr = dayjs(`${selectedDate.value} ${selectedTime.value}`).format('YYYY-MM-DDTHH:mm:00')
     const ids = selectedServices.value.map(s => s.id)
     
     await apiClient.post('/appointments/', {
