@@ -112,7 +112,7 @@ def create_appointment(
     # from django_q.tasks import async_task
     # from booking_app.tasks import schedule_reminders
     # try:
-    #     async_task('booking_app.tasks.send_event_sms_task', booking.id, 'creation')
+    #     async_task('notify_app.tasks.send_event_sms_task', booking.id, 'creation')
     #     schedule_reminders(booking.id, booking.appointment_datetime)
     # except Exception:
     #     logger.exception('booking.create schedule_reminders failed booking=%s', booking.pk)
@@ -165,7 +165,7 @@ def cancel_appointment(
     # 1. Отправляем SMS клиенту (как и раньше)
     from django_q.tasks import async_task
     try:
-        async_task('booking_app.tasks.send_event_sms_task', booking.pk, 'cancel')
+        async_task('notify_app.tasks.send_event_sms_task', booking.pk, 'cancel')
     except Exception:
         logger.exception('booking.cancel sms failed booking=%s', booking.pk)
 
@@ -231,7 +231,7 @@ def reschedule_appointment(
     from django_q.tasks import async_task
     from booking_app.tasks import schedule_reminders
     try:
-        async_task('booking_app.tasks.send_event_sms_task', booking.id, 'edit')
+        async_task('notify_app.tasks.send_event_sms_task', booking.id, 'edit')
         schedule_reminders(booking.id, booking.appointment_datetime)
     except Exception:
         logger.exception('booking.reschedule notify failed booking=%s', booking.pk)

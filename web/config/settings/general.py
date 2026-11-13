@@ -51,6 +51,7 @@ PROJECTS_APP = [
     'gen_posts_app',
     'stats_app',
     'cabinet_app',
+    'notify_app',
 ]
 
 if DEBUG:
