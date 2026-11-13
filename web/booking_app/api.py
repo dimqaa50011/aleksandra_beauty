@@ -23,7 +23,7 @@ from booking_app.services.slots import (
 )
 from booking_app.utils import get_or_create_client
 from booking_app.views import send_fcm_notification
-from .tasks import schedule_reminders
+from notify_app.tasks import schedule_reminders
 
 from .models import Booking, BlockedSlot, Client
 from .serializers import BookingSerializer, BlockDaySerializer

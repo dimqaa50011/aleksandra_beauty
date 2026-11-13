@@ -27,7 +27,7 @@ from firebase_admin import credentials, messaging
 from .models import Booking, BlockedSlot, DayOff, DeviceFCMToken, EmailVerificationCode, Client, PushSubscription
 from .forms import BookingForm, AdminBookingForm, BlockedSlotForm
 from beauty_app.models import Service, Review
-from .tasks import schedule_reminders
+from notify_app.tasks import schedule_reminders
 from .utils import get_or_create_client
 from .services.slots import (
     is_slot_free,
