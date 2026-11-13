@@ -6,40 +6,37 @@ from django.utils import timezone
 from django_q.tasks import async_task
 
 from booking_app.models import Booking, SMSTemplate, Client
+from booking_app.sms_service import send_sms
 from cabinet_app.services.push import send_bulk_push_to_clients
 from notify_app.services.dispatcher import send_notification, is_notification_allowed
 
 logger = logging.getLogger(__name__)
 
-class BroadcastMessage(models.Model):
-    """История массовых или одиночных рассылок от админа."""
-    title = models.CharField('Заголовок', max_length=255)
-    body = models.TextField('Текст')
-    
-    # Список каналов, например ['sms', 'push']
-    methods = models.JSONField('Методы отправки', default=list)
-    
-    # 'all' или 'specific'
-    recipients_type = models.CharField('Тип получателей', max_length=20, default='all')
-    recipients_count = models.IntegerField('Кол-во получателей', default=0)
-    
-    created_by = models.ForeignKey('auth.User', on_delete=models.SET_NULL, null=True, blank=True)
-    created_at = models.DateTimeField('Дата отправки', auto_now_add=True)
 
-    class Meta:
-        verbose_name = 'Рассылка'
-        verbose_name_plural = 'История рассылок'
-        ordering = ['-created_at']
+# ==========================================
+# МАССОВЫЕ РАССЫЛКИ
+# ==========================================
 
-
-def task_send_broadcast(type_code: str, title: str, body: str, action_url: str = '/cabinet/'):
-    """Фоновая задача для массовой рассылки клиентам."""
-    logger.info(f"🚀 Запуск рассылки '{type_code}': {title}")
+def task_send_broadcast(
+    title: str, 
+    body: str, 
+    methods: list, 
+    type_code: str = 'marketing', 
+    action_url: str = '/cabinet/', 
+    client_ids: list = None
+):
+    """Фоновая задача для массовой рассылки. Если client_ids=None, отправляет всем."""
+    logger.info(f"🚀 Запуск рассылки '{title}' каналами {methods}")
     
-    clients = Client.objects.filter(cabinet_user__isnull=False).distinct()
+    if client_ids is None:
+        # Берем всех клиентов, у которых есть аккаунт в PWA
+        clients = Client.objects.filter(cabinet_user__isnull=False).distinct()
+    else:
+        clients = Client.objects.filter(id__in=client_ids)
     
     allowed_ids = []
     for client in clients:
+        # Проверяем, не отключил ли клиент этот тип уведомлений
         allowed, _ = is_notification_allowed(client, type_code)
         if allowed:
             allowed_ids.append(client.id)
@@ -47,20 +44,39 @@ def task_send_broadcast(type_code: str, title: str, body: str, action_url: str =
     total = len(allowed_ids)
     logger.info(f"📊 Найдено {total} клиентов, готовых получить рассылку.")
     
+    # Отправляем пачками (chunks), чтобы не перегрузить БД
     chunk_size = 500
     for i in range(0, total, chunk_size):
         chunk = allowed_ids[i:i+chunk_size]
-        send_bulk_push_to_clients(chunk, title, body, action_url)
+        
+        # Отправляем Push
+        if 'push' in methods:
+            send_bulk_push_to_clients(chunk, title, body, action_url)
+            
+        # Отправляем SMS
+        if 'sms' in methods:
+            for cid in chunk:
+                client = Client.objects.get(id=cid)
+                if client.phone:
+                    send_sms(client.phone, f"{title}\n\n{body}")
 
+
+# ==========================================
+# ТРАНЗАКЦИОННЫЕ SMS И УВЕДОМЛЕНИЯ
+# ==========================================
 
 def get_formatted_text(booking, template_key):
+    """Берет шаблон из БД и подставляет данные."""
     try:
         template = SMSTemplate.objects.get(key=template_key)
     except SMSTemplate.DoesNotExist:
+        logger.error(f"❌ Шаблон SMS '{template_key}' не найден в БД!")
         return None
 
     services = booking.services.all()
     services_text = ", ".join([s.name for s in services]) if services else "процедуры"
+    
+    # Переводим время из UTC в локальный часовой пояс (Москву)
     local_dt = timezone.localtime(booking.appointment_datetime)
 
     try:
@@ -77,6 +93,7 @@ def get_formatted_text(booking, template_key):
 
 
 def send_event_sms_task(booking_id, event_type):
+    """Отправка SMS о событиях записи (создание, отмена, перенос)."""
     try:
         booking = Booking.objects.get(id=booking_id)
     except Booking.DoesNotExist:
@@ -85,7 +102,7 @@ def send_event_sms_task(booking_id, event_type):
     text = get_formatted_text(booking, event_type)
     
     if text and booking.client_id:
-        type_code = f'booking_{event_type}' 
+        type_code = f'booking_{event_type}'
         
         send_notification(
             client_id=booking.client_id,
@@ -97,12 +114,18 @@ def send_event_sms_task(booking_id, event_type):
         )
 
 
+# ==========================================
+# НАПОМИНАНИЯ
+# ==========================================
+
 def send_reminder_task(booking_id, timeframe):
+    """Отправка напоминаний (24h, 2h, 15m)."""
     try:
         booking = Booking.objects.get(id=booking_id)
     except Booking.DoesNotExist:
         return
 
+    # Проверяем, что запись подтверждена
     if booking.status != 'confirmed':
         return
 
@@ -122,6 +145,7 @@ def send_reminder_task(booking_id, timeframe):
         is_time_correct = True
 
     if not is_time_correct:
+        logger.info(f"Время для напоминания {timeframe} не совпадает. Запись {booking_id}.")
         return
 
     text = get_formatted_text(booking, f'reminder_{timeframe}')
@@ -136,6 +160,7 @@ def send_reminder_task(booking_id, timeframe):
             sms_text=text
         )
         
+        # Ставим флаг, что отправили
         setattr(booking, flag_name, True)
         booking.save(update_fields=[flag_name])
 
@@ -144,6 +169,7 @@ def schedule_reminders(booking_id, appointment_datetime):
     """Планирует 3 напоминания для записи."""
     now = timezone.now()
     
+    # 24 часа
     time_24h = appointment_datetime - timedelta(hours=24)
     if time_24h > now:
         async_task(
@@ -152,6 +178,7 @@ def schedule_reminders(booking_id, appointment_datetime):
             q_options={'schedule': time_24h}
         )
         
+    # 2 часа
     time_2h = appointment_datetime - timedelta(hours=2)
     if time_2h > now:
         async_task(
@@ -160,6 +187,7 @@ def schedule_reminders(booking_id, appointment_datetime):
             q_options={'schedule': time_2h}
         )
         
+    # 15 минут
     time_15m = appointment_datetime - timedelta(minutes=15)
     if time_15m > now:
         async_task(
@@ -169,17 +197,24 @@ def schedule_reminders(booking_id, appointment_datetime):
         )
 
 
+# ==========================================
+# ЗАПРОС ОТЗЫВА
+# ==========================================
+
 def send_review_request_task(booking_id):
+    """Генерирует ссылку и отправляет SMS + Push с просьбой оставить отзыв."""
     try:
         booking = Booking.objects.get(id=booking_id)
     except Booking.DoesNotExist:
         return
 
+    # Генерируем токен, если его нет
     if not booking.review_token:
         booking.review_token = uuid.uuid4()
         booking.save()
 
-    url = f"https://sasha-sugar.ru/review/{booking.review_token}/"
+    # Ссылка для SMS (старая HTML форма)
+    url_for_sms = f"https://sasha-sugar.ru/review/{booking.review_token}/"
     
     if booking.client_id:
         send_notification(
@@ -187,10 +222,16 @@ def send_review_request_task(booking_id):
             type_code='review_request',
             title='Спасибо за визит!',
             push_body='Будем рады, если вы оцените наш сервис.',
+            # Ссылка для PWA (внутренний роутинг Vue)
             action_url=f'/cabinet/reviews/{booking.review_token}',
-            sms_text=f"Здравствуйте, {booking.client_name}! Спасибо, что посетили Sasha Sugar. Будем рады, если вы поделитесь впечатлениями: {url}"
+            # Ссылка для SMS
+            sms_text=f"Здравствуйте, {booking.client_name}! Спасибо, что посетили Sasha Sugar. Будем рады, если вы поделитесь впечатлениями: {url_for_sms}"
         )
 
+
+# ==========================================
+# ОБЕРТКА ДЛЯ PUSH-УВЕДОМЛЕНИЙ
+# ==========================================
 
 def task_send_bulk_push(client_ids: list[int], title: str, body: str, action_url: str = '/cabinet/'):
     send_bulk_push_to_clients(client_ids, title, body, action_url)
