@@ -11,6 +11,26 @@ from notify_app.services.dispatcher import send_notification, is_notification_al
 
 logger = logging.getLogger(__name__)
 
+class BroadcastMessage(models.Model):
+    """История массовых или одиночных рассылок от админа."""
+    title = models.CharField('Заголовок', max_length=255)
+    body = models.TextField('Текст')
+    
+    # Список каналов, например ['sms', 'push']
+    methods = models.JSONField('Методы отправки', default=list)
+    
+    # 'all' или 'specific'
+    recipients_type = models.CharField('Тип получателей', max_length=20, default='all')
+    recipients_count = models.IntegerField('Кол-во получателей', default=0)
+    
+    created_by = models.ForeignKey('auth.User', on_delete=models.SET_NULL, null=True, blank=True)
+    created_at = models.DateTimeField('Дата отправки', auto_now_add=True)
+
+    class Meta:
+        verbose_name = 'Рассылка'
+        verbose_name_plural = 'История рассылок'
+        ordering = ['-created_at']
+
 
 def task_send_broadcast(type_code: str, title: str, body: str, action_url: str = '/cabinet/'):
     """Фоновая задача для массовой рассылки клиентам."""

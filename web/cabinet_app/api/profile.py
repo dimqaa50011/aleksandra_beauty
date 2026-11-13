@@ -1,6 +1,7 @@
 from rest_framework.parsers import MultiPartParser, FormParser
 from rest_framework.response import Response
 from rest_framework import status
+from django.utils import timezone
 
 from .base import CabinetAPIView
 from ..serializers.profile import ClientProfileSerializer
@@ -16,7 +17,6 @@ class MeView(CabinetAPIView):
 
     def patch(self, request):
         client = request.user.client
-        # Разрешаем менять только name и email
         serializer = ClientProfileSerializer(client, data=request.data, partial=True)
         serializer.is_valid(raise_exception=True)
         serializer.save()
@@ -32,7 +32,6 @@ class UpdateConsentsView(CabinetAPIView):
         
         if marketing is not None:
             user.consent_marketing = bool(marketing)
-            from django.utils import timezone
             user.consent_marketing_at = timezone.now() if marketing else None
             user.save(update_fields=['consent_marketing', 'consent_marketing_at'])
             
@@ -40,7 +39,7 @@ class UpdateConsentsView(CabinetAPIView):
             'success': True,
             'consent_marketing': user.consent_marketing
         })
-        
+
 
 class AvatarUploadView(CabinetAPIView):
     """POST: Загрузка аватара клиента."""
@@ -51,13 +50,12 @@ class AvatarUploadView(CabinetAPIView):
         if not file:
             return Response({'error': 'Файл не передан'}, status=status.HTTP_400_BAD_REQUEST)
         
-        if file.size > 5 * 1024 * 1024: # Лимит 5 МБ
+        if file.size > 5 * 1024 * 1024:
             return Response({'error': 'Файл слишком большой (макс 5МБ)'}, status=status.HTTP_400_BAD_REQUEST)
 
         user = request.user
         user.avatar = file
         user.save()
 
-        # Возвращаем абсолютный URL до картинки
         avatar_url = request.build_absolute_uri(user.avatar.url) if user.avatar else None
         return Response({'avatar': avatar_url})

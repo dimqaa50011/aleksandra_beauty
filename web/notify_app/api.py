@@ -1,7 +1,6 @@
 from rest_framework.response import Response
 from rest_framework import status
 
-# Импортируем базовый класс из кабинета, чтобы использовать JWT-аутентификацию
 from cabinet_app.api.base import CabinetAPIView
 from .models import NotificationType, ClientNotificationSetting
 
@@ -15,12 +14,11 @@ class NotificationSettingsView(CabinetAPIView):
         
         result = []
         for t in types:
-            # Ищем индивидуальную настройку клиента
             setting = ClientNotificationSetting.objects.filter(
                 client=client, notification_type=t
             ).first()
             
-            # Если настройки нет, берем дефолтную из типа
+            # Если индивидуальной настройки нет, берем дефолтную из типа
             is_enabled = setting.is_enabled if setting else t.default_enabled
             
             result.append({
