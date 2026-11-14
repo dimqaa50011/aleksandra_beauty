@@ -111,7 +111,7 @@
             <div class="portfolio-grid">
                 {% for work in portfolio %}
                 <div class="ba-slider">
-                    <!-- Фото "После" (оно лежит на заднем плане) -->
+                    <!-- Фото "После" (задний план) -->
                     <img src="{{ work.image_after.url }}" alt="После" class="ba-image ba-after" loading="lazy">
                     
                     <!-- Обертка для фото "До" (обрезается по ширине) -->
@@ -119,7 +119,7 @@
                         <img src="{{ work.image_before.url }}" alt="До" class="ba-image ba-before" loading="lazy">
                     </div>
                     
-                    <!-- Ползунок -->
+                    <!-- Визуальный ползунок (линия и кружок) -->
                     <div class="ba-handle">
                         <div class="ba-handle-line"></div>
                         <div class="ba-handle-circle">
@@ -127,6 +127,9 @@
                             <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l6-6-6-6"/></svg>
                         </div>
                     </div>
+
+                    <!-- МАГИЯ: Невидимый инпут поверх всего -->
+                    <input type="range" min="0" max="100" value="50" class="ba-range" aria-label="Слайдер До и После">
 
                     <!-- Подписи -->
                     <span class="ba-label ba-label-before">До</span>
@@ -390,60 +393,17 @@ document.addEventListener('DOMContentLoaded', function() {
     sliders.forEach(slider => {
         const beforeWrapper = slider.querySelector('.ba-before-wrapper');
         const handle = slider.querySelector('.ba-handle');
-        
-        let isDragging = false;
+        const rangeInput = slider.querySelector('.ba-range');
 
-        // Функция для передвижения ползунка
-        const moveSlider = (clientX) => {
-            const rect = slider.getBoundingClientRect();
-            // Вычисляем позицию курсора/пальца относительно контейнера
-            let x = clientX - rect.left;
+        // Слушаем каждое движение ползунка (мышкой или пальцем)
+        rangeInput.addEventListener('input', (e) => {
+            const value = e.target.value; // Значение от 0 до 100
             
-            // Ограничиваем значения, чтобы не вылезти за края
-            if (x < 0) x = 0;
-            if (x > rect.width) x = rect.width;
-
-            // Переводим в проценты
-            const percent = (x / rect.width) * 100;
-            
-            // Двигаем обертку "До" и сам ползунок
-            beforeWrapper.style.width = percent + '%';
-            handle.style.left = percent + '%';
-        };
-
-        // --- Для компьютера (Мышь) ---
-        slider.addEventListener('mousedown', (e) => {
-            isDragging = true;
-            moveSlider(e.clientX);
+            // Двигаем обертку "До"
+            beforeWrapper.style.width = value + '%';
+            // Двигаем визуальный ползунок
+            handle.style.left = value + '%';
         });
-
-        window.addEventListener('mouseup', () => {
-            isDragging = false;
-        });
-
-        window.addEventListener('mousemove', (e) => {
-            if (isDragging) {
-                moveSlider(e.clientX);
-            }
-        });
-
-        // --- Для телефонов (Тач) ---
-        slider.addEventListener('touchstart', (e) => {
-            isDragging = true;
-            moveSlider(e.touches[0].clientX);
-        }, { passive: true });
-
-        window.addEventListener('touchend', () => {
-            isDragging = false;
-        });
-
-        window.addEventListener('touchmove', (e) => {
-            if (isDragging) {
-                moveSlider(e.touches[0].clientX);
-                // Отключаем стандартный скролл, если пользователь тянет ползунок
-                e.preventDefault(); 
-            }
-        }, { passive: false });
     });
 });
 </script>

@@ -1020,3 +1020,81 @@ body.menu-open { overflow: hidden; }
     cursor: ew-resize;
     /* ... остальные стили ползунка остаются ... */
 }
+
+/* Карточка карусели */
+.ba-slider {
+    position: relative;
+    flex: 0 0 85%; 
+    max-width: 400px;
+    aspect-ratio: 4/5;
+    overflow: hidden;
+    border-radius: 16px;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.1);
+    user-select: none;
+    scroll-snap-align: center;
+    /* НЕ ставим touch-action: pan-y, пусть работает нативный скролл */
+}
+
+/* Картинки и обертки не перехватывают клики (кликаем только по инпуту) */
+.ba-image, .ba-before-wrapper, .ba-handle {
+    pointer-events: none; 
+}
+
+.ba-image {
+    position: absolute;
+    top: 0; left: 0; width: 100%; height: 100%;
+    object-fit: cover;
+}
+
+.ba-before-wrapper {
+    position: absolute;
+    top: 0; left: 0; height: 100%;
+    width: 50%; /* Начальная позиция */
+    overflow: hidden;
+    z-index: 2;
+}
+
+.ba-before {
+    width: 100vw; /* Или фиксированная ширина карточки */
+    max-width: 400px; /* Должно совпадать с шириной .ba-slider */
+    height: 100%;
+    object-fit: cover;
+}
+
+/* Визуальный ползунок */
+.ba-handle {
+    position: absolute;
+    top: 0; bottom: 0; left: 50%;
+    width: 2px;
+    background: #fff;
+    z-index: 3;
+    transform: translateX(-50%);
+}
+
+.ba-handle-circle {
+    position: absolute;
+    top: 50%; left: 50%;
+    transform: translate(-50%, -50%);
+    width: 44px; height: 44px;
+    background: #fff;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.3);
+    color: #333;
+}
+
+/* --- САМОЕ ВАЖНОЕ: НЕВИДИМЫЙ ИНПУТ --- */
+.ba-range {
+    position: absolute;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    opacity: 0; /* Делаем прозрачным */
+    z-index: 10; /* Кладем поверх всего */
+    cursor: ew-resize;
+    margin: 0;
+    /* Убираем стандартные ползунки WebKit и Mozilla, чтобы они не мешали */
+    -webkit-appearance: none;
+    appearance: none;
+}
