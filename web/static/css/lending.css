@@ -1086,15 +1086,38 @@ body.menu-open { overflow: hidden; }
 }
 
 /* --- САМОЕ ВАЖНОЕ: НЕВИДИМЫЙ ИНПУТ --- */
+/* Невидимый инпут поверх карточки */
 .ba-range {
     position: absolute;
-    top: 0; left: 0;
-    width: 100%; height: 100%;
-    opacity: 0; /* Делаем прозрачным */
-    z-index: 10; /* Кладем поверх всего */
-    cursor: ew-resize;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    opacity: 0;
+    z-index: 10;
     margin: 0;
-    /* Убираем стандартные ползунки WebKit и Mozilla, чтобы они не мешали */
     -webkit-appearance: none;
     appearance: none;
+    cursor: ew-resize;
+    
+    /* ГЛАВНОЕ: сам инпут пропускает свайпы в карусель */
+    pointer-events: none;
+}
+
+/* Но мы разрешаем клики ТОЛЬКО за белый кружок (ползунок) */
+.ba-range::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 44px; /* Размер должен совпадать с размером твоего .ba-handle-circle */
+    height: 44px;
+    pointer-events: auto; /* Разрешаем тянуть только за кружок */
+    background: transparent; 
+}
+
+.ba-range::-moz-range-thumb {
+    width: 44px;
+    height: 44px;
+    pointer-events: auto;
+    background: transparent;
+    border: none;
 }
