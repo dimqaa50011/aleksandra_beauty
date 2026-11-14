@@ -3,8 +3,42 @@ from rest_framework.response import Response
 from rest_framework import status
 from django.utils import timezone
 
+from cabinet_app.models import CabinetUser
+
 from .base import CabinetAPIView
 from ..serializers.profile import ClientProfileSerializer
+from rest_framework.response import Response
+from rest_framework import status
+from booking_app.models import Client
+from booking_app.utils import find_client_by_phone, normalize_phone
+
+class BindPhoneView(CabinetAPIView):
+    """PATCH: Привязка телефона к аккаунту (для новых юзеров из соцсетей)."""
+
+    def patch(self, request):
+        user = request.user
+        raw_phone = request.data.get('phone', '')
+        normalized = normalize_phone(raw_phone)
+
+        if not normalized:
+            return Response({'error': 'Неверный формат телефона'}, status=400)
+
+        # Проверяем, не занят ли этот телефон другим CabinetUser
+        if CabinetUser.objects.filter(phone=normalized).exclude(pk=user.pk).exists():
+            return Response({'error': 'Этот телефон уже привязан к другому аккаунту'}, status=400)
+
+        # Ищем существующего Client в CRM
+        client = find_client_by_phone(raw_phone)
+        if not client:
+            # Если в CRM нет, создаем нового
+            client = Client.objects.create(phone=raw_phone, name=user.name)
+        
+        # Привязываем Client к CabinetUser и обновляем телефон
+        user.client = client
+        user.phone = normalized
+        user.save()
+
+        return Response({'success': True, 'message': 'Телефон привязан'})
 
 
 class MeView(CabinetAPIView):

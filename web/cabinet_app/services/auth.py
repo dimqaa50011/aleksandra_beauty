@@ -137,7 +137,8 @@ def _link_orphans(client: Client) -> None:
 
 # ─────────────────────────────────────────────────────────────
 # Вход
-# ─────────────────────────────────────────────────────────────
+# ──────
+
 
 def login(
     *,
@@ -148,14 +149,25 @@ def login(
     platform: str = '',
 ) -> tuple[CabinetUser, str, str]:
     """Возвращает (user, access_token, refresh_raw) или бросает AuthenticationFailed."""
-
     normalized = normalize_phone(phone)
     if not normalized:
         raise AuthenticationFailed('Неверный телефон или пароль')
 
     user = CabinetUser.objects.select_related('client').filter(phone=normalized).first()
-    if user is None or not user.check_password(password):
+    
+    if user is None:
         raise AuthenticationFailed('Неверный телефон или пароль')
+
+    # ВОТ ЭТА ПРОВЕРКА НУЖНА ДЛЯ СОЦСЕТЕЙ
+    if not user.has_usable_password():
+        raise ValidationError({
+            'error_code': 'no_password',
+            'detail': 'Для аккаунта не установлен пароль. Восстановите его по СМС.'
+        })
+
+    if not user.check_password(password):
+        raise AuthenticationFailed('Неверный телефон или пароль')
+
     if not user.is_active or user.is_blocked:
         raise AuthenticationFailed('Аккаунт заблокирован')
 
@@ -169,6 +181,41 @@ def login(
     )
     return user, access, refresh_raw
 
+
+def confirm_password_reset(phone: str, code: str, new_password: str) -> tuple[CabinetUser, str, str]:
+    """Устанавливает пароль и СРАЗУ логинит пользователя."""
+    normalized = normalize_phone(phone)
+    user = CabinetUser.objects.filter(phone=normalized, is_active=True).first()
+    if user is None:
+        raise ValidationError({'code': 'Неверный код'})
+
+    reset = user.password_reset_codes.filter(is_used=False).first()
+    if reset is None or reset.is_expired():
+        raise ValidationError({'code': 'Код истёк или не запрашивался'})
+
+    if reset.attempts >= PASSWORD_RESET_MAX_ATTEMPTS:
+        raise ValidationError({'code': 'Слишком много попыток. Запросите новый код'})
+
+    if reset.code != code.strip():
+        reset.attempts += 1
+        reset.save(update_fields=['attempts'])
+        raise ValidationError({'code': 'Неверный код'})
+
+    reset.is_used = True
+    reset.save(update_fields=['is_used'])
+
+    # Устанавливаем пароль
+    user.set_password(new_password)
+    user.save(update_fields=['password'])
+    
+    # Отзываем старые сессии
+    user.refresh_tokens.filter(revoked_at__isnull=True).update(revoked_at=timezone.now())
+    
+    # СРАЗУ АВТОРИЗОВЫВАЕМ И ВЫДАЕМ ТОКЕНЫ
+    access = issue_access_token(user)
+    _, refresh_raw = ClientRefreshToken.issue(user, platform='password_reset')
+    
+    return user, access, refresh_raw
 
 def logout(raw_refresh: str) -> None:
     tok = ClientRefreshToken.find_active(raw_refresh)
@@ -223,30 +270,3 @@ def request_password_reset(phone: str, *, ip: str | None = None) -> None:
     )
     _send_sms(user.client.phone, f'Код для сброса пароля: {code}. Действует {PASSWORD_RESET_TTL_MINUTES} мин.')
 
-
-def confirm_password_reset(phone: str, code: str, new_password: str) -> CabinetUser:
-    normalized = normalize_phone(phone)
-    user = CabinetUser.objects.filter(phone=normalized, is_active=True).first()
-    if user is None:
-        raise ValidationError({'code': 'Неверный код'})
-
-    reset = user.password_reset_codes.filter(is_used=False).first()
-    if reset is None or reset.is_expired():
-        raise ValidationError({'code': 'Код истёк или не запрашивался'})
-
-    if reset.attempts >= PASSWORD_RESET_MAX_ATTEMPTS:
-        raise ValidationError({'code': 'Слишком много попыток. Запросите новый код'})
-
-    if reset.code != code.strip():
-        reset.attempts += 1
-        reset.save(update_fields=['attempts'])
-        raise ValidationError({'code': 'Неверный код'})
-
-    reset.is_used = True
-    reset.save(update_fields=['is_used'])
-
-    user.set_password(new_password)
-    user.save(update_fields=['password'])
-    # Отзываем все сессии
-    user.refresh_tokens.filter(revoked_at__isnull=True).update(revoked_at=timezone.now())
-    return user

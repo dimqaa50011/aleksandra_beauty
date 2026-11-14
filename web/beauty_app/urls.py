@@ -20,6 +20,9 @@ urlpatterns = [
     # Общий дашборд (статистика и т.д.)
     path('admin-dashboard/', views.DashboardView.as_view(), name='dashboard'),
     
+    path('api/admin/portfolio/', api.AdminPortfolioListCreateView.as_view(), name='admin-portfolio'),
+    path('api/admin/portfolio/<int:pk>/', api.AdminPortfolioDetailView.as_view(), name='admin-portfolio-detail'),
+    
     path('api/app-services/', api.AdminServicesAPIView.as_view(), name='api_app_services'),
     path('api/app-services/<int:pk>/update/', api.AdminServiceUpdateAPIView.as_view(), name='api_app_service_update'),
     path('yandex_696a05861a1ca6ec.html', lambda request: HttpResponse("Verification: 696a05861a1ca6ec", content_type="text/html")),

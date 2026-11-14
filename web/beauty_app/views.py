@@ -10,6 +10,7 @@ from .models import (
     AboutBlock,
     HeroSlide,
     MasterBlock,
+    PortfolioWork,
     SiteSettings,
     HeroBlock,
     ServiceCategory,
@@ -68,6 +69,7 @@ class LandingView(TemplateView):
         context['master'] = MasterBlock.objects.filter(is_active=True).first()
         context['reviews'] = Review.objects.filter(is_active=True).order_by('-created_at')[:6]
         context['hero_slides'] = HeroSlide.objects.filter(is_active=True)
+        context['portfolio'] = PortfolioWork.objects.filter(is_active=True)
         return context
 
 

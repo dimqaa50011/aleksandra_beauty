@@ -5,6 +5,22 @@ from django.utils import timezone
 User = get_user_model()
 
 
+# beauty_app/models.py
+class PortfolioWork(models.Model):
+    title = models.CharField('Название работы (например, Брови)', max_length=100, blank=True)
+    image_before = models.ImageField('Фото "До"', upload_to='portfolio/before/')
+    image_after = models.ImageField('Фото "После"', upload_to='portfolio/after/')
+    order = models.PositiveIntegerField('Порядок сортировки', default=0)
+    is_active = models.BooleanField('Показывать на сайте', default=True)
+
+    class Meta:
+        verbose_name = 'Пример работы (До/После)'
+        verbose_name_plural = 'Примеры работ (До/После)'
+        ordering = ['order']
+
+    def __str__(self):
+        return self.title or f"Работа #{self.pk}"
+
 # =============================================
 # 1. НАСТРОЙКИ САЙТА
 # =============================================

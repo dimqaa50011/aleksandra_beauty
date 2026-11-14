@@ -76,14 +76,22 @@ const router = createRouter({
 router.beforeEach(async (to) => {
   const authStore = useAuthStore()
 
-  // Один раз при старте приложения пробуем восстановить сессию по refresh-cookie
+  // 1. Если еще не инициализированы — пробуем восстановить сессию
   if (!authStore.initialized) {
+    // Сначала пробуем по кукам (PWA)
     await authStore.tryRestoreSession()
+    
+    // Если не вышло, пробуем войти через соцсеть (TG, VK, MAX)
+    if (!authStore.token) {
+      await authStore.loginViaSocial()
+    }
   }
 
+  // 2. Защита маршрутов
   if (to.meta.requiresAuth && !authStore.token) {
     return { name: 'login' }
   }
+  
   if (to.meta.requiresGuest && authStore.token) {
     return { name: 'home' }
   }

@@ -1,7 +1,11 @@
 from django.contrib import admin
 from . import models
 
-
+@admin.register(models.PortfolioWork)
+class PortfolioWorkAdmin(admin.ModelAdmin):
+    list_display = ('title', 'order', 'is_active')
+    list_editable = ('order', 'is_active')
+    
 @admin.register(models.MasterBlock)
 class MasterBlockAdmin(admin.ModelAdmin):
     pass

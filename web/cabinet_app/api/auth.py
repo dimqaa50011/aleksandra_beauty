@@ -13,6 +13,7 @@ from ..serializers.auth import (
     PasswordResetRequestSerializer,
     RegisterSerializer,
 )
+from rest_framework.exceptions import AuthenticationFailed, ValidationError
 from ..services import auth as auth_service
 
 
@@ -106,7 +107,6 @@ class RegisterView(APIView):
 # ─────────────────────────────────────────────────────────────
 # Вход
 # ─────────────────────────────────────────────────────────────
-
 class LoginView(APIView):
     authentication_classes = []
     permission_classes = [AllowAny]
@@ -118,16 +118,46 @@ class LoginView(APIView):
         ser.is_valid(raise_exception=True)
         data = ser.validated_data
 
-        user, access, refresh_raw = auth_service.login(
-            phone=data['phone'],
-            password=data['password'],
-            ip=_client_ip(request),
-            user_agent=request.META.get('HTTP_USER_AGENT', ''),
-            platform=_platform(request),
-        )
-        return _auth_response(user, access, refresh_raw)
+        try:
+            user, access, refresh_raw = auth_service.login(
+                phone=data['phone'],
+                password=data['password'],
+                ip=_client_ip(request),
+                user_agent=request.META.get('HTTP_USER_AGENT', ''),
+                platform=_platform(request),
+            )
+            return _auth_response(user, access, refresh_raw)
+        except ValidationError as e:
+            # Если бэкенд бросил ошибку 'no_password'
+            return Response(e.detail, status=status.HTTP_400_BAD_REQUEST)
+        except AuthenticationFailed as e:
+            return Response({'detail': str(e.detail[0]) if isinstance(e.detail, list) else str(e.detail)}, status=status.HTTP_401_UNAUTHORIZED)
 
 
+class PasswordResetConfirmView(APIView):
+    authentication_classes = []
+    permission_classes = [AllowAny]
+    throttle_classes = [ScopedRateThrottle]
+    throttle_scope = 'password_reset_confirm'
+
+    def post(self, request):
+        ser = PasswordResetConfirmSerializer(data=request.data)
+        ser.is_valid(raise_exception=True)
+        data = ser.validated_data
+        
+        try:
+            # Теперь сервис возвращает токены
+            user, access, refresh_raw = auth_service.confirm_password_reset(
+                phone=data['phone'],
+                code=data['code'],
+                new_password=data['new_password'],
+            )
+            # Используем твою же функцию _auth_response для установки куки и возврата токена
+            resp = _auth_response(user, access, refresh_raw)
+            resp.data['detail'] = 'Пароль установлен. Выполнен вход.'
+            return resp
+        except ValidationError as e:
+            return Response(e.detail, status=status.HTTP_400_BAD_REQUEST)
 # ─────────────────────────────────────────────────────────────
 # Refresh / Logout
 # ─────────────────────────────────────────────────────────────
@@ -192,20 +222,3 @@ class PasswordResetRequestView(APIView):
             'detail': 'Если аккаунт с таким телефоном существует, код отправлен по SMS',
         })
 
-
-class PasswordResetConfirmView(APIView):
-    authentication_classes = []
-    permission_classes = [AllowAny]
-    throttle_classes = [ScopedRateThrottle]
-    throttle_scope = 'password_reset_confirm'
-
-    def post(self, request):
-        ser = PasswordResetConfirmSerializer(data=request.data)
-        ser.is_valid(raise_exception=True)
-        data = ser.validated_data
-        auth_service.confirm_password_reset(
-            phone=data['phone'],
-            code=data['code'],
-            new_password=data['new_password'],
-        )
-        return Response({'detail': 'Пароль изменён. Войдите с новым паролем.'})

@@ -4,6 +4,39 @@ from rest_framework import status
 from rest_framework.permissions import IsAuthenticated
 from django.shortcuts import get_object_or_404
 from .models import Service, ServiceCategory
+from rest_framework.parsers import MultiPartParser, FormParser
+from rest_framework.response import Response
+from rest_framework.views import APIView
+from rest_framework.permissions import IsAuthenticated
+from .models import PortfolioWork
+from .serializers import PortfolioWorkSerializer
+
+class AdminPortfolioListCreateView(APIView):
+    permission_classes = [IsAuthenticated]
+    parser_classes = (MultiPartParser, FormParser)
+
+    def get(self, request):
+        works = PortfolioWork.objects.all().order_by('order')
+        serializer = PortfolioWorkSerializer(works, many=True, context={'request': request})
+        return Response(serializer.data)
+
+    def post(self, request):
+        serializer = PortfolioWorkSerializer(data=request.data, context={'request': request})
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data, status=201)
+        return Response(serializer.errors, status=400)
+
+class AdminPortfolioDetailView(APIView):
+    permission_classes = [IsAuthenticated]
+    
+    def delete(self, request, pk):
+        try:
+            work = PortfolioWork.objects.get(pk=pk)
+            work.delete()
+            return Response({'success': True})
+        except PortfolioWork.DoesNotExist:
+            return Response({'error': 'Не найдено'}, status=404)
 
 class AdminServicesAPIView(APIView):
     """

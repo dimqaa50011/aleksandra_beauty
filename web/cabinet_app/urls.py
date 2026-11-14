@@ -2,6 +2,7 @@ from django.urls import path
 
 from cabinet_app.api.notifications import NotificationDetailView, NotificationListView, UnreadCountView
 from cabinet_app.api.push import PushSubscribeView, PushVapidKeyView
+from cabinet_app.api.social_auth import SocialAuthView
 from .apps import CabinetAppConfig
 
 from .api.auth import (
@@ -19,7 +20,7 @@ from .api.bookings import (
 )
 from .api.catalog import ServiceListView
 from .api.slots import SlotListView
-from .api.profile import AvatarUploadView, MeView, UpdateConsentsView
+from .api.profile import AvatarUploadView, BindPhoneView, MeView, UpdateConsentsView
 from .api.bonuses import BonusesView, CertificateDetailView, CertificatesView, ReferralView
 
 app_name = CabinetAppConfig.name
@@ -48,6 +49,8 @@ urlpatterns = [
     path('certificates/<int:pk>/', CertificateDetailView.as_view(), name='certificate-detail'),
     path('referral/', ReferralView.as_view(), name='referral'),
     path('me/avatar/', AvatarUploadView.as_view(), name='me-avatar'),
+    path('auth/social/<str:platform>/', SocialAuthView.as_view(), name='social-auth'),
+    path('me/phone/', BindPhoneView.as_view(), name='me-phone'),
     
     
     # Push

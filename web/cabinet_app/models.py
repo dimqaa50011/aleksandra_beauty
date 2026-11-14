@@ -29,7 +29,7 @@ class CabinetUser(AbstractBaseUser):
     )
     # Денормализация: нормализованный телефон для USERNAME_FIELD.
     # Источник истины — Client.phone_normalized, синхронизируется при сохранении.
-    phone = models.CharField('Телефон (нормализованный)', max_length=12, unique=True, db_index=True)
+    phone = models.CharField('Телефон (нормализованный)', max_length=12, unique=True, db_index=True, null=True, blank=True)
     
         # Внутри класса CabinetUser
     avatar = models.ImageField('Аватар', upload_to='avatars/', null=True, blank=True)
@@ -48,6 +48,10 @@ class CabinetUser(AbstractBaseUser):
 
     created_at = models.DateTimeField('Создан', auto_now_add=True)
     updated_at = models.DateTimeField('Обновлён', auto_now=True)
+    
+    telegram_id = models.CharField('Telegram ID', max_length=50, unique=True, null=True, blank=True)
+    vk_id = models.CharField('VK ID', max_length=50, unique=True, null=True, blank=True)
+    max_id = models.CharField('MAX ID', max_length=50, unique=True, null=True, blank=True)
 
     objects = CabinetUserManager()
 
