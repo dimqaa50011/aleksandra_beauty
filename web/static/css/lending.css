@@ -967,3 +967,56 @@ body.menu-open { overflow: hidden; }
         order: -1; /* Можно вывести карту наверх на мобилке (по желанию) */
     }
 }
+
+/* Сама лента карусели */
+.portfolio-grid {
+    display: flex;
+    gap: 16px;
+    overflow-x: auto;
+    scroll-snap-type: x mandatory; /* Магнитный скролл (карточка прилипает) */
+    padding: 10px 0 20px 0;
+    -webkit-overflow-scrolling: touch; /* Плавный скролл на iOS */
+}
+
+/* Скрываем некрасивый скроллбар */
+.portfolio-grid::-webkit-scrollbar {
+    display: none;
+}
+.portfolio-grid {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+}
+
+/* Карточка в карусели */
+.ba-slider {
+    position: relative;
+    /* Занимает 85% ширины экрана, чтобы было видно край следующей карточки */
+    flex: 0 0 85%; 
+    max-width: 400px;
+    aspect-ratio: 4/5;
+    overflow: hidden;
+    border-radius: 16px;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.1);
+    user-select: none;
+    scroll-snap-align: center; /* Прилипает к центру экрана */
+    touch-action: pan-y; /* Разрешаем вертикальный скролл страницы */
+}
+
+/* На ПК показываем по 2-3 карточки */
+@media (min-width: 768px) {
+    .ba-slider {
+        flex: 0 0 45%;
+    }
+}
+
+/* ВАЖНО: Картинки и обертки не должны перехватывать клики */
+.ba-image, .ba-before-wrapper {
+    pointer-events: none; 
+}
+
+/* Ползунок должен быть кликабельным */
+.ba-handle {
+    pointer-events: auto; 
+    cursor: ew-resize;
+    /* ... остальные стили ползунка остаются ... */
+}
