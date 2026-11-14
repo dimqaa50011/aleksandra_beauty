@@ -1,7 +1,7 @@
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
 import apiClient, { setAccessToken } from '@/api/client'
-import { getPlatform, initPlatform } from '@/utils/platform'
+import { initPlatform } from '@/utils/platform'
 import bridge from '@vkontakte/vk-bridge'
 
 export interface UserProfile {
