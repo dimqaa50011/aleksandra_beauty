@@ -49,7 +49,9 @@ urlpatterns = [
     path('certificates/<int:pk>/', CertificateDetailView.as_view(), name='certificate-detail'),
     path('referral/', ReferralView.as_view(), name='referral'),
     path('me/avatar/', AvatarUploadView.as_view(), name='me-avatar'),
-    path('auth/social/<str:platform>/', SocialAuthView.as_view(), name='social-auth'),
+    path('auth/telegram/', SocialAuthView.as_view(), {'platform': 'telegram'}),
+    path('auth/vk/', SocialAuthView.as_view(), {'platform': 'vk'}),
+    path('auth/max/', SocialAuthView.as_view(), {'platform': 'max'}),
     path('me/phone/', BindPhoneView.as_view(), name='me-phone'),
     
     

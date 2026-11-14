@@ -908,3 +908,62 @@ body.menu-open { overflow: hidden; }
         height: 36px;
     }
 }
+
+/* Контейнер контактов должен быть ограничен шириной экрана */
+.contacts-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr; /* Две колонки на ПК */
+    gap: 40px;
+    align-items: start;
+    max-width: 100%; /* Запрещаем вылезать */
+    box-sizing: border-box;
+}
+
+/* Блок с контактами не должен растягиваться больше контейнера */
+.contact-info {
+    min-width: 0; /* Важно для Grid/Flex, чтобы блок мог сжиматься */
+    max-width: 100%;
+}
+
+/* Карта */
+.contact-map {
+    width: 100%;
+    max-width: 100%;
+    overflow: hidden; /* Скрываем вылезающие края карты */
+}
+
+.map-wrapper {
+    width: 100%;
+    border-radius: 16px; /* Если нужны скругления */
+    overflow: hidden;
+}
+
+/* САМОЕ ВАЖНОЕ: картинка карты не должна быть шире экрана */
+.map-wrapper img {
+    width: 100%;
+    max-width: 100%;
+    height: auto;
+    display: block;
+    object-fit: cover; /* Чтобы карта красиво обрезалась, а не плющилась */
+}
+
+/* Текст контактов должен переноситься, особенно Email */
+.contact-item p,
+.contact-item a {
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+    word-break: break-word;
+    max-width: 100%;
+}
+
+/* Мобильная версия */
+@media (max-width: 768px) {
+    .contacts-grid {
+        grid-template-columns: 1fr; /* Одна колонка на телефоне */
+        gap: 24px;
+    }
+    
+    .contact-map {
+        order: -1; /* Можно вывести карту наверх на мобилке (по желанию) */
+    }
+}

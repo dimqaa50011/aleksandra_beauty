@@ -45,9 +45,6 @@ class SocialAuthView(APIView):
             user.set_unusable_password() # Пароля пока нет!
             
             # Пытаемся взять имя из соцсети
-            name = user_data.get('first_name', '')
-            last_name = user_data.get('last_name', '')
-            user.name = f"{name} {last_name}".strip()
             
             user.save()
 

@@ -6,3 +6,4 @@ from .drf import *
 from .q_cluster import *
 from .web_push import *
 from .cabinrt import *
+from .social import *
