@@ -395,13 +395,14 @@ document.addEventListener('DOMContentLoaded', function() {
         const handle = slider.querySelector('.ba-handle');
         const rangeInput = slider.querySelector('.ba-range');
 
-        // Слушаем каждое движение ползунка (мышкой или пальцем)
+        // Слушаем движение ползунка
         rangeInput.addEventListener('input', (e) => {
             const value = e.target.value; // Значение от 0 до 100
             
-            // Двигаем обертку "До"
+            // Двигаем обертку "До" (она обрезается по ширине)
             beforeWrapper.style.width = value + '%';
-            // Двигаем визуальный ползунок
+            
+            // Двигаем визуальный белый кружок
             handle.style.left = value + '%';
         });
     });
