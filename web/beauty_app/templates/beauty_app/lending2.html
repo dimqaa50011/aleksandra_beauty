@@ -108,38 +108,51 @@
             <h2 class="section-title text-center">Примеры работ</h2>
             <p class="section-subtitle text-center">Потяните за ползунок, чтобы увидеть результат</p>
 
-            <div class="portfolio-grid">
-                {% for work in portfolio %}
-                <div class="ba-slider">
-                    <!-- Фото "После" (задний план) -->
-                    <img src="{{ work.image_after.url }}" alt="После" class="ba-image ba-after" loading="lazy">
-                    
-                    <!-- Обертка для фото "До" (обрезается по ширине) -->
-                    <div class="ba-before-wrapper">
-                        <img src="{{ work.image_before.url }}" alt="До" class="ba-image ba-before" loading="lazy">
-                    </div>
-                    
-                    <!-- Визуальный ползунок (линия и кружок) -->
-                    <div class="ba-handle">
-                        <div class="ba-handle-line"></div>
-                        <div class="ba-handle-circle">
-                            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
-                            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l6-6-6-6"/></svg>
+            <!-- Обертка для карусели и кнопок -->
+            <div class="portfolio-carousel-wrapper">
+                <div class="portfolio-grid" id="portfolioGrid">
+                    {% for work in portfolio %}
+                    <div class="ba-slider">
+                        <!-- Фото "После" (задний план) -->
+                        <img src="{{ work.image_after.url }}" alt="После" class="ba-image ba-after" loading="lazy">
+                        
+                        <!-- Обертка для фото "До" -->
+                        <div class="ba-before-wrapper">
+                            <img src="{{ work.image_before.url }}" alt="До" class="ba-image ba-before" loading="lazy">
                         </div>
+                        
+                        <!-- Визуальный ползунок -->
+                        <div class="ba-handle">
+                            <div class="ba-handle-line"></div>
+                            <div class="ba-handle-circle">
+                                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
+                                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l6-6-6-6"/></svg>
+                            </div>
+                        </div>
+
+                        <!-- Инпут для слайдера -->
+                        <input type="range" min="0" max="100" value="50" class="ba-range" aria-label="Слайдер До и После">
+
+                        <!-- Подписи -->
+                        <span class="ba-label ba-label-before">До</span>
+                        <span class="ba-label ba-label-after">После</span>
+                        
+                        {% if work.title %}
+                            <span class="ba-title">{{ work.title }}</span>
+                        {% endif %}
                     </div>
-
-                    <!-- МАГИЯ: Невидимый инпут поверх всего -->
-                    <input type="range" min="0" max="100" value="50" class="ba-range" aria-label="Слайдер До и После">
-
-                    <!-- Подписи -->
-                    <span class="ba-label ba-label-before">До</span>
-                    <span class="ba-label ba-label-after">После</span>
-                    
-                    {% if work.title %}
-                        <span class="ba-title">{{ work.title }}</span>
-                    {% endif %}
+                    {% endfor %}
                 </div>
-                {% endfor %}
+
+                <!-- Кнопки навигации -->
+                <div class="portfolio-controls">
+                    <button type="button" class="carousel-btn prev-btn" id="portfolioPrev" aria-label="Назад">
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
+                    </button>
+                    <button type="button" class="carousel-btn next-btn" id="portfolioNext" aria-label="Вперед">
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l6-6-6-6"/></svg>
+                    </button>
+                </div>
             </div>
         </div>
     </section>
@@ -388,24 +401,42 @@
 </script>
 <script>
 document.addEventListener('DOMContentLoaded', function() {
+    // 1. Логика слайдера До/После
     const sliders = document.querySelectorAll('.ba-slider');
-
     sliders.forEach(slider => {
         const beforeWrapper = slider.querySelector('.ba-before-wrapper');
         const handle = slider.querySelector('.ba-handle');
         const rangeInput = slider.querySelector('.ba-range');
 
-        // Слушаем движение ползунка
         rangeInput.addEventListener('input', (e) => {
-            const value = e.target.value; // Значение от 0 до 100
-            
-            // Двигаем обертку "До" (она обрезается по ширине)
+            const value = e.target.value;
             beforeWrapper.style.width = value + '%';
-            
-            // Двигаем визуальный белый кружок
             handle.style.left = value + '%';
         });
     });
+
+    // 2. Логика кнопок карусели
+    const grid = document.getElementById('portfolioGrid');
+    const prevBtn = document.getElementById('portfolioPrev');
+    const nextBtn = document.getElementById('portfolioNext');
+
+    if (grid && prevBtn && nextBtn) {
+        // Функция для получения ширины одной карточки + отступа
+        const getScrollAmount = () => {
+            const card = grid.querySelector('.ba-slider');
+            if (!card) return 300;
+            const gap = 16; // Из CSS .portfolio-grid gap
+            return card.offsetWidth + gap;
+        };
+
+        nextBtn.addEventListener('click', () => {
+            grid.scrollBy({ left: getScrollAmount(), behavior: 'smooth' });
+        });
+
+        prevBtn.addEventListener('click', () => {
+            grid.scrollBy({ left: -getScrollAmount(), behavior: 'smooth' });
+        });
+    }
 });
 </script>
 {% endblock content %}
