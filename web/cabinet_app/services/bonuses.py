@@ -7,7 +7,7 @@ from django.db import transaction
 from django.utils import timezone
 from rest_framework.exceptions import ValidationError
 
-from booking_app.models import Client, Booking
+from booking_app.models import Bonus, BonusBalance, Client, Booking
 from cert_app.models import CertificateModel
 
 from ..models import (
@@ -25,7 +25,6 @@ logger = logging.getLogger(__name__)
 # ─────────────────────────────────────────────────────────────
 # Базовые операции с бонусами
 # ─────────────────────────────────────────────────────────────
-
 @transaction.atomic
 def accrue_bonuses(
     client: Client,
@@ -36,93 +35,82 @@ def accrue_bonuses(
     referral: Referral | None = None,
     description: str = '',
     created_by=None,
-) -> BonusTransaction | None:
-    """Начисляет бонусы. Обновляет Client.bonus_balance."""
+    custom_ttl_days: int | None = None, # <--- НОВЫЙ ПАРАМЕТР
+) -> Bonus | None:
+    """Начисляет бонусы. Обновляет BonusBalance."""
     if amount <= 0:
         return None
 
-    locked = Client.objects.select_for_update().get(pk=client.pk)
-    old_balance = locked.bonus_balance
-    new_balance = old_balance + amount
-    locked.bonus_balance = new_balance
-    locked.save(update_fields=['bonus_balance'])
-
-    tx = BonusTransaction.objects.create(
-        client=locked,
+    wallet, _ = BonusBalance.objects.get_or_create(client=client)
+    
+    # ЛОГИКА СРОКА ЖИЗНИ
+    if custom_ttl_days is not None:
+        ttl_days = custom_ttl_days
+        logger.info(f'Использован кастомный TTL: {ttl_days} дней для причины {reason}')
+    else:
+        ttl_days = settings.BONUS_TTL_DAYS.get(reason, settings.BONUS_TTL_DAYS.get('default', 180))
+    
+    expires_at = timezone.now() + timedelta(days=ttl_days)
+    
+    bonus = Bonus.objects.create(
+        wallet=wallet,
         amount=amount,
-        type=BonusTransaction.TYPE_ACCRUAL,
         reason=reason,
-        description=(description or '')[:255],
-        booking=booking,
-        referral=referral,
-        balance_after=new_balance,
-        created_by=created_by,
+        expires_at=expires_at,
+        booking=booking
     )
-
-    client.bonus_balance = new_balance
 
     logger.info(
-        'bonus.accrue client=%s amount=%s reason=%s balance=%s→%s booking=%s referral=%s',
-        locked.pk, amount, reason, old_balance, new_balance,
-        booking.pk if booking else None,
-        referral.pk if referral else None,
+        'bonus.accrue client=%s amount=%s reason=%s expires_at=%s',
+        client.pk, amount, reason, expires_at,
     )
-    return tx
-
+    return bonus
 
 @transaction.atomic
 def spend_bonuses(
-    client: Client,
-    amount: int,
-    reason: str,
-    *,
-    booking: Booking | None = None,
-    referral: Referral | None = None,
-    description: str = '',
-    created_by=None,
-) -> BonusTransaction | None:
-    """Списывает бонусы. Если баланса меньше — списывает сколько есть."""
+    client: Client, amount: int, reason: str, *, booking: Booking | None = None, referral: Referral | None = None, description: str = '', created_by=None
+) -> int:
+    """Списывает бонусы по FIFO. Возвращает фактически списанную сумму."""
     if amount <= 0:
-        return None
+        return 0
 
-    locked = Client.objects.select_for_update().get(pk=client.pk)
-    actual = min(amount, locked.bonus_balance)
-    if actual <= 0:
-        logger.info(
-            'bonus.spend skip client=%s requested=%s balance=0',
-            locked.pk, amount,
-        )
-        return None
+    wallet = client.bonus_wallet
+    available = wallet.get_total()
+    actual_to_spend = min(amount, available)
+    
+    if actual_to_spend <= 0:
+        return 0
 
-    old_balance = locked.bonus_balance
-    new_balance = old_balance - actual
-    locked.bonus_balance = new_balance
-    locked.save(update_fields=['bonus_balance'])
+    remaining_to_spend = actual_to_spend
+    
+    # Берем активные бонусы, сортируем по дате сгорания (FIFO)
+    active_bonuses = wallet.bonuses.filter(
+        is_spent=False, 
+        is_expired=False, 
+        expires_at__gt=timezone.now()
+    ).order_by('expires_at')
+    
+    for bonus in active_bonuses:
+        if remaining_to_spend <= 0:
+            break
+            
+        if bonus.amount <= remaining_to_spend:
+            # Тратим этот бонус полностью
+            remaining_to_spend -= bonus.amount
+            bonus.is_spent = True
+            bonus.amount = 0
+            bonus.save(update_fields=['is_spent', 'amount'])
+        else:
+            # Тратим частично
+            bonus.amount -= remaining_to_spend
+            remaining_to_spend = 0
+            bonus.save(update_fields=['amount'])
 
-    tx = BonusTransaction.objects.create(
-        client=locked,
-        amount=-actual,
-        type=BonusTransaction.TYPE_SPEND,
-        reason=reason,
-        description=(description or '')[:255],
-        booking=booking,
-        referral=referral,
-        balance_after=new_balance,
-        created_by=created_by,
-    )
-    client.bonus_balance = new_balance
-
-    log = logger.info if actual == amount else logger.warning
-    log(
-        'bonus.spend client=%s requested=%s actual=%s reason=%s balance=%s→%s booking=%s',
-        locked.pk, amount, actual, reason, old_balance, new_balance,
-        booking.pk if booking else None,
-    )
-    return tx
-
+    logger.info(f'bonus.spend client={client.pk} requested={amount} actual={actual_to_spend} reason={reason}')
+    return actual_to_spend
 
 def get_bonus_balance(client: Client) -> int:
-    return client.bonus_balance
+    return client.bonus_wallet.get_total()
 
 
 # ─────────────────────────────────────────────────────────────

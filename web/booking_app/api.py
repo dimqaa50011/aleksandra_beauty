@@ -33,6 +33,43 @@ import logging
 
 logger = logging.getLogger(__name__)
 
+from rest_framework.views import APIView
+from rest_framework.response import Response
+from rest_framework import status
+from rest_framework.permissions import IsAuthenticated
+from booking_app.models import Client
+from cabinet_app.services.bonuses import accrue_bonuses
+
+class AdminAccrueBonusAPIView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        client_ids = request.data.get('client_ids', [])
+        amount = request.data.get('amount')
+        reason = request.data.get('reason', 'promo')
+        ttl_days = request.data.get('ttl_days') # Может быть null
+
+        if not client_ids or not amount:
+            return Response({'error': 'Укажите клиентов и сумму'}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            amount = int(amount)
+            clients = Client.objects.filter(id__in=client_ids)
+            
+            for client in clients:
+                accrue_bonuses(
+                    client=client,
+                    amount=amount,
+                    reason=reason,
+                    description=f'Ручное начисление админом ({request.user.username})',
+                    created_by=request.user,
+                    custom_ttl_days=int(ttl_days) if ttl_days else None
+                )
+            
+            return Response({'success': True, 'message': f'Бонусы начислены {clients.count()} клиентам'})
+        except Exception as e:
+            return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
 
 class AdminBookingCreateAPIView(APIView):
     """POST: Создание записи админом"""

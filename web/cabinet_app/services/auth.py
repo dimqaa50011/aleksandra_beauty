@@ -6,7 +6,7 @@ from django.db import transaction
 from django.utils import timezone
 from rest_framework.exceptions import ValidationError, AuthenticationFailed
 
-from booking_app.models import Client, Booking
+from booking_app.models import BonusBalance, Client, Booking
 from booking_app.utils import (
     normalize_phone, phone_variants, find_client_by_phone,
 )
@@ -71,6 +71,7 @@ def register(
             name=name.strip()[:100],
             email=email.strip() or None,
         )
+        bb = BonusBalance(client=client)
     else:
         # Дополняем пустые поля, но не перезаписываем заполненные
         changed = []

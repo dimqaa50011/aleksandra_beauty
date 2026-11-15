@@ -7,9 +7,10 @@ import bridge from '@vkontakte/vk-bridge'
 export interface UserProfile {
   id: number
   name: string
-  phone: string | null // Телефон может быть null, если вход через соцсеть
+  phone: string | null
   email: string
   bonus_balance: number
+  bonus_expiring_soon: number // <--- НОВОЕ ПОЛЕ (общая сумма сгорающих)
   total_bookings: number
   total_spent: string
   consent_marketing: boolean
@@ -22,8 +23,6 @@ export const useAuthStore = defineStore('auth', () => {
   const token = ref<string | null>(null)
   const user = ref<UserProfile | null>(null)
   const initialized = ref(false)
-  
-  // Флаг, если нужен телефон (для новых юзеров из соцсетей)
   const needsPhone = ref(false) 
 
   function setToken(newToken: string | null) {
@@ -31,7 +30,6 @@ export const useAuthStore = defineStore('auth', () => {
     setAccessToken(newToken)
   }
 
-  // --- ОБЫЧНЫЙ ВХОД (PWA) ---
   async function login(phone: string, password: string) {
     const { data } = await apiClient.post('/auth/login/', { phone, password })
     setToken(data.access)
@@ -39,10 +37,9 @@ export const useAuthStore = defineStore('auth', () => {
     return data
   }
 
-  // --- ВХОД ЧЕРЕЗ СОЦСЕТИ ---
   async function loginViaSocial() {
     const platform = await initPlatform()
-    if (platform === 'pwa') return false // Если мы в обычном браузере, ничего не делаем
+    if (platform === 'pwa') return false
 
     try {
       let endpoint = ''
@@ -58,20 +55,27 @@ export const useAuthStore = defineStore('auth', () => {
       } 
       else if (platform === 'vk') {
         endpoint = '/auth/vk/'
-        // Для VK получаем параметры запуска
-        const vkData = await bridge.send('VKWebAppGetLaunchParams')
-        payload = { launch_params: vkData }
+        const urlParams = new URLSearchParams(window.location.search)
+        const vkParams: Record<string, string> = {}
+        urlParams.forEach((value, key) => {
+          if (key.startsWith('vk_')) vkParams[key] = value
+        })
+        
+        if (Object.keys(vkParams).length > 0) {
+          payload = { launch_params: vkParams }
+        } else {
+          const vkData = await bridge.send('VKWebAppGetLaunchParams')
+          payload = { launch_params: vkData }
+        }
       }
 
       const { data } = await apiClient.post(endpoint, payload)
       setToken(data.access)
       await fetchMe()
       
-      // Если бэкенд сказал, что это новый юзер без телефона
       if (data.is_new || !user.value?.phone) {
         needsPhone.value = true
       }
-
       return true
     } catch (e) {
       console.error('Ошибка соц. авторизации', e)
@@ -79,17 +83,7 @@ export const useAuthStore = defineStore('auth', () => {
     }
   }
 
-  // --- РЕГИСТРАЦИЯ (PWA) ---
-  async function register(payload: {
-    phone: string
-    password: string
-    password_confirm: string
-    name?: string
-    email?: string
-    consent_pd: boolean
-    consent_marketing?: boolean
-    ref?: string
-  }) {
+  async function register(payload: any) {
     const { data } = await apiClient.post('/auth/register/', payload)
     setToken(data.access)
     await fetchMe()
@@ -139,18 +133,7 @@ export const useAuthStore = defineStore('auth', () => {
   }
 
   return {
-    token, 
-    user, 
-    initialized,
-    needsPhone, // <--- Экспортируем флаг
-    login, 
-    register, 
-    fetchMe, 
-    updateProfile, 
-    updateConsents, 
-    logout, 
-    tryRestoreSession,
-    loginViaSocial, // <--- Экспортируем новый метод
-    setToken,
+    token, user, initialized, needsPhone,
+    login, register, fetchMe, updateProfile, updateConsents, logout, tryRestoreSession, loginViaSocial, setToken,
   }
 })

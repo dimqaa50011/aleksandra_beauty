@@ -50,7 +50,14 @@
           <span class="bonus-value">{{ user?.bonus_balance || 0 }}</span>
           <span class="bonus-label">бонусов на счету</span>
         </div>
-        <van-icon name="gift" size="32" color="#f2a6b0" />
+        
+        <!-- ПЛАШКА СГОРАНИЯ -->
+        <div v-if="user?.bonus_expiring_soon && user.bonus_expiring_soon > 0" class="expiring-badge">
+          <van-icon name="fire-o" size="16" /> {{ user.bonus_expiring_soon }} сгорят
+        </div>
+        <div v-else>
+          <van-icon name="gift" size="32" color="#f2a6b0" />
+        </div>
       </div>
     </div>
 
@@ -311,6 +318,19 @@ onMounted(async () => {
 .bonus-label {
   font-size: 13px;
   color: var(--text-gray, #6b5f5a);
+}
+
+/* Плашка сгорания */
+.expiring-badge {
+  background: #fee2e2;
+  color: #dc2626;
+  font-size: 12px;
+  font-weight: 600;
+  padding: 6px 10px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
 }
 
 /* Быстрые действия */

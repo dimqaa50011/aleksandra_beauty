@@ -9,7 +9,7 @@ from .base import CabinetAPIView
 from ..serializers.profile import ClientProfileSerializer
 from rest_framework.response import Response
 from rest_framework import status
-from booking_app.models import Client
+from booking_app.models import BonusBalance, Client
 from booking_app.utils import find_client_by_phone, normalize_phone
 
 class BindPhoneView(CabinetAPIView):
@@ -32,6 +32,7 @@ class BindPhoneView(CabinetAPIView):
         if not client:
             # Если в CRM нет, создаем нового
             client = Client.objects.create(phone=raw_phone, name=user.name)
+            bb = BonusBalance(client=client)
         
         # Привязываем Client к CabinetUser и обновляем телефон
         user.client = client

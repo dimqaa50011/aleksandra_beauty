@@ -1,5 +1,5 @@
 import re
-from .models import Client
+from .models import BonusBalance, Client
 
 import re
 
@@ -85,4 +85,5 @@ def get_or_create_client(phone, name="", email=""):
             name=name,
             email=email if email else None
         )
+        bb = BonusBalance(client=new_client)
         return new_client

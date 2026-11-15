@@ -4,6 +4,60 @@ from django.db import models
 from django.utils import timezone
 from datetime import timedelta
 import secrets
+from datetime import timedelta
+from django.db import models
+from django.utils import timezone
+from django.conf import settings
+
+class BonusBalance(models.Model):
+    """Кошелек клиента для хранения бонусов."""
+    client = models.OneToOneField(
+        'booking_app.Client', on_delete=models.CASCADE, related_name='bonus_wallet'
+    )
+    
+    def get_total(self) -> int:
+        """Возвращает сумму всех активных (не сгоревших и не потраченных) бонусов."""
+        return self.bonuses.filter(
+            is_spent=False, 
+            is_expired=False, 
+            expires_at__gt=timezone.now()
+        ).aggregate(total=models.Sum('amount'))['total'] or 0
+
+    def get_expiring_soon(self, days=14) -> int:
+        """Возвращает сумму бонусов, которые сгорят в ближайшие N дней."""
+        threshold = timezone.now() + timedelta(days=days)
+        return self.bonuses.filter(
+            is_spent=False, 
+            is_expired=False,
+            expires_at__lte=threshold,
+            expires_at__gt=timezone.now()
+        ).aggregate(total=models.Sum('amount'))['total'] or 0
+
+    def __str__(self):
+        return f"Кошелек {self.client} (Баланс: {self.get_total()})"
+
+
+class Bonus(models.Model):
+    """Конкретное начисление бонусов со своим сроком жизни."""
+    wallet = models.ForeignKey(BonusBalance, on_delete=models.CASCADE, related_name='bonuses')
+    amount = models.IntegerField('Сумма начисления')
+    reason = models.CharField('Причина', max_length=50) # cashback, referral, promo
+    
+    created_at = models.DateTimeField('Создано', auto_now_add=True)
+    expires_at = models.DateTimeField('Сгорает')
+    
+    # Статусы
+    is_spent = models.BooleanField('Потрачен', default=False)
+    is_expired = models.BooleanField('Сгорел (или отозван)', default=False)
+    
+    # Аудит
+    booking = models.ForeignKey('booking_app.Booking', on_delete=models.SET_NULL, null=True, blank=True)
+    
+    class Meta:
+        ordering = ['expires_at'] # Сначала те, что скоро сгорят
+
+    def __str__(self):
+        return f"{self.amount} б. - {self.reason}"
 
 
 class APIToken(models.Model):
@@ -50,7 +104,6 @@ class Client(models.Model):
     # Заметки администратора (аллергии, предпочтения)
     notes = models.TextField('Заметки', blank=True)
 
-    bonus_balance = models.IntegerField('Баланс бонусов', default=0)
 
     class Meta:
         verbose_name = 'Клиент (CRM)'

@@ -3,6 +3,8 @@ from django.utils import timezone
 from django.db.models import Q
 from rest_framework.response import Response
 
+from booking_app.models import BonusBalance
+
 from .base import CabinetAPIView
 from ..serializers.bonuses import (
     BonusTransactionSerializer,
@@ -12,20 +14,58 @@ from ..serializers.bonuses import (
 from ..models import BonusTransaction, CashbackRule
 from booking_app.utils import phone_variants
 from cert_app.models import CertificateModel
-
+from datetime import timedelta
 
 class BonusesView(CabinetAPIView):
-    """GET: Баланс, история транзакций, активные правила кэшбэка."""
+    """GET: Баланс, список сгорающих бонусов, история транзакций, активные правила кэшбэка."""
 
     def get(self, request):
         client = request.user.client
         
-        # 50 последних транзакций
+        # 1. Получаем кошелек клиента
+        wallet, _ = BonusBalance.objects.get_or_create(client=client)
+        
+        # 2. Считаем общий баланс (сумма всех активных бонусов)
+        total_balance = wallet.get_total()
+        
+        # 3. Ищем бонусы, которые скоро сгорят
+        # Берем только не потраченные и не сгоревшие, срок которых истекает в ближайшие 30 дней
+        now = timezone.now()
+        threshold = now + timedelta(days=30)
+        
+        expiring_bonuses_qs = wallet.bonuses.filter(
+            is_spent=False,
+            is_expired=False,
+            expires_at__gt=now,
+            expires_at__lte=threshold
+        ).order_by('expires_at')
+
+        expiring_list = []
+        for bonus in expiring_bonuses_qs:
+            days_left = (bonus.expires_at - now).days
+            
+            # Красивое название причины для клиента
+            reasons_map = {
+                'cashback': 'Кэшбэк',
+                'referral': 'Бонус за друга',
+                'promo': 'Акция',
+                'migration': 'Старые бонусы',
+            }
+            reason_text = reasons_map.get(bonus.reason, bonus.reason)
+
+            expiring_list.append({
+                'amount': bonus.amount,
+                'expires_at': bonus.expires_at.strftime('%d.%m.%Y'),
+                'days_left': days_left,
+                'reason': reason_text
+            })
+
+        # 4. 50 последних транзакций (история начислений/списаний)
         transactions = BonusTransaction.objects.filter(
             client=client
         ).order_by('-created_at')[:50]
         
-        # Активные правила кэшбэка на сегодня
+        # 5. Активные правила кэшбэка на сегодня
         today = timezone.localdate()
         rules = CashbackRule.objects.filter(
             is_active=True,
@@ -34,12 +74,12 @@ class BonusesView(CabinetAPIView):
         ).select_related('service').order_by('service__name')
 
         return Response({
-            'balance': client.bonus_balance,
+            'balance': total_balance,
+            'expiring_soon': expiring_list,  # <--- СПИСОК СГОРАЮЩИХ БОНУСОВ
             'max_spend_percent': settings.CABINET_MAX_BONUS_SPEND_PERCENT,
             'transactions': BonusTransactionSerializer(transactions, many=True).data,
             'cashback_rules': CashbackRuleSerializer(rules, many=True).data,
         })
-
 
 from rest_framework.exceptions import NotFound
 

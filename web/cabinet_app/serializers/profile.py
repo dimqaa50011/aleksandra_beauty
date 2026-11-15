@@ -15,6 +15,16 @@ class ClientProfileSerializer(serializers.ModelSerializer):
     favorite_service = serializers.SerializerMethodField()
     
     avatar = serializers.ImageField(source='cabinet_user.avatar', read_only=True)
+    
+    bonus_balance = serializers.SerializerMethodField()
+    bonus_expiring_soon = serializers.SerializerMethodField()
+    
+    
+    def get_bonus_balance(self, obj):
+        return obj.bonus_wallet.get_total() if hasattr(obj, 'bonus_wallet') else 0
+
+    def get_bonus_expiring_soon(self, obj):
+        return obj.bonus_wallet.get_expiring_soon() if hasattr(obj, 'bonus_wallet') else 0
 
     class Meta:
         model = Client

@@ -4,6 +4,25 @@
       <h1>Бонусы и подарки</h1>
     </div>
 
+    <!-- БЛОК СГОРАЮЩИХ БОНУСОВ -->
+    <div v-if="expiringBonuses.length > 0" class="expiring-alert">
+      <div class="alert-header">
+        <van-icon name="warning-o" size="20" color="#d85c6b" />
+        <span>Успейте потратить!</span>
+      </div>
+      <div class="alert-list">
+        <div v-for="(bonus, index) in expiringBonuses" :key="index" class="alert-item">
+          <div class="alert-left">
+            <span class="amount">+{{ bonus.amount }} б.</span>
+            <span class="reason">{{ bonus.reason }}</span>
+          </div>
+          <span class="days">
+            {{ bonus.days_left === 1 ? 'завтра' : (bonus.days_left === 0 ? 'сегодня' : 'через ' + bonus.days_left + ' дн.') }}
+          </span>
+        </div>
+      </div>
+    </div>
+
     <!-- ГЛАВНАЯ КАРТОЧКА БАЛАНСА -->
     <div class="balance-card">
       <div class="balance-info">
@@ -141,7 +160,6 @@
 </template>
 
 <script setup lang="ts">
-
 import { ref, onMounted } from 'vue'
 import { showSuccessToast, showFailToast } from 'vant'
 import apiClient from '@/api/client'
@@ -156,13 +174,20 @@ const bonuses = ref<any>(null)
 const certificates = ref<any[]>([])
 const referral = ref<any>(null)
 
-// По умолчанию показываем только активные сертификаты
+// Список сгорающих бонусов
+const expiringBonuses = ref<any[]>([])
+
 const showOnlyActive = ref(true)
 
 async function fetchBonuses() {
   try {
     const { data } = await apiClient.get('/bonuses/')
     bonuses.value = data
+    
+    // Забираем сгорающие бонусы из ответа API
+    if (data.expiring_soon) {
+      expiringBonuses.value = data.expiring_soon
+    }
   } catch (error) {
     showFailToast('Не удалось загрузить бонусы')
   } finally {
@@ -236,7 +261,66 @@ onMounted(() => {
   color: var(--text-dark, #2d2a28);
 }
 
-/* Карточка баланса */
+/* --- БЛОК СГОРАЮЩИХ БОНУСОВ --- */
+.expiring-alert {
+  background: #fff0f2;
+  border: 1px solid #f9d1d6;
+  border-radius: 16px;
+  padding: 16px;
+  margin: 0 16px 16px;
+}
+
+.alert-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 600;
+  color: #d85c6b;
+  margin-bottom: 12px;
+  font-size: 15px;
+}
+
+.alert-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.alert-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 13px;
+  background: #fff;
+  padding: 10px 12px;
+  border-radius: 8px;
+}
+
+.alert-left {
+  display: flex;
+  flex-direction: column;
+}
+
+.alert-item .amount {
+  font-weight: 700;
+  color: #2d2a28;
+  font-size: 15px;
+}
+
+.alert-item .reason {
+  font-size: 11px;
+  color: #9ca3af;
+}
+
+.alert-item .days {
+  color: #d85c6b;
+  font-weight: 600;
+  background: #fff0f2;
+  padding: 4px 8px;
+  border-radius: 6px;
+}
+
+/* --- КАРТОЧКА БАЛАНСА --- */
 .balance-card {
   margin: 0 16px 16px;
   background: linear-gradient(135deg, #ffffff 0%, #fff0f2 100%);

@@ -7,3 +7,4 @@ from .q_cluster import *
 from .web_push import *
 from .cabinrt import *
 from .social import *
+from .bonuses import *
