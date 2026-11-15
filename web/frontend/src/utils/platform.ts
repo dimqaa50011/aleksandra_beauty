@@ -71,4 +71,4 @@ export async function initPlatformSDK(): Promise<Platform> {
   }
 
   return platform;
-}
+}   
