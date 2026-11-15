@@ -4,7 +4,6 @@ from datetime import timedelta
 
 from booking_app.models import Client
 
-
 class ClientProfileSerializer(serializers.ModelSerializer):
     # Поля из CabinetUser
     phone = serializers.CharField(source='cabinet_user.phone', read_only=True)
@@ -16,43 +15,49 @@ class ClientProfileSerializer(serializers.ModelSerializer):
     
     avatar = serializers.ImageField(source='cabinet_user.avatar', read_only=True)
     
+    # Бонусы
     bonus_balance = serializers.SerializerMethodField()
     bonus_expiring_soon = serializers.SerializerMethodField()
     
-    
     def get_bonus_balance(self, obj):
-        return obj.bonus_wallet.get_total() if hasattr(obj, 'bonus_wallet') else 0
+        # Безопасный вызов на случай, если кошелька еще нет или миграции не применены
+        try:
+            return obj.bonus_wallet.get_total()
+        except Exception as e:
+            return 0
 
     def get_bonus_expiring_soon(self, obj):
-        return obj.bonus_wallet.get_expiring_soon() if hasattr(obj, 'bonus_wallet') else 0
+        try:
+            return obj.bonus_wallet.get_expiring_soon()
+        except Exception as e:
+            return 0
 
     class Meta:
         model = Client
         fields = [
             'id', 'name', 'email', 'phone', 'avatar',
-            'bonus_balance', 'total_bookings', 'total_spent', 
+            'bonus_balance', 'bonus_expiring_soon', 'total_bookings', 'total_spent', # <-- ДОБАВИЛИ bonus_expiring_soon
             'first_visit', 'last_visit',
             'consent_marketing', 'years_with_us', 'favorite_service'
         ]
         read_only_fields = [
-            'id', 'phone', 'bonus_balance', 'total_bookings', 
+            'id', 'phone', 'bonus_balance', 'bonus_expiring_soon', 'total_bookings', 
             'total_spent', 'first_visit', 'last_visit', 
             'years_with_us', 'favorite_service'
         ]
 
     def get_years_with_us(self, obj):
-        """Сколько лет клиент с нами (для красивой плашки)."""
+        """Сколько лет клиент с нами."""
         if not obj.first_visit:
             return 0
         delta = timezone.now() - obj.first_visit
         return delta.days // 365
 
     def get_favorite_service(self, obj):
-        """Самая часто посещаемая услуга (для статистики)."""
+        """Самая часто посещаемая услуга."""
         from django.db.models import Count
         from beauty_app.models import Service
         
-        # Берем самую частую услугу из завершенных визитов
         fav = Service.objects.filter(
             bookings__client=obj,
             bookings__status='completed'

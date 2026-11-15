@@ -1,6 +1,15 @@
 from django.contrib import admin
-from .models import APIToken, Client, EmailVerificationCode, Booking, DayOff, BlockedSlot, PushSubscription, SMSTemplate
+from .models import APIToken, Client, EmailVerificationCode, Booking, DayOff, BlockedSlot, PushSubscription, SMSTemplate, BonusBalance, Bonus
 
+
+@admin.register(Bonus)
+class BonusAdmin(admin.ModelAdmin):
+    pass
+
+
+@admin.register(BonusBalance)
+class BonusBalanceAdmin(admin.ModelAdmin):
+    pass
 
 @admin.register(SMSTemplate)
 class SMSTemplateAdmin(admin.ModelAdmin):
