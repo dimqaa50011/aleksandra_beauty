@@ -1,7 +1,7 @@
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
 import apiClient, { setAccessToken } from '@/api/client'
-import { initPlatform } from '@/utils/platform'
+import { initPlatformSDK } from '@/utils/platform' // <-- ИСПРАВЛЕНО ЗДЕСЬ
 import bridge from '@vkontakte/vk-bridge'
 
 export interface UserProfile {
@@ -10,7 +10,7 @@ export interface UserProfile {
   phone: string | null
   email: string
   bonus_balance: number
-  bonus_expiring_soon: number // <--- НОВОЕ ПОЛЕ (общая сумма сгорающих)
+  bonus_expiring_soon: number
   total_bookings: number
   total_spent: string
   consent_marketing: boolean
@@ -38,7 +38,8 @@ export const useAuthStore = defineStore('auth', () => {
   }
 
   async function loginViaSocial() {
-    const platform = await initPlatform()
+    // <-- ИСПРАВЛЕНО ЗДЕСЬ
+    const platform = await initPlatformSDK()
     if (platform === 'pwa') return false
 
     try {
@@ -46,15 +47,19 @@ export const useAuthStore = defineStore('auth', () => {
       let payload = {}
 
       if (platform === 'telegram') {
+        // Проверяем, загрузился ли скрипт и есть ли данные
+        if (!window.Telegram?.WebApp?.initData) return false;
         endpoint = '/auth/telegram/'
         payload = { init_data: window.Telegram.WebApp.initData }
       } 
       else if (platform === 'max') {
+        if (!window.WebApp?.initData) return false;
         endpoint = '/auth/max/'
         payload = { init_data: window.WebApp.initData }
       } 
       else if (platform === 'vk') {
         endpoint = '/auth/vk/'
+        // Для VK получаем параметры запуска
         const urlParams = new URLSearchParams(window.location.search)
         const vkParams: Record<string, string> = {}
         urlParams.forEach((value, key) => {
