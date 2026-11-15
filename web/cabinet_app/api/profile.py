@@ -3,43 +3,13 @@ from rest_framework.response import Response
 from rest_framework import status
 from django.utils import timezone
 
-from cabinet_app.models import CabinetUser
-
 from .base import CabinetAPIView
 from ..serializers.profile import ClientProfileSerializer
-from rest_framework.response import Response
-from rest_framework import status
-from booking_app.models import BonusBalance, Client
+from booking_app.models import Client
 from booking_app.utils import find_client_by_phone, normalize_phone
-
-class BindPhoneView(CabinetAPIView):
-    """PATCH: Привязка телефона к аккаунту (для новых юзеров из соцсетей)."""
-
-    def patch(self, request):
-        user = request.user
-        raw_phone = request.data.get('phone', '')
-        normalized = normalize_phone(raw_phone)
-
-        if not normalized:
-            return Response({'error': 'Неверный формат телефона'}, status=400)
-
-        # Проверяем, не занят ли этот телефон другим CabinetUser
-        if CabinetUser.objects.filter(phone=normalized).exclude(pk=user.pk).exists():
-            return Response({'error': 'Этот телефон уже привязан к другому аккаунту'}, status=400)
-
-        # Ищем существующего Client в CRM
-        client = find_client_by_phone(raw_phone)
-        if not client:
-            # Если в CRM нет, создаем нового
-            client = Client.objects.create(phone=raw_phone, name=user.name)
-            bb = BonusBalance(client=client)
-        
-        # Привязываем Client к CabinetUser и обновляем телефон
-        user.client = client
-        user.phone = normalized
-        user.save()
-
-        return Response({'success': True, 'message': 'Телефон привязан'})
+from ..models import CabinetUser, ClientRefreshToken
+from ..authentication import issue_access_token
+from .auth import _set_refresh_cookie, _user_payload
 
 
 class MeView(CabinetAPIView):
@@ -85,7 +55,7 @@ class AvatarUploadView(CabinetAPIView):
         if not file:
             return Response({'error': 'Файл не передан'}, status=status.HTTP_400_BAD_REQUEST)
         
-        if file.size > 5 * 1024 * 1024:
+        if file.size > 5 * 1024 * 1024: # Лимит 5 МБ
             return Response({'error': 'Файл слишком большой (макс 5МБ)'}, status=status.HTTP_400_BAD_REQUEST)
 
         user = request.user
@@ -94,3 +64,72 @@ class AvatarUploadView(CabinetAPIView):
 
         avatar_url = request.build_absolute_uri(user.avatar.url) if user.avatar else None
         return Response({'avatar': avatar_url})
+
+
+class BindPhoneView(CabinetAPIView):
+    """PATCH: Привязка реального телефона к аккаунту (слияние аккаунтов)."""
+
+    def patch(self, request):
+        current_user = request.user
+        raw_phone = request.data.get('phone', '')
+        normalized = normalize_phone(raw_phone)
+
+        if not normalized:
+            return Response({'error': 'Неверный формат телефона'}, status=400)
+
+        # 1. Ищем, есть ли УЖЕ аккаунт в PWA с таким телефоном
+        existing_user = CabinetUser.objects.filter(phone=normalized).exclude(pk=current_user.pk).first()
+
+        if existing_user:
+            # СЛИЯНИЕ АККАУНТОВ (Merge)
+            # Переносим ID соцсети от временного пользователя к существующему
+            if current_user.vk_id and not existing_user.vk_id:
+                existing_user.vk_id = current_user.vk_id
+            if current_user.telegram_id and not existing_user.telegram_id:
+                existing_user.telegram_id = current_user.telegram_id
+            if current_user.max_id and not existing_user.max_id:
+                existing_user.max_id = current_user.max_id
+            
+            existing_user.save()
+
+            # Запоминаем временного клиента и удаляем временного пользователя
+            temp_client = current_user.client
+            current_user.delete()
+            
+            # Удаляем временный Client, если он был создан для соцсети (vk_123, telegram_123 и т.д.)
+            if temp_client and (
+                temp_client.phone.startswith('vk_') or 
+                temp_client.phone.startswith('telegram_') or 
+                temp_client.phone.startswith('max_')
+            ):
+                temp_client.delete()
+
+            # Выдаем НОВЫЕ токены для входа в СТАРЫЙ аккаунт
+            access = issue_access_token(existing_user)
+            _, refresh_raw = ClientRefreshToken.issue(existing_user, platform='merge')
+            
+            resp = Response({
+                'success': True, 
+                'access': access,
+                'user': _user_payload(existing_user)
+            })
+            _set_refresh_cookie(resp, refresh_raw)
+            return resp
+
+        # 2. Если конфликта нет (телефон новый) - просто обновляем временный аккаунт
+        real_client = find_client_by_phone(raw_phone)
+        
+        if not real_client:
+            current_user.client.phone = normalized
+            current_user.client.save()
+        else:
+            temp_client = current_user.client
+            current_user.client = real_client
+            current_user.save()
+            if temp_client.pk != real_client.pk:
+                temp_client.delete()
+
+        current_user.phone = normalized
+        current_user.save()
+
+        return Response({'success': True, 'message': 'Телефон привязан'})
