@@ -86,12 +86,14 @@ def register(
 
     # Реферал — только для новых клиентов по валидному коду
     referrer_user = None
-    if ref_code:
-        referrer_user = CabinetUser.objects.filter(
-            referral_code=ref_code.strip().upper(), is_active=True,
-        ).first()
-        if referrer_user and referrer_user.client_id == client.pk:
-            referrer_user = None  # сам себя не приглашаешь
+    if ref_code == '':
+        reg_code = None
+#    if ref_code:
+#        referrer_user = CabinetUser.objects.filter(
+#            referral_code=ref_code.strip().upper(), is_active=True,
+#        ).first()
+#        if referrer_user and referrer_user.client_id == client.pk:
+#            referrer_user = None  # сам себя не приглашаешь
 
     user = CabinetUser.objects.create_user(
         phone=normalized,
@@ -103,8 +105,8 @@ def register(
         last_login_ip=ip,
     )
     user.last_login = timezone.now()
-    user.referral_code = user.generate_referral_code()
-    user.save(update_fields=['last_login', 'referral_code'])
+#    user.referral_code = user.generate_referral_code()
+    user.save(update_fields=['last_login'])
 
     # Линкуем «бесхозные» брони и сертификаты по телефону
     _link_orphans(client)

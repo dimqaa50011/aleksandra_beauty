@@ -6,7 +6,6 @@ const apiClient = axios.create({
   headers: { 'Content-Type': 'application/json' },
 })
 
-// Access-токен хранится в памяти (в Pinia), не в localStorage
 let accessToken: string | null = null
 let refreshPromise: Promise<string> | null = null
 
@@ -30,10 +29,15 @@ apiClient.interceptors.response.use(
   async (error) => {
     const original = error.config
 
+    // Если 401 и это не сам запрос на логин/рефреш
     if (error.response?.status === 401 && !original._retry) {
+      // Защита от рекурсии: не пытаемся обновлять токен для запросов авторизации
+      if (original.url?.includes('/auth/login/') || original.url?.includes('/auth/refresh/')) {
+        return Promise.reject(error)
+      }
+
       original._retry = true
       try {
-        // Если несколько запросов упали одновременно — обновляем только раз
         if (!refreshPromise) {
           refreshPromise = axios
             .post('/api/client/cabinet/v1/auth/refresh/', {}, { withCredentials: true })
@@ -52,7 +56,6 @@ apiClient.interceptors.response.use(
       } catch (refreshError) {
         setAccessToken(null)
         
-        // ИСПРАВЛЕНО: Используем BASE_URL для правильного редиректа внутри /cabinet/
         const loginPath = `${import.meta.env.BASE_URL}login`
         if (window.location.pathname !== loginPath) {
           window.location.href = loginPath
