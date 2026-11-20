@@ -87,7 +87,7 @@ def register(
     # Реферал — только для новых клиентов по валидному коду
     referrer_user = None
     if ref_code == '':
-        reg_code = None
+        ref_code = None
 #    if ref_code:
 #        referrer_user = CabinetUser.objects.filter(
 #            referral_code=ref_code.strip().upper(), is_active=True,
@@ -105,8 +105,8 @@ def register(
         last_login_ip=ip,
     )
     user.last_login = timezone.now()
-#    user.referral_code = user.generate_referral_code()
-    user.save(update_fields=['last_login'])
+    user.referral_code = user.generate_referral_code()
+    user.save(update_fields=['last_login', 'referral_code'])
 
     # Линкуем «бесхозные» брони и сертификаты по телефону
     _link_orphans(client)
