@@ -59,6 +59,7 @@ urlpatterns = [
     path('api/app-certificates/', cert_api.AdminCertificatesListAPIView.as_view(), name='api_app_certificates'),
     path('api/app-certificates/redeem/', cert_api.AdminCertificateRedeemAPIView.as_view(), name='api_app_certificate_redeem'),
     path('api/app-certificates/create/', cert_api.AdminCertificateCreateAPIView.as_view(), name='api_app_certificate_create'),
+    path('api/app-certificates/check/', cert_api.AppCertificateCheckAPIView.as_view(), name='app-certificate-check'),
 ]
 
 if settings.DEBUG:
