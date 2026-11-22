@@ -94,15 +94,35 @@ class AdminCertificatesListAPIView(APIView):
             })
         return Response({'certificates': data})
 
-
 class AdminCertificateRedeemAPIView(APIView):
     """
-    POST: Гашение сертификата по номеру телефона.
+    POST: Гашение сертификата по QR-токену или номеру телефона.
     Если сертификатов несколько — возвращает их список для выбора.
     """
     permission_classes = [IsAuthenticated]
 
     def post(self, request):
+        # === 1. НОВАЯ ЛОГИКА: ГАШЕНИЕ ПО QR-ТОКЕНУ ===
+        token = request.data.get('token', '').strip()
+        if token:
+            try:
+                # Ищем активный сертификат по токену
+                cert = CertificateModel.objects.filter(token=token, is_used=False).first()
+                
+                if not cert:
+                    return Response({'error': 'Сертификат не найден или уже был погашен'}, status=status.HTTP_404_NOT_FOUND)
+                
+                if cert.is_expired:
+                    return Response({'error': f'Срок действия сертификата истек {cert.expire_date.strftime("%d.%m.%Y")}'}, status=status.HTTP_400_BAD_REQUEST)
+
+                # Гасим сертификат
+                cert.use()
+                return Response({'success': True, 'message': f'Сертификат на {cert.price} ₽ успешно погашен'})
+                
+            except Exception as e:
+                return Response({'error': 'Ошибка сервера при гашении'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+        # === 2. СТАРАЯ ЛОГИКА: ГАШЕНИЕ ПО ТЕЛЕФОНУ ===
         phone = request.data.get('phone', '').strip()
         cert_id = request.data.get('certificate_id')
 
@@ -143,8 +163,7 @@ class AdminCertificateRedeemAPIView(APIView):
             'multiple': True,
             'certificates': choices,
             'message': 'У клиента несколько сертификатов. Выберите нужный.'
-        })
-
+        }) 
 
 class AppCertificateCheckAPIView(APIView):
     """POST: Проверка сертификата по QR-токену перед гашением."""
