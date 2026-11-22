@@ -144,6 +144,32 @@ class AdminCertificateRedeemAPIView(APIView):
             'certificates': choices,
             'message': 'У клиента несколько сертификатов. Выберите нужный.'
         })
+
+
+class AppCertificateCheckAPIView(APIView):
+    """POST: Проверка сертификата по QR-токену перед гашением."""
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        token = request.data.get('token')
+        if not token:
+            return Response({'success': False, 'error': 'Токен не передан'}, status=status.HTTP_400_BAD_REQUEST)
+
+        controller = CertController(secret_key=settings.SECRET_KEY)
+        
+        try:
+            cert_info = controller.get_cert_info_by_token(token)
+            return Response({
+                'success': True,
+                'certificate': cert_info
+            }, status=status.HTTP_200_OK)
+        except ValueError as e:
+            # Возвращаем 400, чтобы фронтенд понял, что это бизнес-ошибка (просрочен, использован)
+            return Response({'success': False, 'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
+        except Exception as e:
+            return Response({'success': False, 'error': 'Ошибка сервера'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
 class AdminCertificatesAPIView(APIView):
     """
     GET: Список последних сертификатов

@@ -16,6 +16,7 @@
       
       <van-field
         v-model="phone"
+        @update:model-value="(val) => (phone = formatPhone(val))"  
         label="Телефон"
         placeholder="+7 (999) 123-45-67"
         type="tel"
@@ -42,6 +43,7 @@ import { ref } from 'vue'
 import { useAuthStore } from '@/stores/auth'
 import { showSuccessToast, showFailToast } from 'vant'
 import apiClient from '@/api/client'
+import { formatPhone } from '@/utils/phone'
 
 const authStore = useAuthStore()
 const phone = ref('')

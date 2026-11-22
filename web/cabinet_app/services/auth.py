@@ -88,12 +88,12 @@ def register(
     referrer_user = None
     if ref_code == '':
         ref_code = None
-#    if ref_code:
-#        referrer_user = CabinetUser.objects.filter(
-#            referral_code=ref_code.strip().upper(), is_active=True,
-#        ).first()
-#        if referrer_user and referrer_user.client_id == client.pk:
-#            referrer_user = None  # сам себя не приглашаешь
+    if ref_code:
+       referrer_user = CabinetUser.objects.filter(
+           referral_code=ref_code.strip().upper(), is_active=True,
+       ).first()
+       if referrer_user and referrer_user.client_id == client.pk:
+           referrer_user = None  # сам себя не приглашаешь
 
     user = CabinetUser.objects.create_user(
         phone=normalized,

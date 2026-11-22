@@ -189,3 +189,36 @@ class CertController:
     def get_nominals(self):
         from .models import CertificateNominal
         return CertificateNominal.objects.filter(is_active=True).values_list('value', flat=True)
+    
+    
+    def get_cert_info_by_token(self, token: str):
+        """Возвращает информацию о сертификате по токену из QR, независимо от статуса."""
+        crt = CertificateModel.objects.filter(token=token).first()
+        if not crt:
+            raise ValueError("Сертификат с таким QR-кодом не найден")
+        
+        if crt.is_used:
+            raise ValueError(f"Сертификат на {crt.price} ₽ уже был погашен {crt.used_date.strftime('%d.%m.%Y')}")
+            
+        if crt.is_expired:
+            raise ValueError(f"Срок действия сертификата истек {crt.expire_date.strftime('%d.%m.%Y')}")
+            
+        if crt.reserved_for_booking_id:
+            raise ValueError(f"Сертификат зарезервирован под запись клиента {crt.client_name}")
+            
+        return {
+            'id': crt.id,
+            'price': crt.price,
+            'client_name': crt.client_name,
+            'phone': crt.phone,
+            'expire_date': crt.expire_date.strftime('%d.%m.%Y'),
+            'token_short': crt.token[:8]
+        }
+
+    def redeem_by_token(self, token: str):
+        """Гасит сертификат по токену из QR."""
+        crt = self.find_by_token(token) # Твой старый метод, ищет только активные
+        if not crt:
+            raise ValueError("Активный сертификат не найден или уже погашен")
+        crt.use()
+        return crt
