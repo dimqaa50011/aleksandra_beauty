@@ -14,10 +14,10 @@ logger = logging.getLogger(__name__)
 
 
 # ==========================================
-# МАССОВЫЕ РАССЫЛКИ (МАРКЕТИНГ)
+# ВОРКЕРЫ ДЛЯ МАССОВЫХ РАССЫЛОК
 # ==========================================
 
-def task_send_broadcast(
+def worker_send_broadcast(
     title: str, 
     body: str, 
     methods: list, 
@@ -25,7 +25,7 @@ def task_send_broadcast(
     action_url: str = '/cabinet/', 
     client_ids: list = None
 ):
-    """Фоновая задача для массовой рассылки (только маркетинг)."""
+    """Фоновая задача для массовой рассылки."""
     logger.info(f"🚀 Запуск рассылки '{title}' каналами {methods}")
     
     if client_ids is None:
@@ -35,7 +35,6 @@ def task_send_broadcast(
     
     allowed_ids = []
     for client in clients:
-        # Проверяем настройки клиента (не отключил ли он маркетинг)
         allowed, _ = is_notification_allowed(client, type_code)
         if allowed:
             allowed_ids.append(client.id)
@@ -58,7 +57,7 @@ def task_send_broadcast(
 
 
 # ==========================================
-# СИСТЕМНЫЕ УВЕДОМЛЕНИЯ (ТРАНЗАКЦИОННЫЕ)
+# ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ
 # ==========================================
 
 def get_formatted_text(booking, template_key):
@@ -86,25 +85,26 @@ def get_formatted_text(booking, template_key):
         return template.text
 
 
-def send_event_sms_task(booking_id, event_type):
+# ==========================================
+# ВОРКЕРЫ ДЛЯ СИСТЕМНЫХ УВЕДОМЛЕНИЙ
+# ==========================================
+
+def worker_send_event(booking_id, event_type):
     """Отправка SMS и Push о событиях записи (creation, cancel, edit)."""
     try:
         booking = Booking.objects.get(id=booking_id)
     except Booking.DoesNotExist:
         return
 
-    # event_type приходит как 'creation', 'cancel' или 'edit'
     text = get_formatted_text(booking, event_type)
     
     if text:
-        # 1. Отправляем SMS (если есть телефон)
         if booking.phone:
             send_sms(booking.phone, text)
             
-        # 2. Отправляем Push в PWA (если есть аккаунт)
         if booking.client_id:
-            async_task(
-                'notify_app.tasks.task_send_bulk_push',
+            # Внутренний вызов пуша (напрямую, без async_task, так как мы уже в фоне)
+            send_bulk_push_to_clients(
                 [booking.client_id],
                 'Статус записи изменен',
                 text,
@@ -112,7 +112,7 @@ def send_event_sms_task(booking_id, event_type):
             )
 
 
-def send_reminder_task(booking_id, timeframe):
+def worker_send_reminder(booking_id, timeframe):
     """Отправка напоминаний (24h, 2h, 15m)."""
     try:
         booking = Booking.objects.get(id=booking_id)
@@ -140,7 +140,6 @@ def send_reminder_task(booking_id, timeframe):
     if not is_time_correct:
         return
 
-    # Берем шаблон reminder_24h, reminder_2h или reminder_15m
     text = get_formatted_text(booking, f'reminder_{timeframe}')
     
     if text:
@@ -148,8 +147,7 @@ def send_reminder_task(booking_id, timeframe):
             send_sms(booking.phone, text)
             
         if booking.client_id:
-            async_task(
-                'notify_app.tasks.task_send_bulk_push',
+            send_bulk_push_to_clients(
                 [booking.client_id],
                 'Напоминание о визите',
                 text,
@@ -160,24 +158,7 @@ def send_reminder_task(booking_id, timeframe):
         booking.save(update_fields=[flag_name])
 
 
-def schedule_reminders(booking_id, appointment_datetime):
-    """Планирует 3 напоминания для записи."""
-    now = timezone.now()
-    
-    time_24h = appointment_datetime - timedelta(hours=24)
-    if time_24h > now:
-        async_task('notify_app.tasks.send_reminder_task', booking_id, '24h', q_options={'schedule': time_24h})
-        
-    time_2h = appointment_datetime - timedelta(hours=2)
-    if time_2h > now:
-        async_task('notify_app.tasks.send_reminder_task', booking_id, '2h', q_options={'schedule': time_2h})
-        
-    time_15m = appointment_datetime - timedelta(minutes=15)
-    if time_15m > now:
-        async_task('notify_app.tasks.send_reminder_task', booking_id, '15m', q_options={'schedule': time_15m})
-
-
-def send_review_request_task(booking_id):
+def worker_send_review_request(booking_id):
     """Отправка просьбы об отзыве."""
     try:
         booking = Booking.objects.get(id=booking_id)
@@ -188,7 +169,6 @@ def send_review_request_task(booking_id):
         booking.review_token = uuid.uuid4()
         booking.save()
 
-    # Ссылка для старой HTML формы (СМС)
     url_for_sms = f"https://sasha-sugar.ru/review/{booking.review_token}/"
     sms_text = f"Здравствуйте, {booking.client_name}! Спасибо, что посетили Sasha Sugar. Будем рады, если вы поделитесь впечатлениями: {url_for_sms}"
     
@@ -196,8 +176,7 @@ def send_review_request_task(booking_id):
         send_sms(booking.phone, sms_text)
         
     if booking.client_id:
-        async_task(
-            'notify_app.tasks.task_send_bulk_push',
+        send_bulk_push_to_clients(
             [booking.client_id],
             'Спасибо за визит!',
             'Будем рады, если вы оцените наш сервис.',
@@ -205,5 +184,15 @@ def send_review_request_task(booking_id):
         )
 
 
-def task_send_bulk_push(client_ids: list[int], title: str, body: str, action_url: str = '/cabinet/'):
-    send_bulk_push_to_clients(client_ids, title, body, action_url)
+# ==========================================
+# ВОРКЕРЫ ДЛЯ АДМИНОВ (ЗАДЕЛ НА БУДУЩЕЕ)
+# ==========================================
+
+def worker_admin_new_booking(booking_id):
+    """FCM-пуш админу о новой записи."""
+    # Здесь будет вызов старой функции send_fcm_notification для админов
+    pass
+
+def worker_admin_new_review(review_id):
+    """FCM-пуш админу о новом отзыве."""
+    pass

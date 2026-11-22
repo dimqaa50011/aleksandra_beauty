@@ -23,6 +23,7 @@ from booking_app.services.slots import (
 )
 from booking_app.utils import get_or_create_client
 from booking_app.views import send_fcm_notification
+from notify_app.notifiers import ClientNotify
 from notify_app.tasks import schedule_reminders
 
 from .models import Booking, BlockedSlot, Client
@@ -124,7 +125,8 @@ class AdminBookingCreateAPIView(APIView):
         services_names = ", ".join([s.name for s in services])
 
         # send_fcm_notification(f'🔔 Новая запись (API): {client_name}', f'{services_names}\n{appointment_datetime.strftime("%d.%m %H:%M")}', f'/admin-dashboard/bookings/{booking.id}/edit/', booking.id)
-        async_task('notify_app.tasks.send_event_sms_task', booking.id, 'creation')
+        # async_task('notify_app.tasks.send_event_sms_task', booking.id, 'creation')
+        ClientNotify.booking_event(booking.id, 'creation')
         schedule_reminders(booking.id, booking.appointment_datetime)
 
 
@@ -220,7 +222,8 @@ class AdminBookingUpdateAPIView(APIView):
             booking.reminded_15m = False
             booking.save()
 
-            async_task('notify_app.tasks.send_event_sms_task', booking.id, 'edit')
+            # async_task('notify_app.tasks.send_event_sms_task', booking.id, 'edit')
+            ClientNotify.edit_booking(booking.id)
             schedule_reminders(booking.id, booking.appointment_datetime)
 
             return Response({'success': True, 'message': 'Запись обновлена'})
@@ -652,17 +655,20 @@ class AdminBookingStatusAPIView(APIView):
 
         # 1. ПОДТВЕРЖДЕНИЕ
         if old_status == 'pending' and new_status == 'confirmed':
-            async_task('notify_app.tasks.send_event_sms_task', booking.id, 'creation')
-            schedule_reminders(booking.id, booking.appointment_datetime)
+            # СМС + Пуш о создании (логика внутри воркера)
+            ClientNotify.booking_event(booking.id, 'creation')
             
-            # ПУШ КЛИЕНТУ
+            # Напоминания
+            ClientNotify.schedule_reminders(booking.id, booking.appointment_datetime)
+            
+            # Дополнительный Пуш клиенту о подтверждении
             if booking.client_id:
-                async_task(
+                ClientNotify._send(
                     'notify_app.tasks.task_send_bulk_push',
                     [booking.client_id],
                     '✅ Запись подтверждена',
                     f'Ждём вас {booking.appointment_datetime.strftime("%d.%m в %H:%M")}',
-                    '/cabinet/appointments' # action_url
+                    '/cabinet/appointments'
                 )
 
         # 2. ОТМЕНА (админом)
@@ -673,16 +679,18 @@ class AdminBookingStatusAPIView(APIView):
                     handle_booking_cancelled(booking)
                 except Exception:
                     logger.exception('handle_booking_cancelled failed for booking %s', booking.pk)
-            async_task('notify_app.tasks.send_event_sms_task', booking.id, 'cancel')
             
-            # ПУШ КЛИЕНТУ
+            # СМС об отмене
+            ClientNotify.booking_event(booking.id, 'cancel')
+            
+            # Пуш клиенту
             if booking.client_id:
-                async_task(
+                ClientNotify._send(
                     'notify_app.tasks.task_send_bulk_push',
                     [booking.client_id],
                     '❌ Запись отменена',
                     f'Ваша запись на {booking.appointment_datetime.strftime("%d.%m %H:%M")} отменена студией.',
-                    '/cabinet/appointments' # action_url
+                    '/cabinet/appointments'
                 )
 
         # 2b. НЕЯВКА
@@ -694,14 +702,14 @@ class AdminBookingStatusAPIView(APIView):
                 except Exception:
                     logger.exception('handle_booking_cancelled failed for booking %s (no_show)', booking.pk)
             
-            # ПУШ КЛИЕНТУ
+            # Пуш клиенту
             if booking.client_id:
-                async_task(
+                ClientNotify._send(
                     'notify_app.tasks.task_send_bulk_push',
                     [booking.client_id],
                     'Вы не пришли на визит',
                     f'Запись на {booking.appointment_datetime.strftime("%d.%m %H:%M")} отмечена.',
-                    '/cabinet/appointments' # action_url
+                    '/cabinet/appointments'
                 )
 
         # 3. ЗАВЕРШЕНИЕ
@@ -729,18 +737,15 @@ class AdminBookingStatusAPIView(APIView):
             except Exception:
                 logger.exception('completed flow failed for booking %s', booking.pk)
 
-            # SMS с просьбой об отзыве
-            async_task('notify_app.tasks.send_review_request_task', booking.id)
+            # СМС и Пуш с просьбой об отзыве
+            ClientNotify.review_request(booking.id)
             
-            # ПУШ КЛИЕНТУ
+            # Дополнительный кастомный Пуш (если нужно)
             if booking.client_id and booking.review_token:
-                # ВАЖНО: Чистый текст без ссылки
                 text = "Здравствуйте! Спасибо, что посетили Sasha Sugar. Будем рады, если вы оцените наш сервис."
-                
-                # ВАЖНО: Ссылка передается отдельным аргументом action_url
                 action_url = f"/cabinet/reviews/{booking.review_token}"
                     
-                async_task(
+                ClientNotify._send(
                     'notify_app.tasks.task_send_bulk_push',
                     [booking.client_id],
                     '🌟 Спасибо за визит!',

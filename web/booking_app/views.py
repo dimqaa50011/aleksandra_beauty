@@ -24,6 +24,8 @@ from rest_framework.permissions import IsAuthenticated, AllowAny
 import firebase_admin
 from firebase_admin import credentials, messaging
 
+from notify_app.notifiers import ClientNotify
+
 from .models import Booking, BlockedSlot, DayOff, DeviceFCMToken, EmailVerificationCode, Client, PushSubscription
 from .forms import BookingForm, AdminBookingForm, BlockedSlotForm
 from beauty_app.models import Service, Review
@@ -482,16 +484,11 @@ def api_create_booking(request):
     services_names = ", ".join([s.name for s in services])
 
     send_fcm_notification(f'🔔 Новая запись (API): {client_name}', f'{services_names}\n{appointment_datetime.strftime("%d.%m %H:%M")}', f'/admin-dashboard/bookings/{booking.id}/edit/', booking.id)
-    async_task('notify_app.tasks.send_event_sms_task', booking.id, 'creation')
+    # async_task('notify_app.tasks.send_event_sms_task', booking.id, 'creation')
+    ClientNotify.booking_event(booking.id, 'creation')
     schedule_reminders(booking.id, booking.appointment_datetime)
 
-    if email:
-        try:
-            send_mail('🌸 Ваша запись в Sasha Sugar подтверждена!',
-                      f"Здравствуйте, {client_name}!\n\nВаша запись успешно оформлена.\n\n📅 Дата: {date_str}\n⏰ Время: {time_str}\n💅 Услуги: {services_names}\n📍 Адрес: Санкт-Петербург, Спасский переулок, 7",
-                      settings.DEFAULT_FROM_EMAIL, [email], fail_silently=False)
-        except Exception as e:
-            print(f"Ошибка отправки письма: {e}")
+
 
     return JsonResponse({
         'success': True, 'booking_id': booking.id, 'message': 'Запись успешно создана',
@@ -732,7 +729,8 @@ def booking_edit(request, pk):
             booking.reminded_15m = False
             booking.save()
 
-            async_task('notify_app.tasks.send_event_sms_task', booking.id, 'edit')
+            # async_task('notify_app.tasks.send_event_sms_task', booking.id, 'edit')
+            ClientNotify.booking_event(booking.id)
             schedule_reminders(booking.id, booking.appointment_datetime)
 
             messages.success(request, f'Запись для {booking.client_name} обновлена')
@@ -855,7 +853,8 @@ class AdminBookingCreateView(AdminRequiredMixin, FormView):
 
                 services_names = ", ".join([s.name for s in services])
                 send_fcm_notification(f'🔔 Новая запись (Админ): {booking.client_name}', f'{services_names}\n{aware_dt.strftime("%d.%m %H:%M")}', f'/admin-dashboard/bookings/{booking.pk}/edit/', booking.id)
-                async_task('notify_app.tasks.send_event_sms_task', booking.id, 'creation')
+                # async_task('notify_app.tasks.send_event_sms_task', booking.id, 'creation')
+                ClientNotify.booking_event(booking.id, 'creation')
                 schedule_reminders(booking.id, booking.appointment_datetime)
 
                 messages.success(self.request, f'Запись для {booking.client_name} создана')
@@ -881,7 +880,8 @@ class BookingCancelView(AdminRequiredMixin, View):
         booking.status = 'cancelled'
         booking.save()
 
-        async_task('notify_app.tasks.send_event_sms_task', booking.id, 'cancel')
+        # async_task('notify_app.tasks.send_event_sms_task', booking.id, 'cancel')
+        ClientNotify.booking_event(booking.id, 'cancel')
 
         messages.success(request, f'Запись для {booking.client_name} отменена')
         return redirect('booking_app:bookings_list')

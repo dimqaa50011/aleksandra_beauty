@@ -86,6 +86,8 @@ def register(
 
     # Реферал — только для новых клиентов по валидному коду
     referrer_user = None
+    if ref_code == '':
+        ref_code = None
     if ref_code:
         referrer_user = CabinetUser.objects.filter(
             referral_code=ref_code.strip().upper(), is_active=True,

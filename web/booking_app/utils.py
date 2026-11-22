@@ -87,3 +87,4 @@ def get_or_create_client(phone, name="", email=""):
         )
         bb = BonusBalance(client=new_client)
         return new_client
+    

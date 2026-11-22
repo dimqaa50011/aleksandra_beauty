@@ -8,6 +8,7 @@ from booking_app.models import Booking
 from beauty_app.models import Service
 from booking_app.services.slots import calculate_services_duration, is_slot_free
 from cert_app.models import CertificateModel
+from notify_app.notifiers import ClientNotify
 
 from .bonuses import (
     max_bonuses_for_booking,
@@ -165,7 +166,8 @@ def cancel_appointment(
     # 1. Отправляем SMS клиенту (как и раньше)
     from django_q.tasks import async_task
     try:
-        async_task('notify_app.tasks.send_event_sms_task', booking.pk, 'cancel')
+        # async_task('notify_app.tasks.send_event_sms_task', booking.pk, 'cancel')
+        ClientNotify.booking_event(booking.id, 'cancel')
     except Exception:
         logger.exception('booking.cancel sms failed booking=%s', booking.pk)
 
@@ -231,7 +233,8 @@ def reschedule_appointment(
     from django_q.tasks import async_task
     from booking_app.tasks import schedule_reminders
     try:
-        async_task('notify_app.tasks.send_event_sms_task', booking.id, 'edit')
+        # async_task('notify_app.tasks.send_event_sms_task', booking.id, 'edit')
+        ClientNotify.booking_event(booking.id, 'cancel')
         schedule_reminders(booking.id, booking.appointment_datetime)
     except Exception:
         logger.exception('booking.reschedule notify failed booking=%s', booking.pk)
