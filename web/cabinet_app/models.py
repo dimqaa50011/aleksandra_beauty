@@ -474,3 +474,54 @@ class Feedback(models.Model):
 
     def __str__(self):
         return f"{self.client.name or self.client.phone} — {self.created_at.strftime('%d.%m.%Y')}"
+
+
+class LoyaltySettings(models.Model):
+    """Глобальные настройки бонусной программы (Синглтон)."""
+    
+    # Приветственные бонусы
+    welcome_bonus_amount = models.PositiveIntegerField(
+        'Приветственные бонусы', default=500, 
+        help_text='Сколько бонусов начислять при регистрации (0 - отключить)'
+    )
+    welcome_bonus_ttl_days = models.PositiveIntegerField(
+        'Срок жизни приветственных (дней)', default=30
+    )
+    
+    # Реферальные бонусы
+    referral_register_referrer = models.PositiveIntegerField(
+        'Бонус пригласившему (регистрация)', default=100
+    )
+    referral_register_referee = models.PositiveIntegerField(
+        'Бонус другу (регистрация)', default=100
+    )
+    referral_first_visit_referrer = models.PositiveIntegerField(
+        'Бонус пригласившему (1-й визит)', default=500
+    )
+    referral_first_visit_referee = models.PositiveIntegerField(
+        'Бонус другу (1-й визит)', default=500
+    )
+    
+    # Лимиты
+    max_bonus_spend_percent = models.PositiveIntegerField(
+        'Макс. % списания бонусами', default=15,
+        help_text='Сколько процентов от чека можно оплатить бонусами'
+    )
+
+    class Meta:
+        verbose_name = 'Настройки лояльности'
+        verbose_name_plural = 'Настройки лояльности'
+
+    def __str__(self):
+        return "Настройки лояльности (Глобальные)"
+
+    def save(self, *args, **kwargs):
+        """Принудительно сохраняем только с ID=1, чтобы не плодить записи."""
+        self.pk = 1 
+        super().save(*args, **kwargs)
+
+    @classmethod
+    def load(cls):
+        """Возвращает единственную запись (создает, если нет)."""
+        obj, created = cls.objects.get_or_create(pk=1)
+        return obj

@@ -6,7 +6,7 @@ from django.db import transaction
 from django.utils import timezone
 from rest_framework.exceptions import ValidationError, AuthenticationFailed
 
-from booking_app.models import BonusBalance, Client, Booking
+from booking_app.models import Client, Booking
 from booking_app.utils import (
     normalize_phone, phone_variants, find_client_by_phone,
 )
@@ -16,14 +16,13 @@ from ..models import (
     CabinetUser, ClientRefreshToken, PasswordResetCode, Referral,
 )
 from ..authentication import issue_access_token
+from .bonuses import grant_welcome_bonus, process_referral_registration # <--- ДОБАВИЛИ ИМПОРТ
 
 logger = logging.getLogger(__name__)
 
 PASSWORD_RESET_TTL_MINUTES = 15
 PASSWORD_RESET_MAX_ATTEMPTS = 5
 
-# Заглушка — заменить на реальный вызов твоего SMS-сервиса.
-# Сигнатура: send_sms(phone: str, text: str) -> bool
 def _send_sms(phone: str, text: str) -> bool:
     from django.conf import settings
     sender = getattr(settings, 'CABINET_SMS_SENDER', None)
@@ -32,10 +31,6 @@ def _send_sms(phone: str, text: str) -> bool:
         return False
     return sender(phone, text)
 
-
-# ─────────────────────────────────────────────────────────────
-# Регистрация
-# ─────────────────────────────────────────────────────────────
 
 @transaction.atomic
 def register(
@@ -71,9 +66,8 @@ def register(
             name=name.strip()[:100],
             email=email.strip() or None,
         )
-        bb = BonusBalance(client=client)
+        # УБРАЛИ bb = BonusBalance(client=client), так как accrue_bonuses сам создаст кошелек
     else:
-        # Дополняем пустые поля, но не перезаписываем заполненные
         changed = []
         if name and not client.name:
             client.name = name.strip()[:100]
@@ -83,17 +77,6 @@ def register(
             changed.append('email')
         if changed:
             client.save(update_fields=changed)
-
-    # Реферал — только для новых клиентов по валидному коду
-    referrer_user = None
-    if ref_code == '':
-        ref_code = None
-    if ref_code:
-       referrer_user = CabinetUser.objects.filter(
-           referral_code=ref_code.strip().upper(), is_active=True,
-       ).first()
-       if referrer_user and referrer_user.client_id == client.pk:
-           referrer_user = None  # сам себя не приглашаешь
 
     user = CabinetUser.objects.create_user(
         phone=normalized,
@@ -111,16 +94,22 @@ def register(
     # Линкуем «бесхозные» брони и сертификаты по телефону
     _link_orphans(client)
 
-    # Создаём реферальную связь
-    if referrer_user:
-        Referral.objects.get_or_create(
-            referrer=referrer_user.client,
-            referee=client,
-            defaults={'status': Referral.STATUS_REGISTERED},
-        )
-        # TODO: начисление малых бонусов обоим — вызывать после того,
-        # как будет готов services/bonuses.py
-        # accrue_bonuses(referrer_user.client, REFERRAL_REGISTER_BONUS, 'referral_registered', referral=ref)
+    # 1. НАЧИСЛЯЕМ ПРИВЕТСТВЕННЫЕ БОНУСЫ
+    grant_welcome_bonus(client) # <--- ДОБАВИЛИ
+
+    # 2. ОБРАБАТЫВАЕМ РЕФЕРАЛКУ
+    if ref_code:
+        referrer_user = CabinetUser.objects.filter(
+            referral_code=ref_code.strip().upper(), is_active=True,
+        ).first()
+        
+        if referrer_user and referrer_user.client_id != client.pk:
+            referral, _ = Referral.objects.get_or_create(
+                referrer=referrer_user.client,
+                referee=client,
+                defaults={'status': Referral.STATUS_REGISTERED},
+            )
+            process_referral_registration(referral) # <--- ДОБАВИЛИ
 
     access = issue_access_token(user)
     _, refresh_raw = ClientRefreshToken.issue(
@@ -130,17 +119,11 @@ def register(
 
 
 def _link_orphans(client: Client) -> None:
-    """Привязывает Booking и сертификаты без client, совпадающие по телефону."""
     variants = phone_variants(client.phone)
     if not variants:
         return
     Booking.objects.filter(client__isnull=True, phone__in=variants).update(client=client)
     CertificateModel.objects.filter(client__isnull=True, phone__in=variants).update(client=client)
-
-
-# ─────────────────────────────────────────────────────────────
-# Вход
-# ──────
 
 
 def login(
@@ -151,7 +134,6 @@ def login(
     user_agent: str = '',
     platform: str = '',
 ) -> tuple[CabinetUser, str, str]:
-    """Возвращает (user, access_token, refresh_raw) или бросает AuthenticationFailed."""
     normalized = normalize_phone(phone)
     if not normalized:
         raise AuthenticationFailed('Неверный телефон или пароль')
@@ -161,7 +143,6 @@ def login(
     if user is None:
         raise AuthenticationFailed('Неверный телефон или пароль')
 
-    # ВОТ ЭТА ПРОВЕРКА НУЖНА ДЛЯ СОЦСЕТЕЙ
     if not user.has_usable_password():
         raise ValidationError({
             'error_code': 'no_password',
@@ -186,7 +167,6 @@ def login(
 
 
 def confirm_password_reset(phone: str, code: str, new_password: str) -> tuple[CabinetUser, str, str]:
-    """Устанавливает пароль и СРАЗУ логинит пользователя."""
     normalized = normalize_phone(phone)
     user = CabinetUser.objects.filter(phone=normalized, is_active=True).first()
     if user is None:
@@ -207,18 +187,16 @@ def confirm_password_reset(phone: str, code: str, new_password: str) -> tuple[Ca
     reset.is_used = True
     reset.save(update_fields=['is_used'])
 
-    # Устанавливаем пароль
     user.set_password(new_password)
     user.save(update_fields=['password'])
     
-    # Отзываем старые сессии
     user.refresh_tokens.filter(revoked_at__isnull=True).update(revoked_at=timezone.now())
     
-    # СРАЗУ АВТОРИЗОВЫВАЕМ И ВЫДАЕМ ТОКЕНЫ
     access = issue_access_token(user)
     _, refresh_raw = ClientRefreshToken.issue(user, platform='password_reset')
     
     return user, access, refresh_raw
+
 
 def logout(raw_refresh: str) -> None:
     tok = ClientRefreshToken.find_active(raw_refresh)
@@ -227,7 +205,6 @@ def logout(raw_refresh: str) -> None:
 
 
 def refresh(raw_refresh: str, *, user_agent: str = '', platform: str = ''):
-    """Ротирует refresh. Возвращает (user, new_access, new_refresh_raw)."""
     tok = ClientRefreshToken.find_active(raw_refresh)
     if tok is None:
         raise AuthenticationFailed('Invalid refresh token')
@@ -245,12 +222,7 @@ def refresh(raw_refresh: str, *, user_agent: str = '', platform: str = ''):
     return user, access, new_raw
 
 
-# ─────────────────────────────────────────────────────────────
-# Сброс пароля через SMS
-# ─────────────────────────────────────────────────────────────
-
 def request_password_reset(phone: str, *, ip: str | None = None) -> None:
-    """ВСЕГДА успех (не раскрываем, есть ли аккаунт). SMS шлём только если есть."""
     normalized = normalize_phone(phone)
     if not normalized:
         return
@@ -259,7 +231,6 @@ def request_password_reset(phone: str, *, ip: str | None = None) -> None:
     if user is None:
         return
 
-    # Cooldown: не чаще 1 раза в 60 секунд
     last = user.password_reset_codes.first()
     if last and (timezone.now() - last.created_at).total_seconds() < 60:
         return
@@ -272,4 +243,3 @@ def request_password_reset(phone: str, *, ip: str | None = None) -> None:
         ip_address=ip,
     )
     _send_sms(user.client.phone, f'Код для сброса пароля: {code}. Действует {PASSWORD_RESET_TTL_MINUTES} мин.')
-

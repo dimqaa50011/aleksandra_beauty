@@ -3,6 +3,7 @@ from django.utils.html import format_html
 from .models import (
     CabinetUser,
     ClientRefreshToken,
+    LoyaltySettings,
     PasswordResetCode,
     ClientPushSubscription,
     NotificationLog,
@@ -132,4 +133,30 @@ class PersonalOfferAdmin(admin.ModelAdmin):
         ('Действие (CTA)', {'fields': ('cta_type', 'cta_payload')}),
         ('Статус', {'fields': ('is_active', 'valid_until', 'seen_at', 'used_at')}),
         ('Служебное', {'fields': ('created_at', 'created_by')}),
+    )
+    
+
+@admin.register(LoyaltySettings)
+class LoyaltySettingsAdmin(admin.ModelAdmin):
+    # Запрещаем создавать новые записи (только редактировать одну)
+    def has_add_permission(self, request):
+        return not LoyaltySettings.objects.exists()
+
+    # Запрещаем удалять единственную запись
+    def has_delete_permission(self, request, obj=None):
+        return False
+
+    fieldsets = (
+        ('🎁 Приветственные бонусы', {
+            'fields': ('welcome_bonus_amount', 'welcome_bonus_ttl_days')
+        }),
+        ('🤝 Реферальная программа', {
+            'fields': (
+                'referral_register_referrer', 'referral_register_referee',
+                'referral_first_visit_referrer', 'referral_first_visit_referee'
+            )
+        }),
+        ('⚙️ Ограничения', {
+            'fields': ('max_bonus_spend_percent',)
+        }),
     )
