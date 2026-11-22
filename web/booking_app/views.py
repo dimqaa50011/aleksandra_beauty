@@ -484,7 +484,7 @@ def api_create_booking(request):
     send_fcm_notification(f'🔔 Новая запись (API): {client_name}', f'{services_names}\n{appointment_datetime.strftime("%d.%m %H:%M")}', f'/admin-dashboard/bookings/{booking.id}/edit/', booking.id)
     # async_task('notify_app.tasks.send_event_sms_task', booking.id, 'creation')
     ClientNotify.booking_event(booking.id, 'creation')
-    schedule_reminders(booking.id, booking.appointment_datetime)
+    ClientNotify.schedule_reminders(booking.id, booking.appointment_datetime)
 
 
 
@@ -729,7 +729,7 @@ def booking_edit(request, pk):
 
             # async_task('notify_app.tasks.send_event_sms_task', booking.id, 'edit')
             ClientNotify.booking_event(booking.id)
-            schedule_reminders(booking.id, booking.appointment_datetime)
+            ClientNotify.schedule_reminders(booking.id, booking.appointment_datetime)
 
             messages.success(request, f'Запись для {booking.client_name} обновлена')
             return redirect('booking_app:bookings_list')
@@ -853,7 +853,7 @@ class AdminBookingCreateView(AdminRequiredMixin, FormView):
                 send_fcm_notification(f'🔔 Новая запись (Админ): {booking.client_name}', f'{services_names}\n{aware_dt.strftime("%d.%m %H:%M")}', f'/admin-dashboard/bookings/{booking.pk}/edit/', booking.id)
                 # async_task('notify_app.tasks.send_event_sms_task', booking.id, 'creation')
                 ClientNotify.booking_event(booking.id, 'creation')
-                schedule_reminders(booking.id, booking.appointment_datetime)
+                ClientNotify.schedule_reminders(booking.id, booking.appointment_datetime)
 
                 messages.success(self.request, f'Запись для {booking.client_name} создана')
                 return redirect('booking_app:bookings_list')

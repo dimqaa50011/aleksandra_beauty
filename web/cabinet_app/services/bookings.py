@@ -111,12 +111,12 @@ def create_appointment(
 
     # SMS-подтверждение и напоминания — как при создании с сайта
     # from django_q.tasks import async_task
-    # from booking_app.tasks import schedule_reminders
+    # from booking_app.tasks import ClientNotify.schedule_reminders
     # try:
     #     async_task('notify_app.tasks.send_event_sms_task', booking.id, 'creation')
-    #     schedule_reminders(booking.id, booking.appointment_datetime)
+    #     ClientNotify.schedule_reminders(booking.id, booking.appointment_datetime)
     # except Exception:
-    #     logger.exception('booking.create schedule_reminders failed booking=%s', booking.pk)
+    #     logger.exception('booking.create ClientNotify.schedule_reminders failed booking=%s', booking.pk)
 
     return booking
 
@@ -231,11 +231,11 @@ def reschedule_appointment(
     )
 
     from django_q.tasks import async_task
-    from booking_app.tasks import schedule_reminders
+    from booking_app.tasks import ClientNotify.schedule_reminders
     try:
         # async_task('notify_app.tasks.send_event_sms_task', booking.id, 'edit')
         ClientNotify.booking_event(booking.id, 'cancel')
-        schedule_reminders(booking.id, booking.appointment_datetime)
+        ClientNotify.schedule_reminders(booking.id, booking.appointment_datetime)
     except Exception:
         logger.exception('booking.reschedule notify failed booking=%s', booking.pk)
 

@@ -24,7 +24,7 @@ from booking_app.services.slots import (
 from booking_app.utils import get_or_create_client
 from booking_app.views import send_fcm_notification
 from notify_app.notifiers import ClientNotify
-from notify_app.tasks import schedule_reminders
+from notify_app.notifiers import ClientNotify
 
 from .models import Booking, BlockedSlot, Client
 from .serializers import BookingSerializer, BlockDaySerializer
@@ -127,7 +127,7 @@ class AdminBookingCreateAPIView(APIView):
         # send_fcm_notification(f'🔔 Новая запись (API): {client_name}', f'{services_names}\n{appointment_datetime.strftime("%d.%m %H:%M")}', f'/admin-dashboard/bookings/{booking.id}/edit/', booking.id)
         # async_task('notify_app.tasks.send_event_sms_task', booking.id, 'creation')
         ClientNotify.booking_event(booking.id, 'creation')
-        schedule_reminders(booking.id, booking.appointment_datetime)
+        ClientNotify.schedule_reminders(booking.id, booking.appointment_datetime)
 
 
         return Response({
@@ -224,7 +224,7 @@ class AdminBookingUpdateAPIView(APIView):
 
             # async_task('notify_app.tasks.send_event_sms_task', booking.id, 'edit')
             ClientNotify.edit_booking(booking.id)
-            schedule_reminders(booking.id, booking.appointment_datetime)
+            ClientNotify.schedule_reminders(booking.id, booking.appointment_datetime)
 
             return Response({'success': True, 'message': 'Запись обновлена'})
 
@@ -659,7 +659,7 @@ class AdminBookingStatusAPIView(APIView):
             ClientNotify.booking_event(booking.id, 'creation')
             
             # Напоминания
-            ClientNotify.schedule_reminders(booking.id, booking.appointment_datetime)
+            ClientNotify.ClientNotify.schedule_reminders(booking.id, booking.appointment_datetime)
             
             # Дополнительный Пуш клиенту о подтверждении
             if booking.client_id:
