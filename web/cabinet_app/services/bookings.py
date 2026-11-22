@@ -231,7 +231,7 @@ def reschedule_appointment(
     )
 
     from django_q.tasks import async_task
-    from booking_app.tasks import ClientNotify.schedule_reminders
+    from notify_app.notifiers import ClientNotify
     try:
         # async_task('notify_app.tasks.send_event_sms_task', booking.id, 'edit')
         ClientNotify.booking_event(booking.id, 'cancel')
