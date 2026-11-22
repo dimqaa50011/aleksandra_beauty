@@ -7,11 +7,20 @@ from django.db import models
 from django.utils import timezone
 from django.contrib.auth.models import AbstractBaseUser, BaseUserManager
 
+def generate_referral_code() -> str:
+    alphabet = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'
+    for _ in range(10):
+        code = ''.join(secrets.choice(alphabet) for _ in range(8))
+        
+        return code
+    raise RuntimeError('Не удалось сгенерировать реф-код')
 
 class CabinetUserManager(BaseUserManager):
     def create_user(self, phone, password=None, **extra_fields):
         if not phone:
             raise ValueError('Телефон обязателен')
+        if not extra_fields.get('referral_code'):
+            extra_fields['referral_code'] = generate_referral_code()
         user = self.model(phone=phone, **extra_fields)
         user.set_password(password)
         user.save(using=self._db)
@@ -64,7 +73,8 @@ class CabinetUser(AbstractBaseUser):
 
     def __str__(self):
         return f'{self.client} (кабинет)'
-
+    
+    @classmethod
     def generate_referral_code(self) -> str:
         alphabet = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'
         for _ in range(10):
